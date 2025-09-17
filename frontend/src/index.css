@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@theme {
+  --color-primary: #5c2a35; /* derin bordo (başlıklar) */
+  --color-secondary: #8a4d5b; /* rosewood / ikincil metin */
+  --color-accent: #d87c82; /* rose pink (buton, fiyat, yıldız) */
+  --color-accent-hover: #c4646d; /* daha koyu rose hover */
+
+  --color-surface: #f0d9d9; /* açık pembe-bej arkaplan */
+  --color-surface-light: #f9ecec; /* çok açık pembe/krem */
+  --color-surface-hover: #fff6f6; /* hover için neredeyse beyaz */
+  --color-border: #e1bfc2; /* soft pastel pembe border */
+  --color-contact-bg: #fff9f8; /* yumurtamsı krem (ivory pink) */
+}
