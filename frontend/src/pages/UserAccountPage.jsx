@@ -11,8 +11,8 @@ export default function UserAccountPage({ onLogout }) {
     let mounted = true;
     authApi
       .me()
-      .then((res) => {
-        if (mounted && res?.user) setUser(res.user);
+      .then((u) => {
+        if (mounted && u) setUser(u);
       })
       .catch(() => {});
     return () => {

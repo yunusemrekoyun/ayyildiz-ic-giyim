@@ -1,13 +1,25 @@
 @import "tailwindcss";
+
 @theme {
-  --color-primary: #5c2a35; /* derin bordo (başlıklar) */
+  /* Mevcut paletin */
+  --color-primary: #5c2a35; /* derin bordo (başlıklar, sidebar) */
   --color-secondary: #8a4d5b; /* rosewood / ikincil metin */
-  --color-accent: #d87c82; /* rose pink (buton, fiyat, yıldız) */
-  --color-accent-hover: #c4646d; /* daha koyu rose hover */
+  --color-accent: #d87c82; /* rose pink (buton, aktif link) */
+  --color-accent-hover: #c4646d; /* koyu rose hover */
 
   --color-surface: #f0d9d9; /* açık pembe-bej arkaplan */
-  --color-surface-light: #f9ecec; /* çok açık pembe/krem */
+  --color-surface-light: #f9ecec; /* açık pembe/krem */
   --color-surface-hover: #fff6f6; /* hover için neredeyse beyaz */
-  --color-border: #e1bfc2; /* soft pastel pembe border */
-  --color-contact-bg: #fff9f8; /* yumurtamsı krem (ivory pink) */
+  --color-border: #e1bfc2; /* pastel pembe border */
+  --color-contact-bg: #fff9f8; /* ivory pink */
+}
+@theme admin {
+  --color-bg-admin: #fdf7f9; /* çok açık pembe-beyaz */
+  --color-text-admin: #3b0a24; /* bordo koyu yazı */
+  --color-bg-card: #ffffff;
+  --color-bg-hover: #fde2e7; /* pembe hover */
+  --color-bg-sidebar: #9d174d; /* koyu gül sidebar */
+  --color-text-sidebar: #ffffff;
+  --color-text-admin-muted: #6b7280;
+  --color-border-admin: #fbcfe8; /* pastel pembe sınır */
 }

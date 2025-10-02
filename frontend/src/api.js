@@ -1,4 +1,3 @@
-/* eslint-disable no-empty */
 // src/api.js
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -16,10 +15,9 @@ async function http(
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
-    credentials: "include", // refresh cookie için şart
+    credentials: "include", // refresh cookie için
   });
 
-  // Token süresi dolduysa 401 alırız → refresh dene, sonra 1 kez retry
   if (auth && res.status === 401 && retry) {
     const ok = await refreshAccessToken();
     if (ok) return http(path, { method, body, headers, auth, retry: false });
@@ -32,16 +30,14 @@ async function http(
   return res.json();
 }
 
-/* ---------- auth helpers (basit) ---------- */
+/* ---------- helpers ---------- */
 const ACCESS_KEY = "accessToken";
 const USER_KEY = "authUser";
+
 export const getAccessToken = () => localStorage.getItem(ACCESS_KEY) || null;
 export const setAccessToken = (t) =>
   t ? localStorage.setItem(ACCESS_KEY, t) : localStorage.removeItem(ACCESS_KEY);
-export const setUser = (u) =>
-  u
-    ? localStorage.setItem(USER_KEY, JSON.stringify(u))
-    : localStorage.removeItem(USER_KEY);
+
 export const getUser = () => {
   try {
     return JSON.parse(localStorage.getItem(USER_KEY) || "null");
@@ -49,8 +45,12 @@ export const getUser = () => {
     return null;
   }
 };
+export const setUser = (u) =>
+  u
+    ? localStorage.setItem(USER_KEY, JSON.stringify(u))
+    : localStorage.removeItem(USER_KEY);
 
-/* ---------- public auth api ---------- */
+/* ---------- auth api ---------- */
 export const authApi = {
   async register({
     firstName,
@@ -78,12 +78,16 @@ export const authApi = {
     return data;
   },
   async me() {
-    return http("/auth/me", { auth: true });
+    const data = await http("/auth/me", { auth: true });
+    if (data?.user) setUser(data.user);
+    return data?.user || null;
   },
   async logout() {
     try {
       await http("/auth/logout", { method: "POST" });
-    } catch {}
+    } catch {
+      // ignore
+    }
     setAccessToken(null);
     setUser(null);
   },
@@ -91,12 +95,14 @@ export const authApi = {
 
 export async function refreshAccessToken() {
   try {
-    const data = await http("/auth/refresh", { method: "POST" }); // cookie’den okuyacak
+    const data = await http("/auth/refresh", { method: "POST" });
     if (data?.accessToken) {
       setAccessToken(data.accessToken);
       return true;
     }
-  } catch {}
+  } catch {
+    // ignore
+  }
   return false;
 }
 

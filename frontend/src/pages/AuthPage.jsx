@@ -1,4 +1,6 @@
-import { useState } from "react";
+// src/pages/AuthPage.jsx
+import { useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import LoginForm from "../components/auth/LoginForm";
 import RegisterForm from "../components/auth/RegisterForm";
 import { authApi } from "../api";
@@ -6,13 +8,22 @@ import { authApi } from "../api";
 export default function AuthPage({ initialView = "register", onAuthSuccess }) {
   const [view, setView] = useState(initialView);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // /account?view=login&redirect=/admin/xyz gibi geldiğinde
+  const redirectTarget = useMemo(() => {
+    const sp = new URLSearchParams(location.search);
+    const r = sp.get("redirect");
+    return r && r.startsWith("/") ? r : null;
+  }, [location.search]);
 
   const handleRegister = async (vals) => {
     setError("");
     try {
-      // split name → first/last
       const [firstName, ...rest] = (vals.name || "").trim().split(" ");
       const lastName = rest.join(" ") || "-";
+
       await authApi.register({
         firstName,
         lastName,
@@ -21,7 +32,13 @@ export default function AuthPage({ initialView = "register", onAuthSuccess }) {
         password: vals.pass,
         role: "user",
       });
-      onAuthSuccess?.();
+
+      // Guard'tan geldiyse oraya dön; değilse standart akış
+      if (redirectTarget) {
+        navigate(redirectTarget, { replace: true });
+      } else {
+        onAuthSuccess?.();
+      }
     } catch (e) {
       setError(parseErr(e));
     }
@@ -30,8 +47,17 @@ export default function AuthPage({ initialView = "register", onAuthSuccess }) {
   const handleLogin = async (vals) => {
     setError("");
     try {
-      await authApi.login({ email: vals.email, password: vals.pass });
-      onAuthSuccess?.();
+      await authApi.login({
+        email: vals.email,
+        password: vals.pass,
+      });
+
+      // Guard'tan geldiyse oraya dön; değilse standart akış
+      if (redirectTarget) {
+        navigate(redirectTarget, { replace: true });
+      } else {
+        onAuthSuccess?.();
+      }
     } catch (e) {
       setError(parseErr(e));
     }
@@ -100,7 +126,8 @@ function parseErr(e) {
   try {
     const msg = JSON.parse(e.message)?.message;
     if (msg) return msg;
-  // eslint-disable-next-line no-empty
-  } catch {}
+  } catch {
+    // ignore
+  }
   return e.message?.replace(/^Error:\s?/, "") || "Something went wrong";
 }

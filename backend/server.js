@@ -4,19 +4,21 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
-import { connectDB } from "./config/db.js"; // <-- src kaldırmıştık
+import { connectDB } from "./config/db.js";
 import apiRoutes from "./routes/index.js";
 
 const app = express();
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "*",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true, // refresh token cookie için gerekli
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(express.json());
-app.use(cookieParser()); 
+app.use(cookieParser());
 app.use(morgan("dev"));
 
 app.use("/api", apiRoutes);

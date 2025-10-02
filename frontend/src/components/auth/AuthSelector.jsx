@@ -1,3 +1,4 @@
+// src/components/auth/AuthSelector.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import UserAccountPage from "../../pages/UserAccountPage";
@@ -21,12 +22,12 @@ export default function AuthSelector() {
     })();
   }, [params, navigate]);
 
-  // açılışta token var mı → /me ile doğrula; yoksa refresh dene
+  // açılışta doğrula
   useEffect(() => {
     (async () => {
       try {
         if (!getAccessToken()) {
-          const ok = await refreshAccessToken(); // cookie varsa yeni access al
+          const ok = await refreshAccessToken();
           if (!ok) {
             setIsLogged(false);
             setReady(true);
@@ -34,14 +35,16 @@ export default function AuthSelector() {
           }
         }
         const me = await authApi.me();
-        setIsLogged(Boolean(me?.user));
+        setIsLogged(Boolean(me));
+        // 🔴 burada admin'e zorunlu yönlendirme YOK
+        // sadece guard redirect paramı olsaydı orada yakalayabilirdik
       } catch {
         setIsLogged(false);
       } finally {
         setReady(true);
       }
     })();
-  }, [params]);
+  }, [params, navigate]);
 
   if (!ready) return null;
 
