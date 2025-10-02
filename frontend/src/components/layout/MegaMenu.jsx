@@ -3,7 +3,6 @@ import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function MegaMenu({ label, data = [] }) {
-  // data: [{ title, to, children: [{ title, to, description?, image? }] }]
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const closeTimer = useRef(null);
@@ -25,7 +24,7 @@ export default function MegaMenu({ label, data = [] }) {
     >
       {/* Trigger */}
       <button
-        className="text-sm font-medium hover:text-accent focus:outline-none"
+        className="text-sm font-medium hover:text-accent focus:outline-none py-3"
         aria-haspopup="true"
         aria-expanded={open}
       >
@@ -35,12 +34,16 @@ export default function MegaMenu({ label, data = [] }) {
       {/* Dropdown */}
       {open && (
         <div
-          className="absolute left-1/2 z-50 mt-3 -translate-x-1/2"
+          // sabitle: parent overflow’tan bağımsız
+          className="
+            fixed left-1/2 z-[80] mt-2 -translate-x-1/2
+            w-[min(1100px,92vw)]
+          "
           role="menu"
         >
-          <div className="flex overflow-hidden rounded-xl border border-border bg-white shadow-xl">
-            {/* Sol: dikey liste */}
-            <ul className="w-56 max-h-[380px] overflow-auto border-r border-border/60 bg-surface-light/50 p-2">
+          <div className="flex overflow-hidden rounded-xl border border-border bg-white shadow-2xl">
+            {/* Sol kolon */}
+            <ul className="w-64 max-h-[420px] overflow-auto border-r border-border/60 bg-surface-light/50 p-2">
               {data.map((item, i) => {
                 const isActive = i === active;
                 return (
@@ -63,8 +66,8 @@ export default function MegaMenu({ label, data = [] }) {
               })}
             </ul>
 
-            {/* Sağ: geniş panel (seçili sol iteme göre) */}
-            <div className="w-[560px] p-4">
+            {/* Sağ panel */}
+            <div className="flex-1 p-4">
               <RightPanel items={data[active]?.children ?? []} />
             </div>
           </div>
@@ -84,7 +87,7 @@ function RightPanel({ items }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
       {items.map((c) => (
         <Link
           key={c.title}
@@ -95,7 +98,7 @@ function RightPanel({ items }) {
             <img
               src={c.image}
               alt={c.title}
-              className="h-16 w-16 flex-none rounded-md object-cover"
+              className="h-16 w-20 flex-none rounded-md object-cover"
               draggable="false"
             />
           )}

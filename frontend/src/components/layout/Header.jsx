@@ -1,9 +1,10 @@
 // src/components/Header.jsx
 import { Link, useNavigate } from "react-router-dom";
 import { Search, ShoppingBag, Heart, User } from "lucide-react";
-import MegaMenu from "./MegaMenu"; // dosyan farklı klasördeyse: "./nav/MegaMenu"
+import MegaMenu from "./MegaMenu";
 import { useState } from "react";
 
+/* --------- Menüler --------- */
 const LINGERIE_DATA = [
   {
     title: "Bras & Bralettes",
@@ -152,6 +153,8 @@ const WEDDING_DATA = [
   },
 ];
 
+/* ----------------------------------- */
+
 export default function Header() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
@@ -163,73 +166,114 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-white">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        {/* Sol: Logo */}
-        <Link
-          to="/"
-          className="flex items-center gap-2 text-xl font-serif font-bold text-primary"
-        >
-          <img
-            src="/logo.png"
-            alt="Ayyıldız İç Giyim"
-            className="h-12 w-12 object-contain"
-          />
-          Ayyıldız İç Giyim
-        </Link>
+    <header className="sticky top-0 z-[70] bg-white/95 backdrop-blur border-b border-border">
+      {/* ÜST ŞERİT */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        {/* 3 kolon: SOL logo | ORTA arama | SAĞ ikonlar */}
+        <div className="grid grid-cols-[auto_1fr_auto] items-center h-20 gap-4">
+          {/* SOL: Logo + Marka */}
+          <div className="flex items-center justify-start">
+            <Link to="/" className="group inline-flex items-center gap-3">
+              <img
+                src="/logo.png"
+                alt="Ayyıldız İç Giyim"
+                className="h-12 w-12 sm:h-14 sm:w-14 object-contain transition-transform group-hover:scale-[1.04]"
+                draggable="false"
+              />
+              <span className="font-serif font-extrabold tracking-tight text-primary text-2xl sm:text-3xl">
+                Ayyıldız İç Giyim
+              </span>
+            </Link>
+          </div>
 
-        {/* Orta: Menü */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-          <Link to="/new" className="hover:text-accent">
-            New Arrivals
-          </Link>
+          {/* ORTA: Arama */}
+          <div className="flex justify-center">
+            <form
+              onSubmit={onSearchSubmit}
+              className="hidden md:flex items-center w-full max-w-md lg:max-w-lg rounded-full border border-border pl-3 pr-2 py-2 bg-white shadow-sm"
+            >
+              <Search className="h-4 w-4 text-secondary" />
+              <input
+                type="text"
+                placeholder="Search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="ml-2 w-full border-none text-sm outline-none placeholder:text-secondary/60"
+              />
+            </form>
 
-          <MegaMenu label="Lingerie" data={LINGERIE_DATA} />
-          <MegaMenu label="Home Textiles" data={TEXTILES_DATA} />
-          <MegaMenu label="Wedding Sets" data={WEDDING_DATA} />
+            {/* Mobile: yalnız ikon (orta konumda kalır) */}
+            <button
+              onClick={() => {
+                const query = q.trim();
+                navigate(
+                  query ? `/shop?q=${encodeURIComponent(query)}` : "/shop"
+                );
+              }}
+              className="md:hidden inline-flex rounded-full p-2 hover:bg-surface-hover"
+              aria-label="Search"
+              title="Search"
+            >
+              <Search className="h-6 w-6 text-secondary" />
+            </button>
+          </div>
 
-          <Link to="/sets" className="hover:text-accent">
-            Trousseau
-          </Link>
-          <Link to="/sale" className="text-accent hover:text-accent-hover">
-            Sale
-          </Link>
-        </nav>
+          {/* SAĞ: İkonlar */}
+          <div className="flex items-center justify-end gap-2 sm:gap-3">
+            <Link
+              to="/cart"
+              className="relative inline-flex rounded-full p-2 hover:bg-surface-hover"
+            >
+              <ShoppingBag className="h-6 w-6 text-secondary" />
+              <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-accent text-[10px] text-white">
+                2
+              </span>
+            </Link>
+            <Link
+              to="/wishlist"
+              className="inline-flex rounded-full p-2 hover:bg-surface-hover"
+            >
+              <Heart className="h-6 w-6 text-secondary" />
+            </Link>
+            <Link
+              to="/account"
+              className="inline-flex rounded-full p-2 hover:bg-surface-hover"
+            >
+              <User className="h-6 w-6 text-secondary" />
+            </Link>
+          </div>
+        </div>
+      </div>
 
-        {/* Sağ: Arama ve ikonlar */}
-        <div className="flex items-center gap-4">
-          {/* Search */}
-          <form
-            onSubmit={onSearchSubmit}
-            className="hidden sm:flex items-center rounded-full border border-border px-3 py-1"
+      {/* ALT ŞERİT: Kategori / MegaMenu */}
+      {/* ALT ŞERİT: Kategori / MegaMenu */}
+      <div className="border-t border-border/70 bg-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <nav
+            className="
+              flex items-center justify-center gap-6
+              h-14 text-sm font-medium
+              overflow-x-auto no-scrollbar
+            "
           >
-            <Search className="h-4 w-4 text-secondary" />
-            <input
-              type="text"
-              placeholder="Search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="ml-2 w-32 border-none text-sm outline-none placeholder:text-secondary/60"
-            />
-          </form>
+            <Link to="/new" className="shrink-0 hover:text-accent">
+              New Arrivals
+            </Link>
 
-          {/* Sepet */}
-          <Link to="/cart" className="relative">
-            <ShoppingBag className="h-6 w-6 text-secondary" />
-            <span className="absolute -right-2 -top-2 grid h-5 w-5 place-items-center rounded-full bg-accent text-xs text-white">
-              2
-            </span>
-          </Link>
+            <MegaMenu label="Lingerie" data={LINGERIE_DATA} />
+            <MegaMenu label="Home Textiles" data={TEXTILES_DATA} />
+            <MegaMenu label="Wedding Sets" data={WEDDING_DATA} />
 
-          {/* Favori */}
-          <Link to="/wishlist" className="inline-flex">
-            <Heart className="h-6 w-6 text-secondary" />
-          </Link>
-
-          {/* Kullanıcı */}
-          <Link to="/account" className="inline-flex">
-            <User className="h-6 w-6 text-secondary" />
-          </Link>
+            <Link to="/sets" className="shrink-0 hover:text-accent">
+              Trousseau
+            </Link>
+            <Link
+              to="/sale"
+              className="shrink-0 text-accent hover:text-accent-hover"
+            >
+              Sale
+            </Link>
+          </nav>
         </div>
       </div>
     </header>

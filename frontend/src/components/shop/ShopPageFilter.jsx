@@ -1,121 +1,243 @@
-// src/components/shop/ShopPageFilter.jsx
+import { useEffect, useState } from "react";
+
 const pillBase =
   "inline-flex items-center rounded-full border px-3 py-1.5 text-sm transition";
 const pillActive = "bg-accent border-accent text-white shadow";
 const pillIdle = "border-border text-primary hover:bg-surface-hover";
 
-const COLORS = ["#eadf7d", "#d8bfa8", "#e3cde1", "#d3d8ea", "#c7d0d0"]; // görseldeki pastel swatch’lar
+const isHexColor = (value) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value || "");
 
 export default function ShopPageFilter({
-  categories = [],
-  activeCat,
-  onCatChange,
-  size,
-  onSizeChange,
-  color,
+  categoryTree = [],
+  selectedCategory = "all",
+  onCategoryChange,
+  colors = [],
+  selectedColor = "",
   onColorChange,
-  price = 500,
+  sizes = [],
+  selectedSize = "",
+  onSizeChange,
+  priceRange = { min: 0, max: 0 },
+  selectedPrice,
   onPriceChange,
   onReset,
 }) {
+  const maxPrice = priceRange.max ?? 0;
+  const minPrice = priceRange.min ?? 0;
+  const sliderValue = selectedPrice ?? maxPrice;
+
+  const [openNodes, setOpenNodes] = useState(new Set());
+
+  useEffect(() => {
+    const initial = new Set();
+    (categoryTree || []).forEach((node) => {
+      initial.add(node.id);
+    });
+    setOpenNodes(initial);
+  }, [categoryTree]);
+
+  const toggleNode = (id) => {
+    setOpenNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   return (
-    <div className="rounded-xl bg-contact-bg p-5 ring-1 ring-border">
-      <h3 className="mb-4 text-lg font-semibold text-primary">Filters</h3>
-
-      {/* Categories */}
-      <div className="mb-6">
-        <p className="mb-2 text-sm font-medium text-primary">Categories</p>
-        <div className="flex flex-wrap gap-2">
-          {categories.map((c) => (
-            <button
-              key={c}
-              onClick={() => onCatChange(c)}
-              className={`${pillBase} ${
-                activeCat === c ? pillActive : pillIdle
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Size */}
-      <div className="mb-6">
-        <p className="mb-2 text-sm font-medium text-primary">Size</p>
-        <div className="relative">
-          <select
-            value={size}
-            onChange={(e) => onSizeChange(e.target.value)}
-            className="w-full appearance-none rounded-lg border border-border bg-white px-3 py-2 text-sm text-primary focus:outline-none"
-          >
-            <option value="">Select Size</option>
-            <option value="S">S</option>
-            <option value="M">M</option>
-            <option value="L">L</option>
-          </select>
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary">
-            ▾
-          </span>
-        </div>
-      </div>
-
-      {/* Color */}
-      <div className="mb-6">
-        <p className="mb-2 text-sm font-medium text-primary">Color</p>
-        <div className="flex items-center gap-3">
-          {COLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => onColorChange(c === color ? "" : c)}
-              className={`grid h-7 w-7 place-items-center rounded-full ring-2 transition ${
-                c === color ? "ring-accent" : "ring-border"
-              }`}
-              aria-label={c}
-            >
-              <span
-                className="h-5 w-5 rounded-full"
-                style={{ backgroundColor: c }}
-              />
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Price */}
-      <div className="mb-6">
-        <p className="mb-2 text-sm font-medium text-primary">Price Range</p>
-        <input
-          type="range"
-          min={50}
-          max={500}
-          step={10}
-          value={price}
-          onChange={(e) => onPriceChange(Number(e.target.value))}
-          className="w-full accent-accent"
-        />
-        <div className="mt-2 flex justify-between text-sm text-secondary/80">
-          <span>$50</span>
-          <span>${price}</span>
-          <span>$500</span>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="mt-6 flex gap-3">
+    <aside className="rounded-xl bg-contact-bg p-5 ring-1 ring-border">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-primary">Filters</h3>
         <button
-          onClick={() => {}}
-          className="flex-1 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover"
-        >
-          Apply Filters
-        </button>
-        <button
+          type="button"
           onClick={onReset}
-          className="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-surface-hover"
+          className="text-sm text-secondary hover:text-accent"
         >
           Reset
         </button>
       </div>
-    </div>
+
+      {/* Categories */}
+      <section className="mt-5">
+        <header className="mb-2 text-sm font-medium text-primary">
+          Categories
+        </header>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => onCategoryChange?.({ id: "all" })}
+            className={`rounded-lg px-3 py-1.5 text-left text-sm transition ${
+              selectedCategory === "all"
+                ? "bg-accent/10 text-accent"
+                : "text-primary hover:bg-surface-hover"
+            }`}
+          >
+            All products
+          </button>
+
+          <CategoryTreeList
+            tree={categoryTree}
+            selectedId={selectedCategory}
+            onSelect={(id) => onCategoryChange?.({ id })}
+            openNodes={openNodes}
+            onToggle={toggleNode}
+          />
+        </div>
+      </section>
+
+      {/* Sizes */}
+      {sizes.length > 0 && (
+        <section className="mt-6">
+          <header className="mb-2 text-sm font-medium text-primary">Size</header>
+          <div className="flex flex-wrap gap-2">
+            {sizes.map((option) => (
+              <button
+                key={option}
+                onClick={() =>
+                  onSizeChange?.(selectedSize === option ? "" : option)
+                }
+                className={`${pillBase} ${
+                  selectedSize === option ? pillActive : pillIdle
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Colors */}
+      {colors.length > 0 && (
+        <section className="mt-6">
+          <header className="mb-2 text-sm font-medium text-primary">Color</header>
+          <div className="flex flex-wrap items-center gap-3">
+            {colors.map((option) => {
+              const isActive = selectedColor === option.value;
+              const isHex = isHexColor(option.value);
+              return (
+                <button
+                  key={option.value}
+                  onClick={() =>
+                    onColorChange?.(isActive ? "" : option.value)
+                  }
+                  className={`flex items-center gap-2 rounded-full border px-3 py-1 text-sm transition ${
+                    isActive ? "border-accent bg-accent text-white" : pillIdle
+                  }`}
+                >
+                  {isHex && (
+                    <span
+                      className="inline-block h-4 w-4 rounded-full border border-border"
+                      style={{ backgroundColor: option.value }}
+                    />
+                  )}
+                  <span>{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Price */}
+      {maxPrice > 0 && (
+        <section className="mt-6">
+          <header className="mb-2 text-sm font-medium text-primary">
+            Price Range
+          </header>
+          <input
+            type="range"
+            min={minPrice}
+            max={maxPrice}
+            step={Math.max(1, Math.round((maxPrice - minPrice) / 20))}
+            value={sliderValue}
+            onChange={(event) => onPriceChange?.(Number(event.target.value))}
+            className="w-full accent-accent"
+          />
+          <div className="mt-2 flex justify-between text-sm text-secondary/80">
+            <span>{formatCurrency(minPrice)}</span>
+            <span>{formatCurrency(sliderValue)}</span>
+            <span>{formatCurrency(maxPrice)}</span>
+          </div>
+        </section>
+      )}
+    </aside>
   );
+}
+
+function CategoryTreeList({ tree = [], selectedId, onSelect, openNodes, onToggle, depth = 0 }) {
+  if (!tree?.length) return null;
+  return (
+    <ul className="space-y-1">
+      {tree.map((node) => (
+        <CategoryTreeItem
+          key={node.id}
+          node={node}
+          depth={depth}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          openNodes={openNodes}
+          onToggle={onToggle}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function CategoryTreeItem({ node, depth, selectedId, onSelect, openNodes, onToggle }) {
+  const hasChildren = node.children && node.children.length > 0;
+  const isOpen = openNodes.has(node.id);
+  const isActive = String(selectedId) === String(node.id);
+
+  return (
+    <li>
+      <div
+        className={`flex items-center rounded-lg px-2 py-1 transition ${
+          isActive ? "bg-accent/10 text-accent" : "hover:bg-surface-hover"
+        }`}
+        style={{ paddingLeft: depth * 14 + 8 }}
+      >
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={() => onToggle(node.id)}
+            className="mr-2 text-xs text-secondary"
+            aria-label={isOpen ? "Collapse" : "Expand"}
+          >
+            {isOpen ? "–" : "+"}
+          </button>
+        ) : (
+          <span className="mr-2 text-xs text-secondary">•</span>
+        )}
+        <button
+          type="button"
+          onClick={() => onSelect?.(node.id)}
+          className={`flex-1 text-left text-sm ${
+            isActive ? "font-semibold text-accent" : "text-primary"
+          }`}
+        >
+          {node.name}
+        </button>
+      </div>
+      {hasChildren && isOpen && (
+        <CategoryTreeList
+          tree={node.children}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          openNodes={openNodes}
+          onToggle={onToggle}
+          depth={depth + 1}
+        />
+      )}
+    </li>
+  );
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 }

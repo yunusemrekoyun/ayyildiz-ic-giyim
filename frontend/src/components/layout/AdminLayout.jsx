@@ -68,7 +68,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
       label: "Catalog",
       items: [
         { to: "/admin/products", label: "Products", Icon: Package },
-        { to: "/admin/tags", label: "Tags", Icon: Tags },
+        { to: "/admin/categories", label: "Categories", Icon: Tags },
         { to: "/admin/media", label: "Media", Icon: Images },
       ],
     },

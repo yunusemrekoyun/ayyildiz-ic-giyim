@@ -11,6 +11,9 @@ import AboutPage from "./pages/AboutPage";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminCategories from "./pages/admin/AdminCategories";
+import AdminMedia from "./pages/admin/AdminMedia";
 
 export default function App() {
   return (
@@ -34,8 +37,9 @@ export default function App() {
           />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
-
-          <Route path="/admin/products" element={<div>Admin Products</div>} />
+          <Route path="/admin/products" element={<AdminProducts />} />
+          <Route path="/admin/categories" element={<AdminCategories />} />
+          <Route path="/admin/media" element={<AdminMedia />} />
         </Route>
       </Routes>
     </BrowserRouter>

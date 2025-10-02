@@ -6,6 +6,7 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import { connectDB } from "./config/db.js";
 import apiRoutes from "./routes/index.js";
+import { configureCloudinary } from "./config/cloudinary.js";
 
 const app = express();
 
@@ -20,6 +21,8 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
+
+configureCloudinary();
 
 app.use("/api", apiRoutes);
 

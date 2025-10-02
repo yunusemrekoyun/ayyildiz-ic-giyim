@@ -5,16 +5,25 @@ async function http(
   path,
   { method = "GET", body, headers = {}, auth = false, retry = true } = {}
 ) {
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
+
+  const resolvedHeaders = {
+    ...(!isFormData && body ? { "Content-Type": "application/json" } : {}),
+    ...(auth && getAccessToken()
+      ? { Authorization: `Bearer ${getAccessToken()}` }
+      : {}),
+    ...headers,
+  };
+
   const res = await fetch(BASE_URL + path, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(auth && getAccessToken()
-        ? { Authorization: `Bearer ${getAccessToken()}` }
-        : {}),
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: resolvedHeaders,
+    body: body
+      ? isFormData
+        ? body
+        : JSON.stringify(body)
+      : undefined,
     credentials: "include", // refresh cookie için
   });
 
@@ -29,6 +38,17 @@ async function http(
   }
   return res.json();
 }
+
+const toQueryString = (params = {}) => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    if (value === "") return;
+    search.append(key, value);
+  });
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+};
 
 /* ---------- helpers ---------- */
 const ACCESS_KEY = "accessToken";
@@ -106,9 +126,185 @@ export async function refreshAccessToken() {
   return false;
 }
 
+const toJsonArray = (value) => {
+  if (!value) return "[]";
+  if (Array.isArray(value)) {
+    const arr = value.map((item) => `${item}`.trim()).filter(Boolean);
+    return JSON.stringify(arr);
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  return JSON.stringify([]);
+};
+
+export const categoryApi = {
+  async list(params = {}) {
+    const qs = toQueryString(params);
+    const data = await http(`/categories${qs}`, { auth: true });
+    return data.categories || [];
+  },
+  async tree() {
+    const data = await http("/categories/tree", { auth: true });
+    return data.categories || [];
+  },
+  async get(idOrSlug) {
+    const data = await http(`/categories/${idOrSlug}`, { auth: true });
+    return data.category;
+  },
+  async create(payload) {
+    const form = new FormData();
+    form.append("name", payload.name.trim());
+    if (payload.parent) form.append("parent", payload.parent);
+    if (payload.image) form.append("image", payload.image);
+    const data = await http("/categories", {
+      method: "POST",
+      body: form,
+      auth: true,
+    });
+    return data.category;
+  },
+  async update(idOrSlug, payload) {
+    const form = new FormData();
+    if (payload.name !== undefined) form.append("name", payload.name.trim());
+    if (payload.parent !== undefined)
+      form.append("parent", payload.parent || "");
+    if (payload.image) form.append("image", payload.image);
+    if (payload.removeImage !== undefined)
+      form.append("removeImage", payload.removeImage ? "true" : "false");
+    const data = await http(`/categories/${idOrSlug}`, {
+      method: "PATCH",
+      body: form,
+      auth: true,
+    });
+    return data.category;
+  },
+  async remove(idOrSlug) {
+    return http(`/categories/${idOrSlug}`, {
+      method: "DELETE",
+      auth: true,
+    });
+  },
+};
+
+export const productApi = {
+  async list(params = {}) {
+    const qs = toQueryString(params);
+    const data = await http(`/products${qs}`, { auth: true });
+    return data;
+  },
+  async get(idOrSlug) {
+    const data = await http(`/products/${idOrSlug}`, { auth: true });
+    return data.product;
+  },
+  async create(payload) {
+    const form = new FormData();
+    form.append("name", payload.name.trim());
+    form.append("price", String(payload.price));
+    if (payload.description)
+      form.append("description", payload.description.trim());
+    if (payload.careInstructions)
+      form.append("careInstructions", payload.careInstructions.trim());
+    if (payload.details)
+      form.append("details", toJsonArray(payload.details));
+    if (payload.colors)
+      form.append("colors", toJsonArray(payload.colors));
+    if (payload.sizes) form.append("sizes", toJsonArray(payload.sizes));
+    if (payload.category) form.append("category", payload.category);
+    if (payload.isActive !== undefined)
+      form.append("isActive", payload.isActive ? "true" : "false");
+    if (payload.showColors !== undefined)
+      form.append("showColors", payload.showColors ? "true" : "false");
+    if (payload.showSizes !== undefined)
+      form.append("showSizes", payload.showSizes ? "true" : "false");
+    if (payload.customAttribute)
+      form.append("customAttribute", JSON.stringify(payload.customAttribute));
+    if (payload.inventory)
+      form.append("inventory", JSON.stringify(payload.inventory));
+    (payload.images || []).forEach((file) => form.append("images", file));
+
+    const data = await http("/products", {
+      method: "POST",
+      body: form,
+      auth: true,
+    });
+    return data.product;
+  },
+  async update(idOrSlug, payload) {
+    const form = new FormData();
+    if (payload.name !== undefined) form.append("name", payload.name.trim());
+    if (payload.price !== undefined)
+      form.append("price", String(payload.price));
+    if (payload.description !== undefined)
+      form.append("description", payload.description.trim());
+    if (payload.careInstructions !== undefined)
+      form.append("careInstructions", payload.careInstructions.trim());
+    if (payload.details !== undefined)
+      form.append("details", toJsonArray(payload.details));
+    if (payload.colors !== undefined)
+      form.append("colors", toJsonArray(payload.colors));
+    if (payload.sizes !== undefined)
+      form.append("sizes", toJsonArray(payload.sizes));
+    if (payload.category !== undefined)
+      form.append("category", payload.category || "");
+    if (payload.isActive !== undefined)
+      form.append("isActive", payload.isActive ? "true" : "false");
+    if (payload.showColors !== undefined)
+      form.append("showColors", payload.showColors ? "true" : "false");
+    if (payload.showSizes !== undefined)
+      form.append("showSizes", payload.showSizes ? "true" : "false");
+    if (payload.customAttribute !== undefined)
+      form.append("customAttribute", JSON.stringify(payload.customAttribute));
+    (payload.images || []).forEach((file) => form.append("images", file));
+    if (payload.removeImagePublicIds?.length) {
+      form.append(
+        "removeImagePublicIds",
+        toJsonArray(payload.removeImagePublicIds)
+      );
+    }
+    if (payload.inventory !== undefined)
+      form.append("inventory", JSON.stringify(payload.inventory));
+
+    const data = await http(`/products/${idOrSlug}`, {
+      method: "PUT",
+      body: form,
+      auth: true,
+    });
+    return data.product;
+  },
+  async remove(idOrSlug) {
+    return http(`/products/${idOrSlug}`, {
+      method: "DELETE",
+      auth: true,
+    });
+  },
+};
+
+export const mediaApi = {
+  async usage() {
+    const data = await http("/media/usage", { auth: true });
+    return data.usage;
+  },
+  async list(params = {}) {
+    const qs = toQueryString(params);
+    const data = await http(`/media/resources${qs}`, { auth: true });
+    return data;
+  },
+  async remove(publicId, params = {}) {
+    const qs = toQueryString(params);
+    return http(`/media/resources/${encodeURIComponent(publicId)}${qs}`, {
+      method: "DELETE",
+      auth: true,
+    });
+  },
+};
+
 export default {
   http,
   authApi,
+  categoryApi,
+  productApi,
+  mediaApi,
   getAccessToken,
   setAccessToken,
   getUser,
