@@ -19,7 +19,7 @@ export default function ProductDetail({ product = {} }) {
     return imgs;
   }, [product.images]);
 
-  const inventory = product.inventory || [];
+  const inventory = useMemo(() => product.inventory || [], [product.inventory]);
 
   const colorOptions = useMemo(() => {
     if (product.showColors === false) return [];

@@ -36,6 +36,17 @@ export default function ShopPageFilter({
     setOpenNodes(initial);
   }, [categoryTree]);
 
+  useEffect(() => {
+    if (!selectedCategory || selectedCategory === "all") return;
+    const pathIds = findCategoryPath(categoryTree, selectedCategory);
+    if (!pathIds.length) return;
+    setOpenNodes((prev) => {
+      const next = new Set(prev);
+      pathIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [categoryTree, selectedCategory]);
+
   const toggleNode = (id) => {
     setOpenNodes((prev) => {
       const next = new Set(prev);
@@ -240,4 +251,18 @@ function formatCurrency(value) {
     currency: "EUR",
     maximumFractionDigits: 0,
   }).format(value || 0);
+}
+
+function findCategoryPath(tree = [], targetId) {
+  const stack = tree.map((node) => ({ node, path: [node.id] }));
+  while (stack.length) {
+    const { node, path } = stack.pop();
+    if (String(node.id) === String(targetId)) return path;
+    if (node.children?.length) {
+      node.children.forEach((child) => {
+        stack.push({ node: child, path: [...path, child.id] });
+      });
+    }
+  }
+  return [];
 }

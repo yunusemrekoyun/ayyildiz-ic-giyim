@@ -47,6 +47,7 @@ export function mapCategoryTree(tree = [], depth = 0) {
     name: node.name,
     slug: node.slug,
     level: depth,
+     image: node.image?.url || node.image || null,
     children: node.children ? mapCategoryTree(node.children, depth + 1) : [],
   }));
 }

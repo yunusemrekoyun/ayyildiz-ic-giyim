@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import ShopPageFilter from "../components/shop/ShopPageFilter";
 import ShopPageProducts from "../components/shop/ShopPageProducts";
@@ -6,6 +7,7 @@ import { categoryApi, productApi } from "../api";
 import { mapCategoryTree } from "../utils/catalog";
 
 export default function ShopPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [categoryTree, setCategoryTree] = useState([]);
@@ -53,8 +55,17 @@ export default function ShopPage() {
   }, [products]);
 
   useEffect(() => {
-    if (priceRange.max > 0) setSelectedPrice(priceRange.max);
-  }, [priceRange.max]);
+    const categoryParam = searchParams.get("category");
+    setSelectedCategory(categoryParam || "all");
+
+    const priceParam = searchParams.get("price");
+    if (priceParam) {
+      const next = Number(priceParam);
+      setSelectedPrice(Number.isFinite(next) ? next : priceRange.max);
+    } else if (priceRange.max > 0) {
+      setSelectedPrice(priceRange.max);
+    }
+  }, [searchParams, priceRange.max]);
 
   const availableColors = useMemo(() => {
     const map = new Map();
@@ -115,11 +126,31 @@ export default function ShopPage() {
     });
   }, [products, selectedCategory, selectedColor, selectedSize, selectedPrice]);
 
+  const handleCategoryChange = (id) => {
+    setSelectedCategory(id);
+    const params = new URLSearchParams(searchParams);
+    if (!id || id === "all") params.delete("category");
+    else params.set("category", id);
+    setSearchParams(params);
+  };
+
+  const handlePriceChange = (value) => {
+    setSelectedPrice(value);
+    const params = new URLSearchParams(searchParams);
+    if (!value || value >= priceRange.max) params.delete("price");
+    else params.set("price", String(value));
+    setSearchParams(params);
+  };
+
   const handleReset = () => {
     setSelectedCategory("all");
     setSelectedColor("");
     setSelectedSize("");
     setSelectedPrice(priceRange.max);
+    const params = new URLSearchParams(searchParams);
+    params.delete("category");
+    params.delete("price");
+    setSearchParams(params);
   };
 
   return (
@@ -147,7 +178,7 @@ export default function ShopPage() {
           <ShopPageFilter
             categoryTree={categoryTree}
             selectedCategory={selectedCategory}
-            onCategoryChange={(category) => setSelectedCategory(category.id)}
+            onCategoryChange={(category) => handleCategoryChange(category.id)}
             colors={availableColors}
             selectedColor={selectedColor}
             onColorChange={setSelectedColor}
@@ -156,7 +187,7 @@ export default function ShopPage() {
             onSizeChange={setSelectedSize}
             priceRange={priceRange}
             selectedPrice={selectedPrice}
-            onPriceChange={setSelectedPrice}
+            onPriceChange={handlePriceChange}
             onReset={handleReset}
           />
         </div>

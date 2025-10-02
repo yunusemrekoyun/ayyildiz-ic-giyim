@@ -6,6 +6,7 @@ export default function HomeProducts({
   items = [],
   variant = "boxed", // "boxed" | "merge-top" | "merge-bottom"
   className = "",
+  loading = false,
 }) {
   const isBoxed = variant === "boxed";
   const innerPad = "px-4 py-12 sm:px-6 lg:px-8";
@@ -17,11 +18,7 @@ export default function HomeProducts({
         <h2 className="mb-8 text-center font-serif text-3xl font-bold tracking-tight text-primary">
           {title}
         </h2>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((p, i) => (
-            <HomeProductItem key={i} {...p} />
-          ))}
-        </div>
+        <ProductGrid items={items} loading={loading} />
       </div>
     );
   }
@@ -36,12 +33,39 @@ export default function HomeProducts({
           {title}
         </h2>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((p, i) => (
-            <HomeProductItem key={i} {...p} />
-          ))}
-        </div>
+        <ProductGrid items={items} loading={loading} />
       </div>
     </section>
+  );
+}
+
+function ProductGrid({ items, loading }) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="h-72 animate-pulse rounded-2xl bg-white/60"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className="grid place-items-center rounded-xl border border-dashed border-border p-10 text-secondary">
+        Products coming soon.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {items.map((item, index) => (
+        <HomeProductItem key={index} {...item} />
+      ))}
+    </div>
   );
 }

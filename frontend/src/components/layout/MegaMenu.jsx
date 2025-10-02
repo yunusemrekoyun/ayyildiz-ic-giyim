@@ -1,11 +1,20 @@
 // src/components/nav/MegaMenu.jsx
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
-export default function MegaMenu({ label, data = [] }) {
+export default function MegaMenu({ label, data = [], onRootClick }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const closeTimer = useRef(null);
+
+  useEffect(() => {
+    if (!data.length) {
+      setActive(0);
+      return;
+    }
+    const firstWithChildren = data.findIndex((item) => item.children?.length);
+    setActive(firstWithChildren >= 0 ? firstWithChildren : 0);
+  }, [data]);
 
   const openMenu = () => {
     clearTimeout(closeTimer.current);
@@ -27,6 +36,10 @@ export default function MegaMenu({ label, data = [] }) {
         className="text-sm font-medium hover:text-accent focus:outline-none py-3"
         aria-haspopup="true"
         aria-expanded={open}
+        onClick={() => {
+          if (onRootClick) onRootClick();
+          setOpen(false);
+        }}
       >
         {label}
       </button>
@@ -47,7 +60,7 @@ export default function MegaMenu({ label, data = [] }) {
               {data.map((item, i) => {
                 const isActive = i === active;
                 return (
-                  <li key={item.title}>
+                  <li key={item.key || item.title}>
                     <Link
                       to={item.to ?? "#"}
                       onMouseEnter={() => setActive(i)}
@@ -90,7 +103,7 @@ function RightPanel({ items }) {
     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
       {items.map((c) => (
         <Link
-          key={c.title}
+          key={c.key || c.title}
           to={c.to ?? "#"}
           className="group flex gap-3 overflow-hidden rounded-lg border border-border/60 bg-white p-3 hover:shadow-sm"
         >

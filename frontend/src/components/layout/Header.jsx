@@ -1,163 +1,44 @@
 // src/components/Header.jsx
 import { Link, useNavigate } from "react-router-dom";
 import { Search, ShoppingBag, Heart, User } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import MegaMenu from "./MegaMenu";
-import { useState } from "react";
-
-/* --------- Menüler --------- */
-const LINGERIE_DATA = [
-  {
-    title: "Bras & Bralettes",
-    to: "/lingerie/bras",
-    children: [
-      {
-        title: "Lace Bras",
-        to: "/lingerie/bras/lace",
-        image: "/na-1.jpg",
-        description: "Romantic lace support",
-      },
-      {
-        title: "Wireless",
-        to: "/lingerie/bras/wireless",
-        image: "/bs-1.jpg",
-        description: "Everyday comfort",
-      },
-      {
-        title: "Sports Bras",
-        to: "/lingerie/bras/sports",
-        image: "/cat-1.jpg",
-        description: "Active support",
-      },
-      {
-        title: "Strapless",
-        to: "/lingerie/bras/strapless",
-        image: "/cat-2.jpg",
-        description: "Perfect under dresses",
-      },
-    ],
-  },
-  {
-    title: "Panties",
-    to: "/lingerie/panties",
-    children: [
-      { title: "Bikini", to: "/lingerie/panties/bikini", image: "/na-2.jpg" },
-      {
-        title: "High-Waist",
-        to: "/lingerie/panties/highwaist",
-        image: "/bs-2.jpg",
-      },
-      {
-        title: "Seamless",
-        to: "/lingerie/panties/seamless",
-        image: "/cat-3.jpg",
-      },
-      { title: "Cotton", to: "/lingerie/panties/cotton", image: "/cat-4.jpg" },
-    ],
-  },
-  {
-    title: "Nightwear",
-    to: "/lingerie/nightwear",
-    children: [
-      {
-        title: "Silk Chemise",
-        to: "/lingerie/nightwear/chemise",
-        image: "/bs-3.jpg",
-      },
-      {
-        title: "Satin PJ Sets",
-        to: "/lingerie/nightwear/pj",
-        image: "/na-3.jpg",
-      },
-      {
-        title: "Robes & Kimonos",
-        to: "/lingerie/nightwear/robes",
-        image: "/cmp-1.jpg",
-      },
-      {
-        title: "Bridal Nightwear",
-        to: "/lingerie/nightwear/bridal",
-        image: "/cmp-2.jpg",
-      },
-    ],
-  },
-];
-
-const TEXTILES_DATA = [
-  {
-    title: "Bedding",
-    to: "/home-textiles/bedding",
-    children: [
-      {
-        title: "Duvet Covers",
-        to: "/home-textiles/bedding/duvet",
-        image: "/set-bedroom-1.jpg",
-      },
-      {
-        title: "Sheets",
-        to: "/home-textiles/bedding/sheets",
-        image: "/set-bedroom-2.jpg",
-      },
-      {
-        title: "Pillows",
-        to: "/home-textiles/bedding/pillows",
-        image: "/na-2.jpg",
-      },
-    ],
-  },
-  {
-    title: "Bath",
-    to: "/home-textiles/bath",
-    children: [
-      {
-        title: "Towel Sets",
-        to: "/home-textiles/bath/towels",
-        image: "/set-bath-1.jpg",
-      },
-      {
-        title: "Bath Mats",
-        to: "/home-textiles/bath/mats",
-        image: "/set-bath-2.jpg",
-      },
-    ],
-  },
-];
-
-const WEDDING_DATA = [
-  {
-    title: "Bridal Sets",
-    to: "/wedding-sets/bridal",
-    children: [
-      {
-        title: "Deluxe",
-        to: "/wedding-sets/bridal/deluxe",
-        image: "/set-bridal-1.jpg",
-      },
-      {
-        title: "Essential",
-        to: "/wedding-sets/bridal/essential",
-        image: "/set-bridal-2.jpg",
-      },
-    ],
-  },
-  {
-    title: "Trousseau Packages",
-    to: "/sets",
-    children: [
-      { title: "Signature Mix", to: "/sets#mix", image: "/set-mix-1.jpg" },
-      {
-        title: "Premium Bedroom",
-        to: "/sets#bedroom",
-        image: "/set-bedroom-1.jpg",
-      },
-    ],
-  },
-];
-
-/* ----------------------------------- */
+import { categoryApi } from "../../api";
+import { mapCategoryTree } from "../../utils/catalog";
 
 export default function Header() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [categoryTree, setCategoryTree] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [navError, setNavError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const tree = await categoryApi.tree();
+        if (!mounted) return;
+        setCategoryTree(mapCategoryTree(tree));
+      } catch (error) {
+        if (mounted) setNavError(error);
+      } finally {
+        if (mounted) setLoadingCategories(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const navigationItems = useMemo(() => {
+    return (categoryTree || []).map((node) => ({
+      id: node.id,
+      label: node.name,
+      hasChildren: node.children && node.children.length > 0,
+      menu: buildMegaMenuData(node),
+    }));
+  }, [categoryTree]);
 
   const onSearchSubmit = (e) => {
     e.preventDefault();
@@ -256,17 +137,31 @@ export default function Header() {
               overflow-x-auto no-scrollbar
             "
           >
-            <Link to="/new" className="shrink-0 hover:text-accent">
-              New Arrivals
-            </Link>
-
-            <MegaMenu label="Lingerie" data={LINGERIE_DATA} />
-            <MegaMenu label="Home Textiles" data={TEXTILES_DATA} />
-            <MegaMenu label="Wedding Sets" data={WEDDING_DATA} />
-
-            <Link to="/sets" className="shrink-0 hover:text-accent">
-              Trousseau
-            </Link>
+            {loadingCategories && (
+              <span className="text-sm text-secondary">Loading...</span>
+            )}
+            {!loadingCategories && navError && (
+              <span className="text-sm text-secondary">Categories unavailable</span>
+            )}
+            {!loadingCategories && !navError &&
+              navigationItems.map((item) =>
+                item.hasChildren ? (
+                  <MegaMenu
+                    key={item.id}
+                    label={item.label}
+                    data={item.menu}
+                    onRootClick={() => navigate(`/shop?category=${item.id}`)}
+                  />
+                ) : (
+                  <Link
+                    key={item.id}
+                    to={`/shop?category=${item.id}`}
+                    className="shrink-0 hover:text-accent"
+                  >
+                    {item.label}
+                  </Link>
+                )
+              )}
             <Link
               to="/sale"
               className="shrink-0 text-accent hover:text-accent-hover"
@@ -278,4 +173,30 @@ export default function Header() {
       </div>
     </header>
   );
+}
+
+function buildMegaMenuData(node) {
+  const children = node.children || [];
+  if (!children.length) return [];
+
+  return [
+    {
+      title: `View all ${node.name}`,
+      to: `/shop?category=${node.id}`,
+      key: `${node.id}-all`,
+      children: [],
+    },
+    ...children.map((child) => ({
+      title: child.name,
+      to: `/shop?category=${child.id}`,
+      key: child.id,
+      image: child.image,
+      children: (child.children || []).map((grand) => ({
+        title: grand.name,
+        to: `/shop?category=${grand.id}`,
+        key: grand.id,
+        image: grand.image,
+      })),
+    })),
+  ];
 }
