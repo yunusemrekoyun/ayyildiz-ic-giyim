@@ -69,6 +69,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
       items: [
         { to: "/admin/products", label: "Products", Icon: Package },
         { to: "/admin/categories", label: "Categories", Icon: Tags },
+        { to: "/admin/sets", label: "Sets", Icon: Images },
         { to: "/admin/media", label: "Media", Icon: Images },
       ],
     },

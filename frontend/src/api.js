@@ -217,6 +217,11 @@ export const productApi = {
       form.append("showColors", payload.showColors ? "true" : "false");
     if (payload.showSizes !== undefined)
       form.append("showSizes", payload.showSizes ? "true" : "false");
+    if (payload.listedInCatalog !== undefined)
+      form.append(
+        "listedInCatalog",
+        payload.listedInCatalog ? "true" : "false"
+      );
     if (payload.customAttribute)
       form.append("customAttribute", JSON.stringify(payload.customAttribute));
     if (payload.inventory)
@@ -253,6 +258,11 @@ export const productApi = {
       form.append("showColors", payload.showColors ? "true" : "false");
     if (payload.showSizes !== undefined)
       form.append("showSizes", payload.showSizes ? "true" : "false");
+    if (payload.listedInCatalog !== undefined)
+      form.append(
+        "listedInCatalog",
+        payload.listedInCatalog ? "true" : "false"
+      );
     if (payload.customAttribute !== undefined)
       form.append("customAttribute", JSON.stringify(payload.customAttribute));
     (payload.images || []).forEach((file) => form.append("images", file));
@@ -280,6 +290,27 @@ export const productApi = {
   },
 };
 
+export const userApi = {
+  async list(params = {}) {
+    const qs = toQueryString(params);
+    return http(`/users${qs}`, { auth: true });
+  },
+  async get(idOrKey) {
+    const data = await http(`/users/${encodeURIComponent(idOrKey)}`, {
+      auth: true,
+    });
+    return data.user;
+  },
+  async update(idOrKey, payload) {
+    const data = await http(`/users/${encodeURIComponent(idOrKey)}`, {
+      method: "PATCH",
+      body: payload,
+      auth: true,
+    });
+    return data.user;
+  },
+};
+
 export const mediaApi = {
   async usage() {
     const data = await http("/media/usage", { auth: true });
@@ -299,15 +330,79 @@ export const mediaApi = {
   },
 };
 
+export const setApi = {
+  async list(params = {}) {
+    const qs = toQueryString(params);
+    const data = await http(`/sets${qs}`, { auth: true });
+    return data.sets || [];
+  },
+  async get(idOrSlug) {
+    const data = await http(`/sets/${idOrSlug}`, { auth: true });
+    return data.set;
+  },
+  async create(payload) {
+    const form = buildSetFormData(payload);
+    const data = await http("/sets", {
+      method: "POST",
+      body: form,
+      auth: true,
+    });
+    return data;
+  },
+  async update(idOrSlug, payload) {
+    const form = buildSetFormData(payload);
+    const data = await http(`/sets/${idOrSlug}`, {
+      method: "PUT",
+      body: form,
+      auth: true,
+    });
+    return data;
+  },
+  async remove(idOrSlug) {
+    return http(`/sets/${idOrSlug}`, {
+      method: "DELETE",
+      auth: true,
+    });
+  },
+};
+
 export default {
   http,
   authApi,
   categoryApi,
   productApi,
+  userApi,
   mediaApi,
+  setApi,
   getAccessToken,
   setAccessToken,
   getUser,
   setUser,
   refreshAccessToken,
 };
+
+function buildSetFormData(payload = {}) {
+  const form = new FormData();
+  if (payload.name !== undefined) form.append("name", payload.name.trim());
+  if (payload.description !== undefined)
+    form.append("description", payload.description.trim());
+  if (payload.price !== undefined)
+    form.append("price", String(payload.price));
+  if (payload.show !== undefined)
+    form.append("show", payload.show ? "true" : "false");
+
+  if (payload.products) {
+    form.append("products", JSON.stringify(payload.products));
+  }
+
+  (payload.images || []).forEach((file) => form.append("images", file));
+
+  if (payload.removeImagePublicIds?.length) {
+    form.append(
+      "removeImagePublicIds",
+      JSON.stringify(payload.removeImagePublicIds)
+    );
+  }
+
+  return form;
+}

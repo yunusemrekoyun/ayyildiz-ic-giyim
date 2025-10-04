@@ -52,6 +52,7 @@ const ProductSchema = new mongoose.Schema(
       default: null,
     },
     isActive: { type: Boolean, default: true },
+    listedInCatalog: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

@@ -14,6 +14,8 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminMedia from "./pages/admin/AdminMedia";
+import AdminSets from "./pages/admin/AdminSets";
+import AdminCustomers from "./pages/admin/AdminCustomers";
 
 export default function App() {
   return (
@@ -40,6 +42,8 @@ export default function App() {
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/categories" element={<AdminCategories />} />
           <Route path="/admin/media" element={<AdminMedia />} />
+          <Route path="/admin/sets" element={<AdminSets />} />
+          <Route path="/admin/customers" element={<AdminCustomers />} />
         </Route>
       </Routes>
     </BrowserRouter>

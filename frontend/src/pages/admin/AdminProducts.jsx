@@ -57,6 +57,7 @@ export default function AdminProducts() {
         limit: pagination.limit,
         search: debouncedSearch,
         category: categoryFilter,
+        includeHidden: true,
       });
       setProducts(data.products || []);
       setPagination(data.pagination || { page: 1, pages: 1, limit: 20, total: 0 });

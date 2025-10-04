@@ -4,149 +4,22 @@ import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
 } from "../utils/cloudinaryUpload.js";
+import {
+  normalizeArray,
+  parseBoolean,
+  parseAttribute,
+  parseInventory,
+  sanitizeOption,
+  shapeProduct,
+} from "../utils/productHelpers.js";
 
 const isValidObjectId = (val) =>
   typeof val === "string" && val.match(/^[0-9a-fA-F]{24}$/);
-
-const normalizeArray = (value) => {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.filter(Boolean).map((v) => String(v).trim());
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return [];
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed))
-        return parsed.filter(Boolean).map((v) => String(v).trim());
-    } catch (_) {
-      // not JSON
-    }
-    return trimmed
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return [];
-};
 
 const normalizeDetails = (value) => {
   const arr = normalizeArray(value);
   return arr.map((item) => String(item));
 };
-
-const parseBoolean = (value, fallback = false) => {
-  if (value === undefined || value === null) return fallback;
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value === "string") {
-    const lower = value.trim().toLowerCase();
-    if (["true", "1", "yes", "on"].includes(lower)) return true;
-    if (["false", "0", "no", "off"].includes(lower)) return false;
-  }
-  return fallback;
-};
-
-const parseAttribute = (value) => {
-  if (!value) return { title: "", values: [], show: false };
-  let payload = value;
-  if (typeof value === "string") {
-    try {
-      payload = JSON.parse(value);
-    } catch (error) {
-      return { title: value, values: [], show: true };
-    }
-  }
-  if (typeof payload !== "object" || Array.isArray(payload)) {
-    return { title: "", values: [], show: false };
-  }
-  const title = String(payload.title || "").trim();
-  let values = [];
-  if (Array.isArray(payload.values)) {
-    values = payload.values.map((item) => String(item).trim()).filter(Boolean);
-  } else if (typeof payload.values === "string") {
-    values = payload.values
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-  return {
-    title,
-    values,
-    show: parseBoolean(payload.show, true),
-  };
-};
-
-const parseInventory = (value) => {
-  if (!value) return [];
-  let payload = value;
-  if (typeof value === "string") {
-    try {
-      payload = JSON.parse(value);
-    } catch (error) {
-      return [];
-    }
-  }
-  if (!Array.isArray(payload)) return [];
-
-  const map = new Map();
-  payload.forEach((item) => {
-    if (!item) return;
-    const color = sanitizeOption(item.color);
-    const size = sanitizeOption(item.size);
-    const attributeValue = sanitizeOption(item.attributeValue);
-    const stock = Number(item.stock);
-    const safeStock = Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : 0;
-    const key = [color || "", size || "", attributeValue || ""].join("||");
-    map.set(key, {
-      color: color ?? null,
-      size: size ?? null,
-      attributeValue: attributeValue ?? null,
-      stock: safeStock,
-    });
-  });
-
-  return Array.from(map.values());
-};
-
-function sanitizeOption(value) {
-  if (value === undefined || value === null) return null;
-  const trimmed = String(value).trim();
-  return trimmed ? trimmed : null;
-}
-
-const shapeProduct = (doc) => ({
-  id: doc._id,
-  name: doc.name,
-  slug: doc.slug,
-  price: doc.price,
-  images: doc.images,
-  colors: doc.colors,
-  sizes: doc.sizes,
-  showColors: doc.showColors !== undefined ? doc.showColors : true,
-  showSizes: doc.showSizes !== undefined ? doc.showSizes : true,
-  customAttribute: doc.customAttribute
-    ? {
-        title: doc.customAttribute.title || "",
-        values: doc.customAttribute.values || [],
-        show: Boolean(doc.customAttribute.show),
-      }
-    : { title: "", values: [], show: false },
-  inventory: Array.isArray(doc.inventory)
-    ? doc.inventory.map((item) => ({
-        color: item?.color ?? null,
-        size: item?.size ?? null,
-        attributeValue: item?.attributeValue ?? null,
-        stock: Number(item?.stock) || 0,
-      }))
-    : [],
-  description: doc.description,
-  careInstructions: doc.careInstructions,
-  details: doc.details,
-  category: doc.category,
-  isActive: doc.isActive,
-  createdAt: doc.createdAt,
-  updatedAt: doc.updatedAt,
-});
 
 async function resolveCategory(category) {
   if (!category) return null;
@@ -223,6 +96,7 @@ export async function createProduct(req, res) {
       showSizes: parseBoolean(showSizes, true),
       customAttribute: parseAttribute(customAttribute),
       inventory: parseInventory(inventory),
+      listedInCatalog: parseBoolean(req.body.listedInCatalog, true),
       images,
     });
 
@@ -240,6 +114,7 @@ export async function listProducts(req, res) {
     const pageSize = Math.min(100, Math.max(1, Number(limit)));
 
     const filter = {};
+    const includeHidden = parseBoolean(req.query.includeHidden, false);
 
     if (search) {
       filter.name = { $regex: search, $options: "i" };
@@ -251,14 +126,16 @@ export async function listProducts(req, res) {
       filter.category = { $in: [categoryDoc._id, ...descendantIds] };
     }
 
+    const mongoFilter = includeHidden ? filter : { ...filter, listedInCatalog: true };
+
     const [items, total] = await Promise.all([
-      Product.find(filter)
+      Product.find(mongoFilter)
         .sort({ createdAt: -1 })
         .skip((pageNumber - 1) * pageSize)
         .limit(pageSize)
         .populate("category")
         .lean(),
-      Product.countDocuments(filter),
+      Product.countDocuments(mongoFilter),
     ]);
 
     res.json({
@@ -316,6 +193,7 @@ export async function updateProduct(req, res) {
       showSizes,
       customAttribute,
       inventory,
+      listedInCatalog,
     } = req.body;
 
     const product = isValidObjectId(idOrSlug)
@@ -351,6 +229,11 @@ export async function updateProduct(req, res) {
       product.customAttribute = parseAttribute(customAttribute);
     if (inventory !== undefined)
       product.inventory = parseInventory(inventory);
+    if (listedInCatalog !== undefined)
+      product.listedInCatalog = parseBoolean(
+        listedInCatalog,
+        product.listedInCatalog
+      );
 
     if (category !== undefined) {
       if (!category) product.category = null;

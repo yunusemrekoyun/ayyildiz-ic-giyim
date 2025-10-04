@@ -2,6 +2,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { shapeUser } from "../utils/userPresenter.js";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
@@ -26,18 +27,6 @@ function setRefreshCookie(res, token) {
     path: "/api/auth/refresh",
     maxAge: 1000 * 60 * 60 * 24 * 30, // tarayıcı süresi (server tarafı JWT already has exp)
   });
-}
-
-function userSafe(u) {
-  return {
-    id: u._id,
-    firstName: u.firstName,
-    lastName: u.lastName,
-    email: u.email,
-    phone: u.phone,
-    role: u.role,
-    createdAt: u.createdAt,
-  };
 }
 
 /** POST /api/auth/register */
@@ -69,7 +58,7 @@ export const register = async (req, res) => {
   setRefreshCookie(res, refreshToken);
   res
     .status(201)
-    .json({ user: userSafe(user), accessToken, expiresIn: ACCESS_EXPIRES });
+    .json({ user: shapeUser(user), accessToken, expiresIn: ACCESS_EXPIRES });
 };
 
 /** POST /api/auth/login */
@@ -93,7 +82,7 @@ export const login = async (req, res) => {
   await user.save();
 
   setRefreshCookie(res, refreshToken);
-  res.json({ user: userSafe(user), accessToken, expiresIn: ACCESS_EXPIRES });
+  res.json({ user: shapeUser(user), accessToken, expiresIn: ACCESS_EXPIRES });
 };
 
 /** POST /api/auth/refresh */
@@ -142,5 +131,5 @@ export const logout = async (req, res) => {
 export const me = async (req, res) => {
   const user = await User.findById(req.userId);
   if (!user) return res.status(404).json({ message: "User not found" });
-  res.json({ user: userSafe(user) });
+  res.json({ user: shapeUser(user) });
 };
