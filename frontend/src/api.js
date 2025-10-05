@@ -19,17 +19,20 @@ async function http(
   const res = await fetch(BASE_URL + path, {
     method,
     headers: resolvedHeaders,
-    body: body
-      ? isFormData
-        ? body
-        : JSON.stringify(body)
-      : undefined,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
     credentials: "include", // refresh cookie için
   });
 
+  // Access token süresi bitmişse refresh dene
   if (auth && res.status === 401 && retry) {
     const ok = await refreshAccessToken();
     if (ok) return http(path, { method, body, headers, auth, retry: false });
+  }
+
+  // Me endpoint'inde 403 ⇒ hesap pasif/silinmiş ⇒ local state temizle
+  if (auth && res.status === 403 && path.startsWith("/auth/me")) {
+    setAccessToken(null);
+    setUser(null);
   }
 
   if (!res.ok) {
@@ -205,10 +208,8 @@ export const productApi = {
       form.append("description", payload.description.trim());
     if (payload.careInstructions)
       form.append("careInstructions", payload.careInstructions.trim());
-    if (payload.details)
-      form.append("details", toJsonArray(payload.details));
-    if (payload.colors)
-      form.append("colors", toJsonArray(payload.colors));
+    if (payload.details) form.append("details", toJsonArray(payload.details));
+    if (payload.colors) form.append("colors", toJsonArray(payload.colors));
     if (payload.sizes) form.append("sizes", toJsonArray(payload.sizes));
     if (payload.category) form.append("category", payload.category);
     if (payload.isActive !== undefined)
@@ -292,6 +293,7 @@ export const productApi = {
 
 export const userApi = {
   async list(params = {}) {
+    // params: { page, limit, sort, role, search, status }
     const qs = toQueryString(params);
     return http(`/users${qs}`, { auth: true });
   },
@@ -305,6 +307,20 @@ export const userApi = {
     const data = await http(`/users/${encodeURIComponent(idOrKey)}`, {
       method: "PATCH",
       body: payload,
+      auth: true,
+    });
+    return data.user;
+  },
+  async softDelete(idOrKey) {
+    const data = await http(
+      `/users/${encodeURIComponent(idOrKey)}/soft-delete`,
+      { method: "POST", auth: true }
+    );
+    return data.user;
+  },
+  async restore(idOrKey) {
+    const data = await http(`/users/${encodeURIComponent(idOrKey)}/restore`, {
+      method: "POST",
       auth: true,
     });
     return data.user;
@@ -386,8 +402,7 @@ function buildSetFormData(payload = {}) {
   if (payload.name !== undefined) form.append("name", payload.name.trim());
   if (payload.description !== undefined)
     form.append("description", payload.description.trim());
-  if (payload.price !== undefined)
-    form.append("price", String(payload.price));
+  if (payload.price !== undefined) form.append("price", String(payload.price));
   if (payload.show !== undefined)
     form.append("show", payload.show ? "true" : "false");
 

@@ -1,5 +1,13 @@
+// src/pages/admin/AdminCustomers.jsx
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Filter, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import {
+  Filter,
+  RefreshCw,
+  Search,
+  SlidersHorizontal,
+  UserX,
+  Undo2,
+} from "lucide-react";
 import AdminModal from "../../components/admin/common/AdminModal.jsx";
 import UserStats from "../../components/admin/users/UserStats.jsx";
 import UserTable from "../../components/admin/users/UserTable.jsx";
@@ -18,12 +26,18 @@ const SORT_OPTIONS = [
   { value: "name", label: "Name A-Z" },
   { value: "role", label: "Role" },
 ];
+const STATUS_OPTIONS = [
+  { value: "all", label: "All statuses" },
+  { value: "active", label: "Active only" },
+  { value: "deleted", label: "Deleted only" },
+];
 
 export default function AdminCustomers() {
   const [users, setUsers] = useState([]);
   const [metrics, setMetrics] = useState({});
   const [searchValue, setSearchValue] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all"); // NEW
   const [sort, setSort] = useState("recent");
   const [limit, setLimit] = useState(20);
   const [pagination, setPagination] = useState({
@@ -48,6 +62,8 @@ export default function AdminCustomers() {
         const resolvedLimit = overrides.limit ?? limit;
         const resolvedRole =
           overrides.role !== undefined ? overrides.role : roleFilter;
+        const resolvedStatus =
+          overrides.status !== undefined ? overrides.status : statusFilter;
         const resolvedSort = overrides.sort ?? sort;
         const resolvedSearch =
           overrides.search !== undefined ? overrides.search : debouncedSearch;
@@ -56,9 +72,11 @@ export default function AdminCustomers() {
           page,
           limit: resolvedLimit,
           sort: resolvedSort,
+          status: resolvedStatus, // NEW (backend listUsers destekliyor)
         };
         if (resolvedRole) params.role = resolvedRole;
         if (resolvedSearch) params.search = resolvedSearch;
+
         const data = await userApi.list(params);
         setUsers(data.users || []);
         setMetrics(data.metrics || {});
@@ -74,7 +92,7 @@ export default function AdminCustomers() {
         setLoading(false);
       }
     },
-    [debouncedSearch, limit, roleFilter, sort]
+    [debouncedSearch, limit, roleFilter, sort, statusFilter]
   );
 
   useEffect(() => {
@@ -88,21 +106,6 @@ export default function AdminCustomers() {
       setUsers((prev) =>
         prev.map((item) => (item.id === updated.id ? updated : item))
       );
-      setMetrics((prev) => {
-        if (!prev) return prev;
-        if (user.role === updated.role) return prev;
-        const diff = updated.role === "admin" ? 1 : -1;
-        return {
-          ...prev,
-          adminUsers:
-            prev.adminUsers !== undefined
-              ? Math.max(0, (prev.adminUsers || 0) + diff)
-              : prev.adminUsers,
-        };
-      });
-      if (selectedUser?.id === updated.id) {
-        setSelectedUser(updated);
-      }
       setBanner({
         type: "success",
         message:
@@ -110,6 +113,7 @@ export default function AdminCustomers() {
             ? `${updated.fullName || updated.email} is now an administrator`
             : `${updated.fullName || updated.email} downgraded to customer`,
       });
+      if (selectedUser?.id === updated.id) setSelectedUser(updated);
     } catch (error) {
       setBanner({ type: "error", message: extractMessage(error) });
     } finally {
@@ -135,16 +139,52 @@ export default function AdminCustomers() {
   const handleClearFilters = () => {
     setSearchValue("");
     setRoleFilter("");
+    setStatusFilter("all");
     setSort("recent");
     setLimit(20);
     setPagination((prev) => ({ ...prev, page: 1, limit: 20 }));
+  };
+
+  const handleSoftDelete = async (user) => {
+    setPendingUserId(user.id);
+    try {
+      const updated = await userApi.softDelete(user.id);
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      if (selectedUser?.id === updated.id) setSelectedUser(updated);
+      setBanner({
+        type: "success",
+        message: `${user.fullName || user.email} deactivated`,
+      });
+    } catch (e) {
+      setBanner({ type: "error", message: extractMessage(e) });
+    } finally {
+      setPendingUserId(null);
+    }
+  };
+
+  const handleRestore = async (user) => {
+    setPendingUserId(user.id);
+    try {
+      const updated = await userApi.restore(user.id);
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      if (selectedUser?.id === updated.id) setSelectedUser(updated);
+      setBanner({
+        type: "success",
+        message: `${user.fullName || user.email} restored`,
+      });
+    } catch (e) {
+      setBanner({ type: "error", message: extractMessage(e) });
+    } finally {
+      setPendingUserId(null);
+    }
   };
 
   const filtersActive =
     Boolean(roleFilter) ||
     Boolean(searchValue) ||
     sort !== "recent" ||
-    limit !== 20;
+    limit !== 20 ||
+    statusFilter !== "all";
 
   return (
     <section className="space-y-6">
@@ -154,8 +194,8 @@ export default function AdminCustomers() {
             Customers
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-            View your entire customer base, search, filter and adjust roles in a
-            single glance.
+            View your customer base, search, filter, adjust roles and manage
+            account status.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -178,7 +218,7 @@ export default function AdminCustomers() {
 
       <UserStats metrics={metrics} />
 
-      <div className="grid gap-4 rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4 shadow-sm md:grid-cols-4">
+      <div className="grid gap-4 rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4 shadow-sm md:grid-cols-5">
         <label className="md:col-span-2 flex items-center gap-3 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
           <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
           <input
@@ -191,6 +231,7 @@ export default function AdminCustomers() {
             className="w-full border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
           />
         </label>
+
         <label className="flex items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
           <SlidersHorizontal className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
           <select
@@ -208,6 +249,25 @@ export default function AdminCustomers() {
             ))}
           </select>
         </label>
+
+        <label className="flex items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
+          <SlidersHorizontal className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+          <select
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value);
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            className="w-full border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <label className="flex items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
           <SlidersHorizontal className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
           <select
@@ -225,6 +285,7 @@ export default function AdminCustomers() {
             ))}
           </select>
         </label>
+
         <label className="flex items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
           <span className="text-sm text-[var(--color-text-admin-muted)]">
             Per page
@@ -270,6 +331,8 @@ export default function AdminCustomers() {
         loading={loading}
         onSelect={handleSelectUser}
         onChangeRole={handleChangeRole}
+        onSoftDelete={handleSoftDelete} // NEW
+        onRestore={handleRestore} // NEW
         currentUserId={me?.id}
         pendingUserId={pendingUserId}
       />
@@ -277,7 +340,8 @@ export default function AdminCustomers() {
       {pagination.pages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-4 py-3 text-sm text-[var(--color-text-admin)] md:flex-row">
           <div>
-            {pagination.total} users • page {pagination.page} of {pagination.pages}
+            {pagination.total} users • page {pagination.page} of{" "}
+            {pagination.pages}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -315,12 +379,10 @@ export default function AdminCustomers() {
 
 function useDebounce(value, delay = 400) {
   const [debounced, setDebounced] = useState(value);
-
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(value), delay);
     return () => clearTimeout(timer);
   }, [value, delay]);
-
   return debounced;
 }
 

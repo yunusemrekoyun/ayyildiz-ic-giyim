@@ -1,9 +1,12 @@
+// src/components/admin/users/UserTable.jsx
 import {
   Eye,
   Mail,
   Phone,
   ShieldCheck,
   ShieldOff,
+  UserX,
+  Undo2,
 } from "lucide-react";
 import { formatDate, formatRelative, roleBadge } from "./helpers.js";
 
@@ -12,6 +15,8 @@ export default function UserTable({
   loading = false,
   onSelect,
   onChangeRole,
+  onSoftDelete, // NEW
+  onRestore, // NEW
   currentUserId,
   pendingUserId,
 }) {
@@ -46,7 +51,8 @@ export default function UserTable({
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-sm">
-      <table className="min-w-[720px] divide-y divide-[var(--color-border-admin)]/70 text-sm">
+      <table className="w-full min-w-[820px] table-fixed divide-y divide-[var(--color-border-admin)]/70 text-sm">
+        {" "}
         <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
           <tr>
             <th className="px-4 py-3 text-left font-medium">Customer</th>
@@ -62,25 +68,58 @@ export default function UserTable({
             const isSelf = currentUserId && currentUserId === user.id;
             const nextRole = user.role === "admin" ? "user" : "admin";
             const isPending = pendingUserId && pendingUserId === user.id;
-            const disableRoleChange = (isSelf && user.role === "admin") || isPending;
+            const isDeleted = Boolean(user.isDeleted);
+            const disableRoleChange =
+              (isSelf && user.role === "admin") || isPending || isDeleted;
+
             return (
               <tr
                 key={user.id}
-                className="hover:bg-[var(--color-bg-hover)]/50 transition-colors"
+                className={`transition-colors ${
+                  isDeleted
+                    ? "bg-[var(--color-bg-hover)]/30"
+                    : "hover:bg-[var(--color-bg-hover)]/50"
+                }`}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="grid h-12 w-12 place-items-center rounded-full bg-[var(--color-bg-hover)] text-base font-semibold">
+                    <div
+                      className={`grid h-12 w-12 place-items-center rounded-full text-base font-semibold ${
+                        isDeleted
+                          ? "bg-[var(--color-border-admin)]/40 text-[var(--color-text-admin-muted)]"
+                          : "bg-[var(--color-bg-hover)]"
+                      }`}
+                    >
                       {user.initials}
                     </div>
                     <div>
-                      <p className="font-semibold">{user.fullName || "—"}</p>
+                      <div className="flex items-center gap-2">
+                        <p
+                          className={`font-semibold ${
+                            isDeleted ? "line-through opacity-70" : ""
+                          }`}
+                        >
+                          {user.fullName || "—"}
+                        </p>
+                        {isDeleted && user.deletedAlias ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                            as{" "}
+                            <span className="italic">{user.deletedAlias}</span>
+                          </span>
+                        ) : null}
+                        {isDeleted ? (
+                          <span className="ml-1 inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                            <UserX className="h-3 w-3" /> Deleted
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-[var(--color-text-admin-muted)]">
                         ID #{user.id.slice(-6)}
                       </p>
                     </div>
                   </div>
                 </td>
+
                 <td className="px-4 py-3">
                   <div className="flex flex-col gap-1">
                     <a
@@ -96,9 +135,12 @@ export default function UserTable({
                     </div>
                   </div>
                 </td>
+
                 <td className="px-4 py-3">
                   <span
-                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${roleMeta.className}`}
+                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
+                      roleMeta.className
+                    } ${isDeleted ? "opacity-60" : ""}`}
                   >
                     {user.role === "admin" ? (
                       <ShieldCheck className="h-4 w-4" />
@@ -106,12 +148,14 @@ export default function UserTable({
                     {roleMeta.label}
                   </span>
                 </td>
+
                 <td className="px-4 py-3">
                   <div className="text-sm">{formatDate(user.createdAt)}</div>
                   <div className="text-xs text-[var(--color-text-admin-muted)]">
                     {formatRelative(user.createdAt)}
                   </div>
                 </td>
+
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-2">
                     <button
@@ -120,6 +164,7 @@ export default function UserTable({
                     >
                       <Eye className="h-4 w-4" /> View
                     </button>
+
                     <button
                       onClick={() => onChangeRole?.(user, nextRole)}
                       disabled={disableRoleChange || !onChangeRole}
@@ -129,10 +174,10 @@ export default function UserTable({
                           : "border border-emerald-200 text-emerald-600 hover:bg-emerald-50 disabled:opacity-60"
                       }`}
                       title={
-                        disableRoleChange
-                          ? isPending
-                            ? "Updating role..."
-                            : "You cannot revoke your own admin rights"
+                        isDeleted
+                          ? "Deleted accounts cannot change role"
+                          : isSelf && user.role === "admin"
+                          ? "You cannot revoke your own admin rights"
                           : user.role === "admin"
                           ? "Revoke admin access"
                           : "Promote to admin"
@@ -152,6 +197,42 @@ export default function UserTable({
                         </>
                       )}
                     </button>
+
+                    {!isDeleted ? (
+                      <button
+                        onClick={() => onSoftDelete?.(user)}
+                        disabled={isSelf || isPending}
+                        className="inline-flex items-center gap-2 rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+                        title={
+                          isSelf
+                            ? "You cannot delete yourself"
+                            : "Deactivate (soft delete)"
+                        }
+                      >
+                        {isPending ? (
+                          "Working..."
+                        ) : (
+                          <>
+                            <UserX className="h-4 w-4" /> Delete
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onRestore?.(user)}
+                        disabled={isPending}
+                        className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:opacity-60"
+                        title="Restore account"
+                      >
+                        {isPending ? (
+                          "Working..."
+                        ) : (
+                          <>
+                            <Undo2 className="h-4 w-4" /> Restore
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

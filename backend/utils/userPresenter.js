@@ -27,16 +27,28 @@ export function shapeUser(user) {
     createdAt: user.createdAt || null,
     updatedAt: user.updatedAt || null,
     initials: initials || "?",
+
+    // 🔽 Soft delete ile ilgili alanlar UI için gelsin
+    isDeleted: !!user.isDeleted,
+    deletedAt: user.deletedAt || null,
+    deletedAlias: user.deletedAlias || "",
   };
 }
 
-export function buildUserFilter({ search, role }) {
+export function buildUserFilter({ search, role, includeDeleted }) {
   const filter = {};
 
+  // rol filtresi
   if (role && ["user", "admin"].includes(role)) {
     filter.role = role;
   }
 
+  // 🔽 default: silinmişleri listeleme
+  if (!includeDeleted) {
+    filter.isDeleted = false;
+  }
+
+  // arama
   if (search && typeof search === "string" && search.trim()) {
     const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const regex = new RegExp(escaped, "i");

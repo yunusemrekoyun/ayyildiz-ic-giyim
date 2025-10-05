@@ -17,6 +17,7 @@ import {
   BarChart3,
   Bell,
   Search,
+  Home,
   LogOut,
 } from "lucide-react";
 import { authApi, getUser as getUserCache } from "../../api";
@@ -92,13 +93,13 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--color-bg-admin)] text-[var(--color-text-admin)]">
+    <div className="flex h-screen overflow-hidden bg-[var(--color-bg-admin)] text-[var(--color-text-admin)]">
       {/* SIDEBAR (Desktop) */}
       <aside
         className={[
-          "hidden md:flex md:flex-col bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] transition-[width] duration-300",
+          "relative hidden md:flex md:flex-col bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] transition-[width] duration-300",
           sidebarCollapsed ? "md:w-20" : "md:w-72",
-          "shadow-sm",
+          "shadow-sm h-screen",
         ].join(" ")}
       >
         {/* Brand / Collapse */}
@@ -127,7 +128,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
           </button>
         </div>
 
-        {/* Menu */}
+        {/* Menu (scrollable orta alan) */}
         <nav className="flex-1 overflow-y-auto py-3">
           {menu.map((group) => (
             <div key={group.label} className="mt-2">
@@ -152,24 +153,43 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
           ))}
         </nav>
 
-        {/* User mini card */}
-        <div className="border-t border-[var(--color-border-admin)]/20 p-3">
-          <div className="flex items-center gap-3 rounded-xl bg-white/10 p-3 hover:bg-white/15 transition-colors">
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20 text-[var(--color-text-sidebar)] font-semibold">
-              {getInitials(me)}
-            </div>
-            {!sidebarCollapsed && (
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">
-                  {me?.firstName
-                    ? `${me.firstName} ${me.lastName || ""}`.trim()
-                    : "—"}
-                </div>
-                <div className="truncate text-xs text-[var(--color-text-sidebar)]/70">
-                  {me?.email || ""}
-                </div>
+        {/* FOOTER: her zaman en altta görünür */}
+        <div className="mt-auto sticky bottom-0 border-t border-[var(--color-border-admin)]/20 bg-[var(--color-bg-sidebar)]/95 backdrop-blur">
+          {/* User mini card */}
+          <div className="p-3">
+            <div className="flex items-center gap-3 rounded-xl bg-white/10 p-3 hover:bg-white/15 transition-colors">
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20 text-[var(--color-text-sidebar)] font-semibold">
+                {getInitials(me)}
               </div>
-            )}
+              {!sidebarCollapsed && (
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">
+                    {me?.firstName
+                      ? `${me.firstName} ${me.lastName || ""}`.trim()
+                      : "—"}
+                  </div>
+                  <div className="truncate text-xs text-[var(--color-text-sidebar)]/70">
+                    {me?.email || ""}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ana sayfa butonu */}
+          <div className="px-3 pb-3">
+            <Link
+              to="/"
+              className="flex items-center gap-3 rounded-xl bg-white/10 p-3 hover:bg-white/15 transition-colors"
+              title="Ana sayfaya dön"
+            >
+              <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/15">
+                <Home className="h-5 w-5 text-[var(--color-text-sidebar)]" />
+              </div>
+              {!sidebarCollapsed && (
+                <span className="text-sm font-semibold">Ana sayfa</span>
+              )}
+            </Link>
           </div>
         </div>
       </aside>
@@ -183,7 +203,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
       />
 
       {/* MAIN */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 min-h-0 flex-col">
         {/* Top bar */}
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-4 shadow-sm">
           <div className="flex items-center gap-3">
@@ -215,31 +235,36 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
           </div>
         </header>
 
-        {/* Page header */}
-        <div className="border-b border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]">
-          <div className="mx-auto max-w-[1400px] px-4 py-5">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-                  {title || pageTitleFromBreadcrumb(breadcrumbs) || "Overview"}
-                </h1>
-                {subtitle && (
-                  <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-                    {subtitle}
-                  </p>
+        {/* Scrollable page area (header + content birlikte kendi içinde scroll) */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* Page header */}
+          <div className="border-b border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]">
+            <div className="mx-auto max-w-[1400px] px-4 py-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
+                    {title ||
+                      pageTitleFromBreadcrumb(breadcrumbs) ||
+                      "Overview"}
+                  </h1>
+                  {subtitle && (
+                    <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
+                      {subtitle}
+                    </p>
+                  )}
+                </div>
+                {actions && (
+                  <div className="flex items-center gap-2">{actions}</div>
                 )}
               </div>
-              {actions && (
-                <div className="flex items-center gap-2">{actions}</div>
-              )}
             </div>
           </div>
-        </div>
 
-        {/* Content */}
-        <main className="min-h-0 flex-1">
-          <div className="mx-auto max-w-[1400px] px-4 py-6">{children}</div>
-        </main>
+          {/* Content */}
+          <main className="min-h-0">
+            <div className="mx-auto max-w-[1400px] px-4 py-6">{children}</div>
+          </main>
+        </div>
       </div>
     </div>
   );
@@ -350,6 +375,21 @@ function MobileDrawer({ open, onClose, menu, me }) {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Go to Home (Mobile) */}
+          <div className="border-t border-[var(--color-border-admin)]/20 p-3">
+            <Link
+              to="/"
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-xl bg-white/10 p-3 hover:bg-white/15 transition-colors"
+              title="Ana sayfaya dön"
+            >
+              <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/15">
+                <Home className="h-5 w-5 text-[var(--color-text-sidebar)]" />
+              </div>
+              <span className="text-sm font-semibold">Ana sayfa</span>
+            </Link>
           </div>
         </div>
       </div>

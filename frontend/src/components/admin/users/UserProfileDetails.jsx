@@ -1,4 +1,13 @@
-import { CalendarClock, IdCard, Mail, Phone, ShieldCheck } from "lucide-react";
+// src/components/admin/users/UserProfileDetails.jsx
+import {
+  CalendarClock,
+  IdCard,
+  Mail,
+  Phone,
+  ShieldCheck,
+  UserX,
+  Undo2,
+} from "lucide-react";
 import {
   formatDate,
   formatDateTime,
@@ -9,6 +18,7 @@ import {
 export default function UserProfileDetails({ user }) {
   if (!user) return null;
   const role = roleBadge(user.role);
+  const isDeleted = Boolean(user.isDeleted);
 
   return (
     <div className="space-y-8 text-[var(--color-text-admin)]">
@@ -25,6 +35,16 @@ export default function UserProfileDetails({ user }) {
               Joined {formatDate(user.createdAt)} ·{" "}
               {formatRelative(user.createdAt)}
             </p>
+            {isDeleted && (
+              <p className="mt-1 text-xs text-rose-700">
+                Deleted {user.deletedAt ? formatRelative(user.deletedAt) : ""}{" "}
+                {user.deletedAlias ? (
+                  <>
+                    · alias: <span className="italic">{user.deletedAlias}</span>
+                  </>
+                ) : null}
+              </p>
+            )}
           </div>
         </div>
         <span
@@ -34,6 +54,19 @@ export default function UserProfileDetails({ user }) {
           {role.label}
         </span>
       </header>
+
+      {isDeleted && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <UserX className="h-4 w-4" /> This account is deactivated (soft
+            deleted).
+          </div>
+          <p className="mt-1 text-xs">
+            Orders, reviews and history remain intact under the alias shown
+            above.
+          </p>
+        </div>
+      )}
 
       <section className="grid gap-4 rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-5 md:grid-cols-2">
         <InfoItem

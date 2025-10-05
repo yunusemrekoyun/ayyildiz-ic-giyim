@@ -18,14 +18,13 @@ function signRefreshToken(payload) {
 }
 
 function setRefreshCookie(res, token) {
-  // Prod'da secure: true ve sameSite:"none" (https) önerilir.
   const isProd = process.env.NODE_ENV === "production";
   res.cookie("refreshToken", token, {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
     path: "/api/auth/refresh",
-    maxAge: 1000 * 60 * 60 * 24 * 30, // tarayıcı süresi (server tarafı JWT already has exp)
+    maxAge: 1000 * 60 * 60 * 24 * 30,
   });
 }
 
@@ -51,7 +50,6 @@ export const register = async (req, res) => {
   const accessToken = signAccessToken({ sub: user._id, role: user.role });
   const refreshToken = signRefreshToken({ sub: user._id, role: user.role });
 
-  // DB'ye refresh token'ı kaydet (rotate için)
   user.refreshToken = refreshToken;
   await user.save();
 
@@ -70,6 +68,15 @@ export const login = async (req, res) => {
   const user = await User.findOne({ email });
   if (!user)
     return res.status(401).json({ message: "Invalid email or password" });
+
+  // 🚫 Silinmiş hesap login yapamaz
+  if (user.isDeleted) {
+    return res.status(403).json({
+      message: user.deletedAlias
+        ? `Account is deactivated (${user.deletedAlias})`
+        : "Account is deactivated",
+    });
+  }
 
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok)
@@ -93,10 +100,15 @@ export const refresh = async (req, res) => {
   try {
     const payload = jwt.verify(token, REFRESH_SECRET);
     const user = await User.findById(payload.sub);
+
     if (!user || user.refreshToken !== token)
       return res.status(401).json({ message: "Invalid refresh token" });
 
-    // yeni tokenlar
+    // 🚫 Silinmiş hesap token yenileyemez
+    if (user.isDeleted) {
+      return res.status(403).json({ message: "Account is deactivated" });
+    }
+
     const newAccess = signAccessToken({ sub: user._id, role: user.role });
     const newRefresh = signRefreshToken({ sub: user._id, role: user.role });
 
@@ -121,7 +133,9 @@ export const logout = async (req, res) => {
         user.refreshToken = null;
         await user.save();
       }
-    } catch {}
+    } catch {
+      // ignore invalid token
+    }
   }
   res.clearCookie("refreshToken", { path: "/api/auth/refresh" });
   res.json({ ok: true });
@@ -131,5 +145,15 @@ export const logout = async (req, res) => {
 export const me = async (req, res) => {
   const user = await User.findById(req.userId);
   if (!user) return res.status(404).json({ message: "User not found" });
+
+  // 🚫 Soft-deleted kullanıcıya 403 dön
+  if (user.isDeleted) {
+    return res.status(403).json({
+      message: user.deletedAlias
+        ? `Account is deactivated (${user.deletedAlias})`
+        : "Account is deactivated",
+    });
+  }
+
   res.json({ user: shapeUser(user) });
 };
