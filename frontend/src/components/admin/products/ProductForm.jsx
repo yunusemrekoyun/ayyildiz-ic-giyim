@@ -84,7 +84,9 @@ export default function ProductForm({
 
   const attributeActive = useMemo(() => {
     return (
-      showAttribute && Boolean(attributeTitle.trim()) && attributeValues.length > 0
+      showAttribute &&
+      Boolean(attributeTitle.trim()) &&
+      attributeValues.length > 0
     );
   }, [showAttribute, attributeTitle, attributeValues.length]);
 
@@ -165,7 +167,9 @@ export default function ProductForm({
   };
 
   const removeExistingImage = (image) => {
-    setExistingImages((prev) => prev.filter((item) => item.publicId !== image.publicId));
+    setExistingImages((prev) =>
+      prev.filter((item) => item.publicId !== image.publicId)
+    );
     setRemoveImageIds((prev) => [...prev, image.publicId]);
     setError("");
   };
@@ -180,10 +184,12 @@ export default function ProductForm({
   };
 
   const handleStockChange = (comboKey, value) => {
-    const numeric = Math.max(0, Math.floor(Number(value))); 
+    const numeric = Math.max(0, Math.floor(Number(value)));
     setInventory((prev) =>
       prev.map((item) =>
-        makeKey(item) === comboKey ? { ...item, stock: Number.isFinite(numeric) ? numeric : 0 } : item
+        makeKey(item) === comboKey
+          ? { ...item, stock: Number.isFinite(numeric) ? numeric : 0 }
+          : item
       )
     );
   };
@@ -221,7 +227,10 @@ export default function ProductForm({
         customAttribute: {
           title: attributeTitle.trim(),
           values: attributeValues,
-          show: showAttribute && attributeTitle.trim() && attributeValues.length > 0,
+          show:
+            showAttribute &&
+            attributeTitle.trim() &&
+            attributeValues.length > 0,
         },
         inventory: inventory.map((item) => ({
           color: item.color ?? null,
@@ -247,13 +256,24 @@ export default function ProductForm({
 
   const variantColumns = useMemo(() => {
     const columns = [];
-    if (showColors && colors.length) columns.push({ key: "color", label: "Color" });
+    if (showColors && colors.length)
+      columns.push({ key: "color", label: "Color" });
     if (showSizes && sizes.length) columns.push({ key: "size", label: "Size" });
     if (attributeActive)
-      columns.push({ key: "attributeValue", label: attributeTitle || "Option" });
+      columns.push({
+        key: "attributeValue",
+        label: attributeTitle || "Option",
+      });
     if (!columns.length) columns.push({ key: "variant", label: "Variant" });
     return columns;
-  }, [showColors, colors.length, showSizes, sizes.length, attributeActive, attributeTitle]);
+  }, [
+    showColors,
+    colors.length,
+    showSizes,
+    sizes.length,
+    attributeActive,
+    attributeTitle,
+  ]);
 
   return (
     <AdminModal
@@ -280,7 +300,11 @@ export default function ProductForm({
             disabled={submitting}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-60"
           >
-            {submitting ? "Saving..." : isEditing ? "Update product" : "Create product"}
+            {submitting
+              ? "Saving..."
+              : isEditing
+              ? "Update product"
+              : "Create product"}
           </button>
         </>
       }
@@ -294,7 +318,8 @@ export default function ProductForm({
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Product name<span className="text-[var(--color-accent)]">*</span>
+                Product name
+                <span className="text-[var(--color-accent)]">*</span>
               </span>
               <input
                 value={name}
@@ -492,7 +517,10 @@ export default function ProductForm({
                 <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
                   <tr>
                     {variantColumns.map((column) => (
-                      <th key={column.key} className="px-3 py-2 text-left font-medium">
+                      <th
+                        key={column.key}
+                        className="px-3 py-2 text-left font-medium"
+                      >
                         {column.label}
                       </th>
                     ))}
@@ -629,7 +657,8 @@ function extractMessage(error) {
     try {
       const parsed = JSON.parse(error.message);
       if (parsed?.message) return parsed.message;
-    } catch (_) {
+    } catch (e) {
+      console.error(e);
       /* ignore */
     }
     return error.message;
@@ -645,7 +674,9 @@ function SelectionCard({ title, description, checked, onToggle, children }) {
           <h4 className="text-sm font-semibold text-[var(--color-text-admin)]">
             {title}
           </h4>
-          <p className="text-xs text-[var(--color-text-admin-muted)]">{description}</p>
+          <p className="text-xs text-[var(--color-text-admin-muted)]">
+            {description}
+          </p>
         </div>
         <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text-admin)]">
           <input

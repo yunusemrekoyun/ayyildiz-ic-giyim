@@ -36,7 +36,8 @@ export default function AdminCategories() {
       label: item.name,
       level: item.level,
       disabled:
-        item.node.level >= 2 || (selectedCategory ? disabledSet.has(item.id) : false),
+        item.node.level >= 2 ||
+        (selectedCategory ? disabledSet.has(item.id) : false),
     }));
   }, [tree, selectedCategory]);
 
@@ -176,7 +177,8 @@ function extractMessage(error) {
     try {
       const parsed = JSON.parse(error.message);
       if (parsed?.message) return parsed.message;
-    } catch (_) {
+    } catch (e) {
+      console.error(e);
       /* ignore */
     }
     return error.message;

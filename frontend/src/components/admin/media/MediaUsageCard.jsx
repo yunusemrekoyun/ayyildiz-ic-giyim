@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable no-unused-vars */
 import { Gauge, HardDrive, Wifi } from "lucide-react";
 
 function formatBytes(bytes) {

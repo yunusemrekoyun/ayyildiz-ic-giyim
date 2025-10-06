@@ -10,6 +10,7 @@ import AuthSelector from "./components/auth/AuthSelector";
 import AboutPage from "./pages/AboutPage";
 import SetDetailsPage from "./pages/SetDetailsPage";
 
+// Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminProducts from "./pages/admin/AdminProducts";

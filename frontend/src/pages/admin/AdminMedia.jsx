@@ -161,7 +161,8 @@ function extractMessage(error) {
     try {
       const parsed = JSON.parse(error.message);
       if (parsed?.message) return parsed.message;
-    } catch (_) {
+    } catch (e) {
+      console.error(e);
       /* ignore */
     }
     return error.message;

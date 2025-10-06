@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "../../hooks/useCart";
+import { Heart } from "lucide-react";
+import { getAccessToken, userDetailsApi } from "../../api";
+import { useNavigate } from "react-router-dom";
+
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "EUR",
@@ -11,6 +15,9 @@ const isHexColor = (value) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value || "");
 const pillIdle = "border-border bg-white text-primary hover:bg-surface-hover";
 
 export default function ProductDetail({ product = {} }) {
+  const navigate = useNavigate();
+  const [isFav, setIsFav] = useState(false);
+
   const gallery = useMemo(() => {
     const imgs = (product.images || [])
       .map((img) => img?.url || img)
@@ -21,6 +28,7 @@ export default function ProductDetail({ product = {} }) {
 
   const inventory = useMemo(() => product.inventory || [], [product.inventory]);
   const { addToCart } = useCart();
+
   const colorOptions = useMemo(() => {
     if (product.showColors === false) return [];
     const map = new Map();
@@ -77,6 +85,46 @@ export default function ProductDetail({ product = {} }) {
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedAttribute, setSelectedAttribute] = useState(null);
+
+  // Favori durumu yükle
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!product?.id) return;
+      if (!getAccessToken()) {
+        if (mounted) setIsFav(false);
+        return;
+      }
+      try {
+        const favs = await userDetailsApi.favorites();
+        const favIds = new Set(
+          (favs.products || []).map((p) => p.id || p._id || p)
+        );
+        if (mounted) setIsFav(favIds.has(product.id));
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [product?.id]);
+
+  // Favori toggle
+  const toggleFav = async () => {
+    if (!product?.id) return;
+    if (!getAccessToken()) {
+      // login sayfasına yönlendir (istersen ?next= ekleyebilirsin)
+      navigate("/auth");
+      return;
+    }
+    try {
+      await userDetailsApi.toggleFavorite({ type: "product", id: product.id });
+      setIsFav((v) => !v);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     setActiveImg(0);
@@ -184,9 +232,31 @@ export default function ProductDetail({ product = {} }) {
       {/* Right: Info */}
       <div className="md:col-span-7">
         <div className="rounded-xl border border-border bg-contact-bg p-6">
-          <h1 className="font-serif text-3xl font-extrabold text-primary">
-            {product.name || product.title || "Product"}
-          </h1>
+          {/* Başlık + Kalp */}
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="font-serif text-3xl font-extrabold text-primary">
+              {product.name || product.title || "Product"}
+            </h1>
+
+            <button
+              type="button"
+              onClick={toggleFav}
+              aria-pressed={isFav}
+              aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+              className={[
+                "inline-flex items-center justify-center rounded-full border px-3 py-2",
+                isFav
+                  ? "border-accent text-accent bg-white"
+                  : "border-border text-secondary hover:bg-surface-hover",
+              ].join(" ")}
+              title={isFav ? "Favorilerden kaldır" : "Favorilere ekle"}
+            >
+              <Heart
+                className="h-5 w-5"
+                {...(isFav ? { fill: "currentColor" } : {})}
+              />
+            </button>
+          </div>
 
           <div className="mt-2 flex items-center gap-3">
             <span className="text-xl font-semibold text-accent">

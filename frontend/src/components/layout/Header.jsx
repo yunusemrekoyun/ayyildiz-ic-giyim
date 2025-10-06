@@ -118,7 +118,7 @@ export default function Header() {
                 )}
               </Link>
               <Link
-                to="/wishlist"
+                to="/account?tab=Wishlist"
                 className="inline-flex rounded-full p-2 hover:bg-surface-hover"
               >
                 <Heart className="h-6 w-6 text-secondary" />

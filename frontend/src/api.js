@@ -382,6 +382,113 @@ export const setApi = {
   },
 };
 
+// ---------- user details api ----------
+export const userDetailsApi = {
+  /** Tüm detaylar (profile + addresses + favorites id'leri) */
+  async getAll() {
+    const data = await http("/user-details/me", { auth: true });
+    return data?.details || data || null;
+  },
+
+  /** Eski kullanım ile uyumlu kısa yol */
+  async me() {
+    return this.getAll();
+  },
+
+  /** Profil/demografik güncelleme (firstName, lastName, email, phone, gender, birthDate) */
+  async updateProfile({
+    firstName,
+    lastName,
+    email,
+    phone,
+    gender,
+    birthDate,
+  }) {
+    const payload = {};
+    if (firstName !== undefined) payload.firstName = String(firstName).trim();
+    if (lastName !== undefined) payload.lastName = String(lastName).trim();
+    if (email !== undefined) payload.email = String(email).trim();
+    if (phone !== undefined) payload.phone = String(phone).trim();
+    if (gender !== undefined) payload.gender = String(gender).trim();
+    if (birthDate !== undefined) payload.birthDate = birthDate;
+
+    const data = await http("/user-details/me", {
+      method: "PUT",
+      body: payload,
+      auth: true,
+    });
+
+    return data?.details || data || null;
+  },
+
+  /** Avatar güncelle (tek dosya) */
+  async uploadAvatar(file) {
+    const form = new FormData();
+    form.append("avatar", file);
+    const data = await http("/user-details/me/avatar", {
+      method: "PATCH",
+      body: form,
+      auth: true,
+    });
+    // data => { avatar }
+    return data?.avatar || null;
+  },
+
+  /** Adres listesi — ayrı GET yok; me() içinden alınır */
+  async listAddresses() {
+    const details = await this.getAll();
+    return details?.addresses || [];
+  },
+
+  /** Adres ekle */
+  async createAddress(payload) {
+    // payload: { label, fullName, phone, country, city, district, postalCode, addressLine, isDefault }
+    const data = await http("/user-details/addresses", {
+      method: "POST",
+      body: payload,
+      auth: true,
+    });
+    return data?.address || null;
+  },
+
+  /** Adres güncelle (backend PUT kullanıyor) */
+  async updateAddress(addressId, payload) {
+    const data = await http(`/user-details/addresses/${addressId}`, {
+      method: "PUT",
+      body: payload,
+      auth: true,
+    });
+    return data?.address || null;
+  },
+
+  /** Adres sil */
+  async deleteAddress(addressId) {
+    await http(`/user-details/addresses/${addressId}`, {
+      method: "DELETE",
+      auth: true,
+    });
+    return true;
+  },
+
+  /** Favoriler (populate) */
+  async favorites() {
+    const data = await http("/user-details/favorites", { auth: true });
+    // { favorites: { products: [...], sets: [...] } }
+    return data?.favorites || { products: [], sets: [] };
+  },
+
+  /** Favori toggle */
+  async toggleFavorite({ type, id }) {
+    const data = await http("/user-details/favorites/toggle", {
+      method: "POST",
+      auth: true,
+      body: { type, id },
+    });
+    // { ok, favorites: { productCount, setCount } }
+    return data;
+  },
+};
+
 export default {
   http,
   authApi,
@@ -390,6 +497,7 @@ export default {
   userApi,
   mediaApi,
   setApi,
+  userDetailsApi,
   getAccessToken,
   setAccessToken,
   getUser,

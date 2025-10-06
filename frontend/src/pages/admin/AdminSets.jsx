@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-catch */
 import { useEffect, useState } from "react";
 import { PlusCircle, RefreshCw } from "lucide-react";
 import { setApi, productApi, categoryApi } from "../../api";
@@ -128,7 +129,12 @@ export default function AdminSets() {
         </div>
       )}
 
-      <SetTable sets={sets} loading={loading} onEdit={handleEdit} onDelete={handleDelete} />
+      <SetTable
+        sets={sets}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
       <SetForm
         open={modalOpen}
@@ -163,7 +169,8 @@ function extractMessage(error) {
     try {
       const parsed = JSON.parse(error.message);
       if (parsed?.message) return parsed.message;
-    } catch (_) {
+    } catch (e) {
+      console.error(e);
       /* ignore */
     }
     return error.message;

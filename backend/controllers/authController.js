@@ -46,6 +46,7 @@ export const register = async (req, res) => {
     passwordHash,
     role: role && ["user", "admin"].includes(role) ? role : "user",
   });
+  await UserDetails.create({ user: user._id });
 
   const accessToken = signAccessToken({ sub: user._id, role: user.role });
   const refreshToken = signRefreshToken({ sub: user._id, role: user.role });
