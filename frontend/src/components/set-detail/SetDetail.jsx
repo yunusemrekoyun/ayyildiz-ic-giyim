@@ -15,11 +15,6 @@ export default function SetDetail({ setDoc }) {
     return Number.isFinite(s) && s > 0 ? s : 99;
   }, [setDoc?.stock]);
 
-  const handleAddToCart = () => {
-    // Sepete ekleme entegrasyonunu burada tetikle
-    console.log("ADD SET TO CART", { set: setDoc?.name, qty });
-  };
-
   // setDoc yoksa hiçbir şey çizme (hook'lardan SONRA koşullu return)
   if (!setDoc) {
     return null;
@@ -45,12 +40,12 @@ export default function SetDetail({ setDoc }) {
           <SetIncludes products={setDoc.products || []} />
 
           <SetSummary
+            setDoc={setDoc}
             price={setDoc.price}
             stock={setDoc.stock}
             quantity={qty}
             maxStock={maxStock}
             onChangeQuantity={setQty}
-            onAddToCart={handleAddToCart}
           />
         </div>
       </div>

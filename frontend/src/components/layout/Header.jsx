@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import MegaMenu from "./MegaMenu";
 import { categoryApi } from "../../api";
 import { mapCategoryTree } from "../../utils/catalog";
+import { useCart } from "../../hooks/useCart";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -45,6 +46,8 @@ export default function Header() {
     const query = q.trim();
     navigate(query ? `/shop?q=${encodeURIComponent(query)}` : "/shop");
   };
+
+  const { totalItems } = useCart();
 
   return (
     <header className="sticky top-0 z-[70]">
@@ -108,9 +111,11 @@ export default function Header() {
                 className="relative inline-flex rounded-full p-2 hover:bg-surface-hover"
               >
                 <ShoppingBag className="h-6 w-6 text-secondary" />
-                <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-accent text-[10px] text-white">
-                  2
-                </span>
+                {totalItems > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-accent text-[10px] text-white">
+                    {totalItems}
+                  </span>
+                )}
               </Link>
               <Link
                 to="/wishlist"

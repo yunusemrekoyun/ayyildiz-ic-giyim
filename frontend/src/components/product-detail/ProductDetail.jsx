@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-
+import { useCart } from "../../hooks/useCart";
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "EUR",
@@ -20,7 +20,7 @@ export default function ProductDetail({ product = {} }) {
   }, [product.images]);
 
   const inventory = useMemo(() => product.inventory || [], [product.inventory]);
-
+  const { addToCart } = useCart();
   const colorOptions = useMemo(() => {
     if (product.showColors === false) return [];
     const map = new Map();
@@ -94,15 +94,26 @@ export default function ProductDetail({ product = {} }) {
     const match = inventory.find((item) => {
       const matchColor = normalize(item.color) === normalize(selectedColor);
       const matchSize = normalize(item.size) === normalize(selectedSize);
-      const matchAttr = normalize(item.attributeValue) === normalize(selectedAttribute);
+      const matchAttr =
+        normalize(item.attributeValue) === normalize(selectedAttribute);
       return matchColor && matchSize && matchAttr;
     });
 
     return match ? Number(match.stock) || 0 : 0;
-  }, [inventory, product.inStock, selectedAttribute, selectedColor, selectedSize]);
+  }, [
+    inventory,
+    product.inStock,
+    selectedAttribute,
+    selectedColor,
+    selectedSize,
+  ]);
 
   useEffect(() => {
-    if (currentStock !== null && currentStock !== undefined && currentStock >= 0) {
+    if (
+      currentStock !== null &&
+      currentStock !== undefined &&
+      currentStock >= 0
+    ) {
       if (currentStock === 0) {
         setQuantity(0);
       } else if (quantity === 0) {
@@ -124,11 +135,12 @@ export default function ProductDetail({ product = {} }) {
     setQuantity((q) => Math.max(canPurchase ? 1 : 0, q - 1));
   };
 
-  const stockLabel = currentStock === null
-    ? "In stock"
-    : currentStock > 0
-    ? `${currentStock} in stock`
-    : "Out of stock";
+  const stockLabel =
+    currentStock === null
+      ? "In stock"
+      : currentStock > 0
+      ? `${currentStock} in stock`
+      : "Out of stock";
 
   const description = product.description || "No description provided.";
   const care = product.careInstructions || "";
@@ -186,7 +198,11 @@ export default function ProductDetail({ product = {} }) {
               </span>
             ) : null}
           </div>
-          <p className={`mt-1 text-sm ${canPurchase ? "text-accent" : "text-secondary"}`}>
+          <p
+            className={`mt-1 text-sm ${
+              canPurchase ? "text-accent" : "text-secondary"
+            }`}
+          >
             <span className="mr-1">●</span>
             {stockLabel}
           </p>
@@ -213,10 +229,9 @@ export default function ProductDetail({ product = {} }) {
                       <span
                         className="h-4 w-4 rounded-full border border-border"
                         style={{
-                          background:
-                            option.isHex
-                              ? option.value
-                              : "linear-gradient(135deg, #f3f4f6, #e5e7eb)",
+                          background: option.isHex
+                            ? option.value
+                            : "linear-gradient(135deg, #f3f4f6, #e5e7eb)",
                         }}
                         aria-hidden="true"
                       />
@@ -263,7 +278,8 @@ export default function ProductDetail({ product = {} }) {
               </p>
               <div className="flex flex-wrap gap-2">
                 {attribute.values.map((value) => {
-                  const active = normalize(value) === normalize(selectedAttribute);
+                  const active =
+                    normalize(value) === normalize(selectedAttribute);
                   return (
                     <button
                       key={value}
@@ -298,8 +314,19 @@ export default function ProductDetail({ product = {} }) {
                 +
               </button>
             </div>
-
             <button
+              onClick={() =>
+                addToCart(product, {
+                  color: selectedColor,
+                  colorHex: colorOptions.find((c) => c.value === selectedColor)
+                    ?.isHex
+                    ? selectedColor
+                    : null,
+                  size: selectedSize,
+                  attribute: selectedAttribute,
+                  qty: quantity,
+                })
+              }
               className="inline-flex flex-1 items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60 md:flex-none md:px-8"
               disabled={!canPurchase}
             >
@@ -310,7 +337,9 @@ export default function ProductDetail({ product = {} }) {
           {care && (
             <div className="mt-6">
               <h3 className="mb-1 font-semibold text-primary">Care</h3>
-              <p className="text-sm text-secondary whitespace-pre-line">{care}</p>
+              <p className="text-sm text-secondary whitespace-pre-line">
+                {care}
+              </p>
             </div>
           )}
 

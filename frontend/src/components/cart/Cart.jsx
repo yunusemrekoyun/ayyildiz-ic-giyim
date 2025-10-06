@@ -1,5 +1,7 @@
+// src/components/cart/Cart.jsx
 import { useMemo, useState } from "react";
 import CartItem from "./CartItem";
+import { useCart } from "../../hooks/useCart";
 
 const CURRENCY = (n) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(
@@ -9,38 +11,11 @@ const CURRENCY = (n) =>
 const FREE_SHIPPING_THRESHOLD = 300; // €300 üzeri kargo bedava
 const SHIPPING_FEE = 9.9;
 
-const INITIAL_ITEMS = [
-  {
-    id: "p1",
-    title: "Luxury Silk Pajama Set",
-    image: "/pd-1.jpg",
-    price: 129,
-    qty: 1,
-    color: "Ivory",
-    colorHex: "#f1e9d6",
-    size: "M",
-  },
-  {
-    id: "p2",
-    title: "Elegant Lace Robe",
-    image: "/sp-1.jpg",
-    price: 89,
-    qty: 2,
-    color: "Blush",
-    colorHex: "#e4c6cf",
-    size: "S",
-  },
-];
-
 export default function Cart() {
-  const [items, setItems] = useState(INITIAL_ITEMS);
-  const [coupon, setCoupon] = useState("");
-  const [applied, setApplied] = useState(null); // {code, amount}
+  const { items, updateQty, removeFromCart, subTotal } = useCart();
 
-  const subTotal = useMemo(
-    () => items.reduce((sum, it) => sum + it.price * it.qty, 0),
-    [items]
-  );
+  const [coupon, setCoupon] = useState("");
+  const [applied, setApplied] = useState(null); // {code, type: 'percent'|'flat'|'invalid', value}
 
   // Sahte kupon örneği: ROSE10 => %10; BRIDE20 => €20
   const discount = useMemo(() => {
@@ -57,12 +32,8 @@ export default function Cart() {
 
   const total = Math.max(0, subTotal - discount + shipping);
 
-  const onQty = (id, next) =>
-    setItems((arr) =>
-      arr.map((it) => (it.id === id ? { ...it, qty: Math.max(1, next) } : it))
-    );
-
-  const onRemove = (id) => setItems((arr) => arr.filter((it) => it.id !== id));
+  const onQty = (lineId, next) => updateQty(lineId, next);
+  const onRemove = (lineId) => removeFromCart(lineId);
 
   const applyCoupon = () => {
     const code = coupon.trim().toUpperCase();
@@ -72,7 +43,6 @@ export default function Cart() {
     else setApplied({ code, type: "invalid" });
     setCoupon("");
   };
-
   const clearCoupon = () => setApplied(null);
 
   // Boş sepet
@@ -112,10 +82,10 @@ export default function Cart() {
           <ul className="divide-y divide-border/70">
             {items.map((it) => (
               <CartItem
-                key={it.id}
+                key={it.lineId}
                 item={it}
                 onQty={onQty}
-                onRemove={() => onRemove(it.id)}
+                onRemove={() => onRemove(it.lineId)}
               />
             ))}
           </ul>

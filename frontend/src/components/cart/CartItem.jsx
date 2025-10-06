@@ -1,8 +1,9 @@
+// src/components/cart/CartItem.jsx
 export default function CartItem({ item, onQty, onRemove }) {
-  const inc = () => onQty(item.id, item.qty + 1);
-  const dec = () => onQty(item.id, item.qty - 1);
+  const inc = () => onQty(item.lineId, item.qty + 1);
+  const dec = () => onQty(item.lineId, item.qty - 1);
 
-  const lineTotal = (item.price * item.qty).toFixed(2);
+  const lineTotal = (Number(item.price) * Number(item.qty)).toFixed(2);
 
   return (
     <li className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-12">
@@ -35,6 +36,9 @@ export default function CartItem({ item, onQty, onRemove }) {
           {item.size && (
             <span className="text-secondary">Size: {item.size}</span>
           )}
+          {item.attribute && (
+            <span className="text-secondary">Option: {item.attribute}</span>
+          )}
         </div>
 
         {/* Miktar + Kaldır */}
@@ -61,7 +65,9 @@ export default function CartItem({ item, onQty, onRemove }) {
       {/* Fiyatlar */}
       <div className="sm:col-span-3 sm:text-right">
         <p className="text-sm text-secondary">Unit</p>
-        <p className="font-semibold text-primary">€{item.price.toFixed(2)}</p>
+        <p className="font-semibold text-primary">
+          €{Number(item.price).toFixed(2)}
+        </p>
         <p className="mt-2 text-sm text-secondary">Total</p>
         <p className="font-semibold text-primary">€{lineTotal}</p>
       </div>

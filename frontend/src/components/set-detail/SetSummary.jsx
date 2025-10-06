@@ -1,15 +1,20 @@
+// src/components/set-detail/SetSummary.jsx
 import React, { useMemo } from "react";
 import QtyStepper from "./QtyStepper";
+import { useCart } from "../../hooks/useCart";
 
 export default function SetSummary({
+  setDoc,
   price = 0,
-  stock = 0,
+  stock = null,
   quantity = 1,
   maxStock = 99,
   onChangeQuantity,
-  onAddToCart,
 }) {
-  const canBuy = stock > 0 && quantity >= 1;
+  const { addToCart } = useCart();
+
+  const hasStockInfo = stock !== null && stock !== undefined;
+  const canBuy = (hasStockInfo ? stock > 0 : true) && quantity >= 1;
 
   const priceText = useMemo(() => {
     try {
@@ -21,6 +26,13 @@ export default function SetSummary({
       return `€${Number(price || 0).toFixed(2)}`;
     }
   }, [price]);
+
+  const handleAdd = () => {
+    if (!setDoc) return;
+    addToCart(setDoc, {
+      qty: quantity,
+    });
+  };
 
   return (
     <div className="rounded-xl bg-surface/60 p-3 sm:p-4">
@@ -42,7 +54,7 @@ export default function SetSummary({
           <button
             type="button"
             disabled={!canBuy}
-            onClick={onAddToCart}
+            onClick={handleAdd}
             className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white
                        hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
