@@ -14,6 +14,7 @@ export default function HomeSets({
   items = [],
   variant = "standard", // "standard" | "compact"
   viewAllHref = "/sets",
+  loading = false, // <<< NEW
 }) {
   const [active, setActive] = useState(tabs[0] ?? "All");
 
@@ -63,7 +64,7 @@ export default function HomeSets({
           </div>
 
           {/* View all (compact’te üst sağda) */}
-          {isCompact && (
+          {isCompact && !loading && (
             <a
               href={viewAllHref}
               className="inline-flex items-center rounded-full border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface-hover"
@@ -80,19 +81,27 @@ export default function HomeSets({
             isCompact && "justify-start",
           ].join(" ")}
         >
-          {tabs.map((t) => (
-            <button
-              key={t}
-              onClick={() => setActive(t)}
-              className={[
-                pillBase,
-                active === t ? pillActive : pillIdle,
-                isCompact && "px-3 py-1 text-xs",
-              ].join(" ")}
-            >
-              {t}
-            </button>
-          ))}
+          {loading
+            ? // Skeleton pills
+              Array.from({ length: 4 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="h-8 w-20 animate-pulse rounded-full bg-surface-hover/80"
+                />
+              ))
+            : tabs.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setActive(t)}
+                  className={[
+                    pillBase,
+                    active === t ? pillActive : pillIdle,
+                    isCompact && "px-3 py-1 text-xs",
+                  ].join(" ")}
+                >
+                  {t}
+                </button>
+              ))}
         </div>
 
         {/* Grid */}
@@ -104,11 +113,36 @@ export default function HomeSets({
               : "grid-cols-1 md:grid-cols-2 gap-6",
           ].join(" ")}
         >
-          {shown.map((s, i) => (
-            <HomeSetItem key={i} {...s} compact={isCompact} />
-          ))}
+          {loading
+            ? // Skeleton cards (compact için ölçüler uyumlu)
+              Array.from({ length: isCompact ? 8 : 4 }).map((_, i) => (
+                <article
+                  key={i}
+                  className={
+                    isCompact
+                      ? "overflow-hidden rounded-xl bg-white ring-1 ring-border"
+                      : "overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5"
+                  }
+                >
+                  <div
+                    className={
+                      isCompact
+                        ? "h-36 w-full animate-pulse bg-surface-hover md:h-40"
+                        : "h-56 w-full animate-pulse bg-surface-hover md:h-64"
+                    }
+                  />
+                  <div className={isCompact ? "p-3" : "p-6"}>
+                    <div className="h-4 w-2/3 animate-pulse rounded bg-surface-hover" />
+                    <div className="mt-2 h-3 w-full animate-pulse rounded bg-surface-hover" />
+                    <div className="mt-1 h-3 w-4/5 animate-pulse rounded bg-surface-hover" />
+                  </div>
+                </article>
+              ))
+            : shown.map((s, i) => (
+                <HomeSetItem key={i} {...s} compact={isCompact} />
+              ))}
 
-          {shown.length === 0 && (
+          {!loading && shown.length === 0 && (
             <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border p-10 text-secondary">
               No packages match this filter.
             </div>
@@ -116,7 +150,7 @@ export default function HomeSets({
         </div>
 
         {/* View all (standard’ta altta) */}
-        {!isCompact && (
+        {!isCompact && !loading && (
           <div className="mt-8 text-center">
             <a
               href={viewAllHref}

@@ -8,6 +8,7 @@ import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
 import AuthSelector from "./components/auth/AuthSelector";
 import AboutPage from "./pages/AboutPage";
+import SetDetailsPage from "./pages/SetDetailsPage";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/account" element={<AuthSelector />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/set/:slug" element={<SetDetailsPage />} />
 
           {/* Admin (guard işini LayoutSelector yapıyor) */}
           <Route

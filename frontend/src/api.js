@@ -349,7 +349,7 @@ export const mediaApi = {
 export const setApi = {
   async list(params = {}) {
     const qs = toQueryString(params);
-    const data = await http(`/sets${qs}`, { auth: true });
+    const data = await http(`/sets${qs}`);
     return data.sets || [];
   },
   async get(idOrSlug) {

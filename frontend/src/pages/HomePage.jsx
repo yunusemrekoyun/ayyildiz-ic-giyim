@@ -7,7 +7,7 @@ import HomeProductComments from "../components/home-comments/HomeProductComments
 import HomeCampaigns from "../components/home-campaigns/HomeCampaigns";
 import HomeContact from "../components/home-contact/HomeContact";
 import HomeSets from "../components/home-sets/HomeSets";
-import { productApi } from "../api";
+import { productApi, setApi } from "../api";
 
 const FALLBACK_CAMPAIGNS = [
   {
@@ -62,47 +62,14 @@ const FALLBACK_COMMENTS = [
   },
 ];
 
-const SET_TABS = [
-  "All",
-  "Bridal Sets",
-  "Bedroom Packages",
-  "Bathroom Packages",
-];
-
-const SET_ITEMS = [
-  {
-    image: "/set-bridal-1.jpg",
-    title: "Bridal Set – Deluxe",
-    desc: "A luxurious collection for the modern bride.",
-    includes: "Silk robe, lace chemise, satin pajama set, and more.",
-    tags: ["Bridal Sets"],
-  },
-  {
-    image: "/set-bridal-2.jpg",
-    title: "Bridal Set – Essential",
-    desc: "Elegant base set to complete your trousseau.",
-    includes: "Lace camisole, robe, nightdress, slippers.",
-    tags: ["Bridal Sets"],
-  },
-  {
-    image: "/set-bedroom-1.jpg",
-    title: "Bedroom Package – Premium",
-    desc: "Transform your bedroom with premium bedding.",
-    includes: "Duvet cover, fitted sheet, pillowcases, decorative pillows.",
-    tags: ["Bedroom Packages"],
-  },
-  {
-    image: "/set-bath-1.jpg",
-    title: "Bathroom Package – Luxe",
-    desc: "Hotel-quality towels and bath accessories.",
-    includes: "4 bath towels, 2 hand towels, bath mat.",
-    tags: ["Bathroom Packages"],
-  },
-];
-
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Sets state
+  const [sets, setSets] = useState([]);
+  const [loadingSets, setLoadingSets] = useState(true);
+
   const [setError] = useState(null);
 
   useEffect(() => {
@@ -123,6 +90,28 @@ export default function HomePage() {
     };
   }, [setError]);
 
+  // Fetch sets
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await setApi.list(); // dizi veya {sets:[...]} gelebilir
+        const rawSets = Array.isArray(data) ? data : data?.sets || [];
+        if (!mounted) return;
+        const mapped = mapSetsToCards(rawSets);
+        setSets(mapped);
+      } catch (e) {
+        if (!mounted) setError(extractMessage(e));
+        // sessiz
+      } finally {
+        if (mounted) setLoadingSets(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const newArrivalCards = useMemo(() => {
     return mapProductsToHomeCards(featuredProducts.slice(0, 3));
   }, [featuredProducts]);
@@ -130,6 +119,14 @@ export default function HomePage() {
   const bestsellerCards = useMemo(() => {
     return mapProductsToHomeCards(featuredProducts.slice(3, 6));
   }, [featuredProducts]);
+
+  // Dynamic tabs from set tags
+  const setTabs = useMemo(() => {
+    const tagSet = new Set();
+    (sets || []).forEach((s) => (s.tags || []).forEach((t) => tagSet.add(t)));
+    const arr = Array.from(tagSet);
+    return ["All", ...arr];
+  }, [sets]);
 
   return (
     <>
@@ -159,13 +156,15 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Sets – stil aynı, sadece backend datası ve loading eklendi */}
       <HomeSets
         variant="compact"
         title="Trousseau Packages"
         subtitle="Curated collections for your perfect wedding trousseau"
-        tabs={SET_TABS}
-        items={SET_ITEMS}
+        tabs={setTabs}
+        items={sets}
         viewAllHref="/sets"
+        loading={loadingSets}
       />
 
       <HomeProductComments items={FALLBACK_COMMENTS} />
@@ -189,14 +188,43 @@ function mapProductsToHomeCards(products) {
   }));
 }
 
+/** Backend set -> HomeSets kart verisi */
+function mapSetsToCards(sets) {
+  return (sets || []).map((s) => {
+    const image = s.images?.[0]?.url || "/set-placeholder.jpg";
+    const title = s.name || "Untitled Set";
+    const desc = s.description || "";
+    const to = `/set/${s.slug || s.id}`;
+    // includes: ilk 3 ürün adı
+    const productNames = (s.products || [])
+      .map((p) => p?.product?.name)
+      .filter(Boolean);
+    const includes =
+      productNames.length > 0
+        ? productNames.slice(0, 3).join(", ") +
+          (productNames.length > 3 ? " +" + (productNames.length - 3) : "")
+        : "";
+
+    // tags: ürün kategorileri isimlerinden uniq
+    const tags = Array.from(
+      new Set(
+        (s.products || [])
+          .map((p) => p?.product?.category?.name)
+          .filter(Boolean)
+      )
+    );
+
+    return { image, title, desc, includes, tags, to };
+  });
+}
+
 function extractMessage(error) {
   if (!error) return "Unexpected error";
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);
       if (parsed?.message) return parsed.message;
-    } catch (e) {
-      console.error(e);
+    } catch {
       /* ignore */
     }
     return error.message;

@@ -1,70 +1,57 @@
-// src/pages/SetsPage.jsx
+import { useEffect, useMemo, useState } from "react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import SetsSets from "../components/sets-sets/SetsSets";
+import { setApi } from "../api";
 
 export default function SetsPage() {
-  const setTabs = [
-    "All",
-    "Bridal Sets",
-    "Bedroom Packages",
-    "Bathroom Packages",
-  ];
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const setItems = [
-    {
-      image: "/set-bridal-1.jpg",
-      title: "Bridal Set – Deluxe",
-      desc: "A luxurious collection of lingerie and sleepwear for the modern bride.",
-      includes: "Silk robe, lace chemise, satin pajama set, and more.",
-      tags: ["Bridal Sets"],
-    },
-    {
-      image: "/set-bridal-2.jpg",
-      title: "Bridal Set – Essential",
-      desc: "Elegant base set to complete your trousseau with timeless pieces.",
-      includes: "Lace camisole, robe, nightdress, slippers.",
-      tags: ["Bridal Sets"],
-    },
-    {
-      image: "/set-bedroom-1.jpg",
-      title: "Bedroom Package – Premium",
-      desc: "Transform your bedroom with our premium bedding set.",
-      includes: "Duvet cover, fitted sheet, pillowcases, decorative pillows.",
-      tags: ["Bedroom Packages"],
-    },
-    {
-      image: "/set-bedroom-2.jpg",
-      title: "Bedroom Package – Comfort",
-      desc: "Soft and breathable cotton set for everyday comfort.",
-      includes: "Duvet cover set + 2 pillowcases.",
-      tags: ["Bedroom Packages"],
-    },
-    {
-      image: "/set-bath-1.jpg",
-      title: "Bathroom Package – Luxe",
-      desc: "Hotel-quality towels and bath accessories.",
-      includes: "4 bath towels, 2 hand towels, bath mat.",
-      tags: ["Bathroom Packages"],
-    },
-    {
-      image: "/set-bath-2.jpg",
-      title: "Bathroom Package – Everyday",
-      desc: "Durable and quick-dry towel set for daily use.",
-      includes: "2 bath towels, 2 hand towels.",
-      tags: ["Bathroom Packages"],
-    },
-    {
-      image: "/set-mix-1.jpg",
-      title: "Trousseau Mix – Signature",
-      desc: "Handpicked highlights across bridal, bedroom and bath.",
-      includes: "Lace robe, duvet cover set, towel duo.",
-      tags: ["Bridal Sets", "Bedroom Packages", "Bathroom Packages"],
-    },
-  ];
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+
+        // 1. normal istek
+        let res = await setApi.list(); // beklenen { sets: [...] }
+        console.log("SETS PAGE - raw response (1):", res);
+
+        // esnek okuma
+        let sets = normalizeSetsResponse(res);
+
+        // 2. boşsa includeHidden ile tekrar dene
+        if (!sets.length) {
+          const res2 = await setApi.list({ includeHidden: true });
+          console.log("SETS PAGE - raw response (2 includeHidden):", res2);
+          sets = normalizeSetsResponse(res2);
+        }
+
+        const mapped = mapSetsToCards(sets);
+        if (mounted) {
+          setItems(mapped);
+          console.log("SETS PAGE - mapped sets:", mapped);
+        }
+      } catch (e) {
+        console.error("SETS PAGE - fetch error:", e);
+        if (mounted) setItems([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const tabs = useMemo(() => {
+    const tagSet = new Set();
+    for (const s of items) (s.tags || []).forEach((t) => tagSet.add(String(t)));
+    return ["All", ...Array.from(tagSet)];
+  }, [items]);
 
   return (
     <>
-      {/* Üst intro/breadcrumb şeridi */}
       <section className="border-b border-border bg-surface-light/60">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-8">
           <BreadCrumb
@@ -86,15 +73,14 @@ export default function SetsPage() {
         </div>
       </section>
 
-      {/* Asıl içerik: HomeSets (mevcut bileşen) */}
       <SetsSets
         title="Explore the Collections"
         subtitle="Use the filters to browse our Bridal, Bedroom and Bathroom packages."
-        tabs={setTabs}
-        items={setItems}
+        tabs={tabs}
+        items={items}
+        loading={loading}
       />
 
-      {/* Alt CTA şeridi (yumuşak kapatma, sayfayı bitirir) */}
       <section className="mx-auto mb-12 max-w-[1400px] px-4 sm:px-6">
         <div className="rounded-xl border border-border bg-contact-bg p-6 text-center">
           <h3 className="text-xl font-semibold text-primary">
@@ -115,4 +101,43 @@ export default function SetsPage() {
       </section>
     </>
   );
+}
+
+/** Response’u esnek şekilde normalize et */
+function normalizeSetsResponse(res) {
+  // Bazı client’larda res direkt dizi olabilir; bazılarında { sets }, bazılarında { data: { sets } }
+  const maybe = res?.sets || res?.data?.sets || res;
+  return Array.isArray(maybe) ? maybe : [];
+}
+
+/** backend set -> kart */
+function mapSetsToCards(sets) {
+  return (sets || []).map((s) => {
+    const image = s?.images?.[0]?.url || "/set-placeholder.jpg";
+    const title = s?.name || "Untitled Set";
+    const desc = s?.description || "";
+
+    const productNames = (s?.products || [])
+      .map((p) => p?.product?.name)
+      .filter(Boolean);
+
+    const includes =
+      productNames.length > 0
+        ? productNames.slice(0, 3).join(", ") +
+          (productNames.length > 3 ? ` +${productNames.length - 3}` : "")
+        : "";
+
+    const tags = Array.from(
+      new Set(
+        (s?.products || [])
+          .map((p) => p?.product?.category?.name)
+          .filter(Boolean)
+      )
+    );
+
+    const slugOrId = s?.slug || s?.id || s?._id;
+    const to = slugOrId ? `/set/${slugOrId}` : "#";
+
+    return { image, title, desc, includes, tags, to };
+  });
 }
