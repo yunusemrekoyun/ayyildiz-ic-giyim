@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
+import AlertBanner from "../components/ui/AlertBanner.jsx";
+import LoadingOverlay from "../components/ui/LoadingOverlay.jsx";
 import { useCart } from "../hooks/useCart";
 import { userDetailsApi } from "../api/userDetails";
 import { orderApi } from "../api/orders";
@@ -97,6 +99,7 @@ export default function CheckoutPage() {
   const [addressId, setAddressId] = useState("");
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
+  const [banner, setBanner] = useState(null);
 
   // Adresleri çek
   useEffect(() => {
@@ -152,7 +155,10 @@ export default function CheckoutPage() {
         navigate(`/account?view=login&redirect=/checkout`, { replace: true });
         return;
       }
-      alert("Order failed: " + (e?.message || "Unknown error"));
+      setBanner({
+        variant: "danger",
+        message: `Order failed: ${e?.message || "Unexpected error"}`,
+      });
     } finally {
       setPlacing(false);
     }
@@ -165,6 +171,16 @@ export default function CheckoutPage() {
           items={[{ label: "Home", to: "/" }, { label: "Checkout" }]}
         />
       </div>
+
+      {banner && (
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2">
+          <AlertBanner
+            variant={banner.variant}
+            message={banner.message}
+            onClose={() => setBanner(null)}
+          />
+        </div>
+      )}
 
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-16 grid gap-6 md:grid-cols-12">
         {/* Address / Details */}
@@ -234,9 +250,9 @@ export default function CheckoutPage() {
         {/* Order Summary */}
         <div className="md:col-span-5 lg:col-span-4">
           <div className="rounded-2xl border border-border bg-white p-6">
-              <h2 className="text-xl font-semibold text-primary">
-                Order Summary
-              </h2>
+            <h2 className="text-xl font-semibold text-primary">
+              Order Summary
+            </h2>
 
             <ul className="mt-4 space-y-3 max-h-56 overflow-auto pr-1">
               {lines.map((it, idx) => (
@@ -268,13 +284,16 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-            <button
-              disabled={!canPlace}
-              className="mt-5 w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
-              onClick={placeOrder}
-            >
-              {placing ? "Placing..." : "Place Order"}
-            </button>
+            <div className="relative">
+              <LoadingOverlay show={placing} />
+              <button
+                disabled={!canPlace || placing}
+                className="mt-5 w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
+                onClick={placeOrder}
+              >
+                {placing ? "Placing..." : "Place Order"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

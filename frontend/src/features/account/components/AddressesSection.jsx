@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { extractErrorMessage } from "../helpers.js";
+import AlertBanner from "../../../components/ui/AlertBanner.jsx";
+import LoadingOverlay from "../../../components/ui/LoadingOverlay.jsx";
 
 function emptyAddress() {
   return {
@@ -54,6 +56,7 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyAddress());
   const [saving, setSaving] = useState(false);
+  const [banner, setBanner] = useState(null);
 
   const startNew = () => {
     setForm(emptyAddress());
@@ -81,19 +84,43 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
     try {
       if (editingId === "new") {
         await onCreate(cleanAddress(form));
+        setBanner({ variant: "success", message: "Address added" });
       } else if (editingId) {
         await onUpdate(editingId, cleanAddress(form));
+        setBanner({ variant: "success", message: "Address updated" });
       }
       cancel();
     } catch (error) {
-      alert(extractErrorMessage(error));
+      setBanner({
+        variant: "danger",
+        message: extractErrorMessage(error),
+      });
     } finally {
       setSaving(false);
     }
   };
 
+  const handleDelete = async (id) => {
+    try {
+      await onDelete(id);
+      setBanner({ variant: "warning", message: "Address removed" });
+    } catch (error) {
+      setBanner({ variant: "danger", message: extractErrorMessage(error) });
+    }
+  };
+
   return (
     <div>
+      {banner && (
+        <div className="mb-4">
+          <AlertBanner
+            variant={banner.variant}
+            message={banner.message}
+            onClose={() => setBanner(null)}
+          />
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold text-primary">Addresses</h2>
         <button
@@ -144,7 +171,7 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
                   <Pencil className="h-4 w-4 text-secondary" />
                 </button>
                 <button
-                  onClick={() => onDelete(address.id)}
+                  onClick={() => handleDelete(address.id)}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-hover"
                   title="Delete"
                 >
@@ -159,8 +186,9 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
       {editingId && (
         <form
           onSubmit={handleSubmit}
-          className="mt-6 rounded-2xl border border-border bg-white p-4"
+          className="relative mt-6 rounded-2xl border border-border bg-white p-4"
         >
+          <LoadingOverlay show={saving} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AddressField
               label="Full Name"

@@ -4,10 +4,13 @@ import { PlusCircle, RefreshCw } from "lucide-react";
 import { setApi } from "../../api/sets";
 import { productApi } from "../../api/products";
 import { categoryApi } from "../../api/categories";
+import AlertBanner from "../../components/ui/AlertBanner.jsx";
+import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
 import SetTable from "../../components/admin/sets/SetTable";
 import SetForm from "../../components/admin/sets/SetForm";
 
 export default function AdminSets() {
+  const confirm = useConfirm();
   const [sets, setSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,7 +31,7 @@ export default function AdminSets() {
       const data = await setApi.list({ includeHidden: true });
       setSets(data);
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     } finally {
       setLoading(false);
     }
@@ -39,7 +42,7 @@ export default function AdminSets() {
       const data = await productApi.list({ limit: 200, includeHidden: true });
       setProducts(data.products || []);
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     }
   };
 
@@ -49,7 +52,7 @@ export default function AdminSets() {
       const flat = flattenTree(tree);
       setCategories(flat);
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     }
   };
 
@@ -64,14 +67,19 @@ export default function AdminSets() {
   };
 
   const handleDelete = async (set) => {
-    const confirmed = window.confirm(`Delete set “${set.name}”?`);
-    if (!confirmed) return;
+    const ok = await confirm({
+      title: "Delete set",
+      description: `Delete “${set.name}”? This action cannot be undone.`,
+      confirmText: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
       await setApi.remove(set.id || set.slug);
-      setBanner({ type: "success", message: "Set deleted" });
+      setBanner({ variant: "warning", message: "Set deleted" });
       await loadSets();
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     }
   };
 
@@ -79,10 +87,10 @@ export default function AdminSets() {
     try {
       if (editingSet?.id) {
         await setApi.update(editingSet.id, payload);
-        setBanner({ type: "success", message: "Set updated" });
+        setBanner({ variant: "success", message: "Set updated" });
       } else {
         await setApi.create(payload);
-        setBanner({ type: "success", message: "Set created" });
+        setBanner({ variant: "success", message: "Set created" });
       }
       setModalOpen(false);
       await loadSets();
@@ -120,15 +128,11 @@ export default function AdminSets() {
       </header>
 
       {banner && (
-        <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
-            banner.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-rose-200 bg-rose-50 text-rose-700"
-          }`}
-        >
-          {banner.message}
-        </div>
+        <AlertBanner
+          variant={banner.variant}
+          message={banner.message}
+          onClose={() => setBanner(null)}
+        />
       )}
 
       <SetTable

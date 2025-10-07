@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { categoryApi } from "../../api/categories";
 import CategoryTree from "../../components/admin/categories/CategoryTree";
 import CategoryForm from "../../components/admin/categories/CategoryForm";
+import AlertBanner from "../../components/ui/AlertBanner.jsx";
+import LoadingOverlay from "../../components/ui/LoadingOverlay.jsx";
+import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
 import {
   collectDescendantIds,
   flattenCategoryTree,
 } from "../../utils/catalog.js";
 
 export default function AdminCategories() {
+  const confirm = useConfirm();
   const [tree, setTree] = useState([]);
   const [loadingTree, setLoadingTree] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -49,7 +53,7 @@ export default function AdminCategories() {
       const detail = await categoryApi.get(node.id);
       setSelectedCategory(detail);
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
       setSelectedCategory(null);
     } finally {
       setLoadingCategory(false);
@@ -65,7 +69,7 @@ export default function AdminCategories() {
         await handleSelect({ id: nextSelectId });
       }
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     } finally {
       setLoadingTree(false);
     }
@@ -76,16 +80,16 @@ export default function AdminCategories() {
     try {
       if (selectedCategory?.id) {
         await categoryApi.update(selectedCategory.id, payload);
-        setBanner({ type: "success", message: "Category updated" });
+        setBanner({ variant: "success", message: "Category updated" });
         await refreshTree(selectedCategory.id);
       } else {
         const created = await categoryApi.create(payload);
-        setBanner({ type: "success", message: "Category created" });
+        setBanner({ variant: "success", message: "Category created" });
         setSelectedCategory(null);
         await refreshTree(created.id);
       }
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     } finally {
       setSaving(false);
     }
@@ -93,20 +97,23 @@ export default function AdminCategories() {
 
   const handleDelete = async () => {
     if (!selectedCategory?.id) return;
-    const confirmed = window.confirm(
-      "Deleting this category is permanent. Continue?"
-    );
-    if (!confirmed) return;
+    const ok = await confirm({
+      title: "Delete category",
+      description: `Deleting “${selectedCategory.name}” is permanent. Continue?`,
+      confirmText: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
 
     setSaving(true);
     try {
       await categoryApi.remove(selectedCategory.id);
-      setBanner({ type: "success", message: "Category deleted" });
+      setBanner({ variant: "warning", message: "Category deleted" });
       setSelectedCategory(null);
       setSelectedId(null);
       await refreshTree();
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     } finally {
       setSaving(false);
     }
@@ -124,19 +131,16 @@ export default function AdminCategories() {
       </header>
 
       {banner && (
-        <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
-            banner.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-rose-200 bg-rose-50 text-rose-700"
-          }`}
-        >
-          {banner.message}
-        </div>
+        <AlertBanner
+          variant={banner.variant}
+          message={banner.message}
+          onClose={() => setBanner(null)}
+        />
       )}
 
       <div className="grid gap-6 xl:grid-cols-12">
-        <div className="xl:col-span-4">
+        <div className="relative xl:col-span-4">
+          <LoadingOverlay show={loadingTree} />
           <CategoryTree
             items={tree}
             selectedId={selectedId}
@@ -146,13 +150,11 @@ export default function AdminCategories() {
               setSelectedId(null);
             }}
           />
-          {loadingTree && (
-            <p className="mt-3 text-xs text-[var(--color-text-admin-muted)]">
-              Updating tree...
-            </p>
-          )}
         </div>
-        <div className="xl:col-span-8">
+        <div className="relative xl:col-span-8">
+          <LoadingOverlay
+            show={saving || (loadingCategory && Boolean(selectedId))}
+          />
           <CategoryForm
             category={selectedCategory}
             parentOptions={parentOptions}

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { orderApi } from "../../../api/orders";
+import AlertBanner from "../../ui/AlertBanner.jsx";
+import LoadingOverlay from "../../ui/LoadingOverlay.jsx";
 import {
   ArrowLeftRight,
   RefreshCw,
@@ -59,6 +61,7 @@ export default function AdminOrdersPage() {
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [busyOrderId, setBusyOrderId] = useState(null);
+  const [banner, setBanner] = useState(null);
 
   const fetchOrders = async (nextPage = page, nextFilters = filters) => {
     setLoading(true);
@@ -71,8 +74,12 @@ export default function AdminOrdersPage() {
       setOrders(data.orders || []);
       setPagination(data.pagination || { total: 0, pages: 1 });
       setPage(nextPage);
+      setBanner(null);
     } catch (error) {
-      alert(error?.message || "Unable to load orders");
+      setBanner({
+        variant: "danger",
+        message: error?.message || "Unable to load orders",
+      });
     } finally {
       setLoading(false);
     }
@@ -106,8 +113,12 @@ export default function AdminOrdersPage() {
             : order
         )
       );
+      setBanner({ variant: "success", message: "Order status updated" });
     } catch (error) {
-      alert(error?.message || "Unable to update status");
+      setBanner({
+        variant: "danger",
+        message: error?.message || "Unable to update status",
+      });
     } finally {
       setBusyOrderId(null);
     }
@@ -137,7 +148,16 @@ export default function AdminOrdersPage() {
         </div>
       </header>
 
-      <section className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4">
+      {banner && (
+        <AlertBanner
+          variant={banner.variant}
+          message={banner.message}
+          onClose={() => setBanner(null)}
+        />
+      )}
+
+      <section className="relative rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4">
+        <LoadingOverlay show={loading} />
         <form
           onSubmit={onSubmitSearch}
           className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-center"

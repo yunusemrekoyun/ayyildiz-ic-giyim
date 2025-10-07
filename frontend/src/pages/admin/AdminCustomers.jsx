@@ -14,6 +14,7 @@ import UserTable from "../../components/admin/users/UserTable.jsx";
 import UserProfileDetails from "../../components/admin/users/UserProfileDetails.jsx";
 import { userApi } from "../../api/users";
 import { getUser as getCachedUser } from "../../api/client";
+import AlertBanner from "../../components/ui/AlertBanner.jsx";
 
 const LIMIT_OPTIONS = [10, 20, 50, 100];
 const ROLE_OPTIONS = [
@@ -153,11 +154,11 @@ export default function AdminCustomers() {
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       if (selectedUser?.id === updated.id) setSelectedUser(updated);
       setBanner({
-        type: "success",
+        variant: "warning",
         message: `${user.fullName || user.email} deactivated`,
       });
     } catch (e) {
-      setBanner({ type: "error", message: extractMessage(e) });
+      setBanner({ variant: "danger", message: extractMessage(e) });
     } finally {
       setPendingUserId(null);
     }
@@ -170,11 +171,11 @@ export default function AdminCustomers() {
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       if (selectedUser?.id === updated.id) setSelectedUser(updated);
       setBanner({
-        type: "success",
+        variant: "success",
         message: `${user.fullName || user.email} restored`,
       });
     } catch (e) {
-      setBanner({ type: "error", message: extractMessage(e) });
+      setBanner({ variant: "danger", message: extractMessage(e) });
     } finally {
       setPendingUserId(null);
     }
@@ -310,21 +311,11 @@ export default function AdminCustomers() {
       </div>
 
       {banner && (
-        <div
-          className={`flex items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm ${
-            banner.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-rose-200 bg-rose-50 text-rose-700"
-          }`}
-        >
-          <span>{banner.message}</span>
-          <button
-            onClick={() => setBanner(null)}
-            className="text-xs font-semibold uppercase tracking-wide"
-          >
-            Close
-          </button>
-        </div>
+        <AlertBanner
+          variant={banner.variant}
+          message={banner.message}
+          onClose={() => setBanner(null)}
+        />
       )}
 
       <UserTable

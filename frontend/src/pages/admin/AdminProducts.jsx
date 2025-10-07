@@ -5,8 +5,11 @@ import { productApi } from "../../api/products";
 import ProductTable from "../../components/admin/products/ProductTable";
 import ProductForm from "../../components/admin/products/ProductForm";
 import { flattenCategoryTree } from "../../utils/catalog.js";
+import AlertBanner from "../../components/ui/AlertBanner.jsx";
+import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
 
 export default function AdminProducts() {
+  const confirm = useConfirm();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState(null);
@@ -46,7 +49,7 @@ export default function AdminProducts() {
       const data = await categoryApi.tree();
       setCategoryTree(data);
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     }
   };
 
@@ -65,7 +68,7 @@ export default function AdminProducts() {
         data.pagination || { page: 1, pages: 1, limit: 20, total: 0 }
       );
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     } finally {
       setLoading(false);
     }
@@ -82,27 +85,30 @@ export default function AdminProducts() {
   };
 
   const handleDeleteProduct = async (product) => {
-    const confirmed = window.confirm(
-      `Delete “${product.name}”? This action is irreversible.`
-    );
-    if (!confirmed) return;
+    const ok = await confirm({
+      title: "Delete product",
+      description: `Delete “${product.name}”? This action cannot be undone.`,
+      confirmText: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
       await productApi.remove(product.id || product.slug);
-      setBanner({ type: "success", message: "Product deleted" });
+      setBanner({ variant: "warning", message: "Product deleted" });
       await loadProducts(pagination.page);
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     }
   };
 
   const handleSaveProduct = async (payload) => {
     if (editingProduct?.id) {
       await productApi.update(editingProduct.id, payload);
-      setBanner({ type: "success", message: "Product updated" });
+      setBanner({ variant: "success", message: "Product updated" });
       await loadProducts(pagination.page);
     } else {
       await productApi.create(payload);
-      setBanner({ type: "success", message: "Product created" });
+      setBanner({ variant: "success", message: "Product created" });
       await loadProducts(1);
     }
   };
@@ -173,15 +179,11 @@ export default function AdminProducts() {
       </div>
 
       {banner && (
-        <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
-            banner.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-rose-200 bg-rose-50 text-rose-700"
-          }`}
-        >
-          {banner.message}
-        </div>
+        <AlertBanner
+          variant={banner.variant}
+          message={banner.message}
+          onClose={() => setBanner(null)}
+        />
       )}
 
       <ProductTable

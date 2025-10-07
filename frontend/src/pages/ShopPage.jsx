@@ -7,28 +7,35 @@ import { categoryApi } from "../api/categories";
 import { productApi } from "../api/products";
 import { mapCategoryTree } from "../utils/catalog";
 
+const isObjectId = (v) => typeof v === "string" && /^[0-9a-fA-F]{24}$/.test(v);
+
 export default function ShopPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+
   const [categoryTree, setCategoryTree] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
+
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedPrice, setSelectedPrice] = useState(0);
+
   const [error, setError] = useState(null);
 
+  // Ürünler + kategori ağacı
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [{ products: productList }, categoryTree] = await Promise.all([
+        const [{ products: productList }, treeRes] = await Promise.all([
           productApi.list({ limit: 200 }),
           categoryApi.tree(),
         ]);
         if (!mounted) return;
         setProducts(productList || []);
-        setCategoryTree(mapCategoryTree(categoryTree));
+        setCategoryTree(mapCategoryTree(treeRes));
       } catch (err) {
         if (!mounted) return;
         setError(extractMessage(err));
@@ -41,50 +48,75 @@ export default function ShopPage() {
     };
   }, []);
 
+  // Fiyat aralığı (ürünlere göre)
   const priceRange = useMemo(() => {
     if (!products.length) return { min: 0, max: 0 };
-    const mins = Math.min(
-      ...products.map((product) => Number(product.price) || 0)
-    );
-    const maxs = Math.max(
-      ...products.map((product) => Number(product.price) || 0)
-    );
+    const vals = products.map((p) => Number(p.price) || 0);
+    const mins = Math.min(...vals);
+    const maxs = Math.max(...vals);
     return {
       min: Math.max(0, Math.floor(mins)),
       max: Math.max(0, Math.ceil(maxs)),
     };
   }, [products]);
 
+  // URL paramlarını uygula: category (id/slug), price
   useEffect(() => {
-    const categoryParam = searchParams.get("category");
-    setSelectedCategory(categoryParam || "all");
+    let mounted = true;
+    (async () => {
+      // CATEGORY
+      const categoryParam = searchParams.get("category");
+      if (!categoryParam) {
+        if (mounted) setSelectedCategory("all");
+      } else if (isObjectId(categoryParam)) {
+        if (mounted) setSelectedCategory(categoryParam);
+      } else {
+        // slug -> id çöz
+        try {
+          const cat = await categoryApi.get(categoryParam); // id veya slug kabul ediyor
+          if (!mounted) return;
+          const resolvedId = cat?.id || cat?._id || "";
+          setSelectedCategory(resolvedId || "all");
+        } catch {
+          if (mounted) setSelectedCategory("all");
+        }
+      }
 
-    const priceParam = searchParams.get("price");
-    if (priceParam) {
-      const next = Number(priceParam);
-      setSelectedPrice(Number.isFinite(next) ? next : priceRange.max);
-    } else if (priceRange.max > 0) {
-      setSelectedPrice(priceRange.max);
-    }
+      // PRICE
+      const priceParam = searchParams.get("price");
+      if (priceParam) {
+        const next = Number(priceParam);
+        if (mounted) {
+          setSelectedPrice(Number.isFinite(next) ? next : priceRange.max);
+        }
+      } else if (priceRange.max > 0) {
+        if (mounted) setSelectedPrice(priceRange.max);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+    // priceRange.max değiştiğinde de başlangıç değeri ayarlansın
   }, [searchParams, priceRange.max]);
 
+  // Renk/S beden seçenekleri
   const availableColors = useMemo(() => {
-    const map = new Map();
+    const m = new Map();
     products.forEach((product) => {
-      if (!product.showColors) return;
+      if (!product?.showColors) return;
       (product.colors || []).forEach((color) => {
         const key = (color || "").toLowerCase();
         if (!key) return;
-        if (!map.has(key)) map.set(key, { value: color, label: color });
+        if (!m.has(key)) m.set(key, { value: color, label: color });
       });
     });
-    return Array.from(map.values());
+    return Array.from(m.values());
   }, [products]);
 
   const availableSizes = useMemo(() => {
     const set = new Set();
     products.forEach((product) => {
-      if (!product.showSizes) return;
+      if (!product?.showSizes) return;
       (product.sizes || []).forEach((size) => {
         const trimmed = (size || "").trim();
         if (trimmed) set.add(trimmed);
@@ -93,30 +125,36 @@ export default function ShopPage() {
     return Array.from(set);
   }, [products]);
 
+  // Client-side filtreleme (ID uyumlu hale getirildi)
   const filteredProducts = useMemo(() => {
     return (products || []).filter((product) => {
       if (!product) return false;
+
+      // price
       const price = Number(product.price) || 0;
       if (selectedPrice && price > selectedPrice) return false;
 
+      // category (product.category id’sini normalize et)
       if (selectedCategory !== "all") {
         const catId =
           product.category?.id || product.category?._id || product.category;
         if (String(catId) !== String(selectedCategory)) return false;
       }
 
+      // color
       if (selectedColor) {
         if (!product.showColors) return false;
         const colors = product.colors || [];
         if (
           !colors
-            .map((c) => c.toLowerCase())
+            .map((c) => (c || "").toLowerCase())
             .includes(selectedColor.toLowerCase())
         ) {
           return false;
         }
       }
 
+      // size
       if (selectedSize) {
         if (!product.showSizes) return false;
         const sizes = product.sizes || [];
@@ -127,6 +165,7 @@ export default function ShopPage() {
     });
   }, [products, selectedCategory, selectedColor, selectedSize, selectedPrice]);
 
+  // Filtre eventleri (URL senkron)
   const handleCategoryChange = (id) => {
     setSelectedCategory(id);
     const params = new URLSearchParams(searchParams);
@@ -210,8 +249,7 @@ function extractMessage(error) {
     try {
       const parsed = JSON.parse(error.message);
       if (parsed?.message) return parsed.message;
-    } catch (e) {
-      console.error(e);
+    } catch {
       /* ignore */
     }
     return error.message;

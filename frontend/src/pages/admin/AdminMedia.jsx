@@ -5,8 +5,11 @@ import MediaUsageCard, {
   MediaUsageSkeleton,
 } from "../../components/admin/media/MediaUsageCard";
 import MediaResourceTable from "../../components/admin/media/MediaResourceTable";
+import AlertBanner from "../../components/ui/AlertBanner.jsx";
+import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
 
 export default function AdminMedia() {
+  const confirm = useConfirm();
   const [usage, setUsage] = useState(null);
   const [usageLoading, setUsageLoading] = useState(true);
   const [refreshingUsage, setRefreshingUsage] = useState(false);
@@ -38,7 +41,7 @@ export default function AdminMedia() {
           : "—",
       });
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     } finally {
       setUsageLoading(false);
       setRefreshingUsage(false);
@@ -58,26 +61,29 @@ export default function AdminMedia() {
         reset ? data.resources : [...prev, ...data.resources]
       );
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     } finally {
       setResourcesLoading(false);
     }
   };
 
   const handleDelete = async (resource) => {
-    const confirmed = window.confirm(
-      `Delete asset “${resource.publicId}”? This cannot be undone.`
-    );
-    if (!confirmed) return;
+    const ok = await confirm({
+      title: "Delete asset",
+      description: `Delete asset “${resource.publicId}”? This cannot be undone.`,
+      confirmText: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     try {
       await mediaApi.remove(resource.publicId);
       setResources((prev) =>
         prev.filter((item) => item.publicId !== resource.publicId)
       );
       await fetchUsage(true);
-      setBanner({ type: "success", message: "Asset removed" });
+      setBanner({ variant: "warning", message: "Asset removed" });
     } catch (error) {
-      setBanner({ type: "error", message: extractMessage(error) });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     }
   };
 
@@ -122,15 +128,11 @@ export default function AdminMedia() {
       </div>
 
       {banner && (
-        <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
-            banner.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-rose-200 bg-rose-50 text-rose-700"
-          }`}
-        >
-          {banner.message}
-        </div>
+        <AlertBanner
+          variant={banner.variant}
+          message={banner.message}
+          onClose={() => setBanner(null)}
+        />
       )}
 
       <MediaResourceTable

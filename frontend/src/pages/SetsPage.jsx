@@ -15,7 +15,6 @@ export default function SetsPage() {
 
         // 1. normal istek
         let res = await setApi.list(); // beklenen { sets: [...] }
-        console.log("SETS PAGE - raw response (1):", res);
 
         // esnek okuma
         let sets = normalizeSetsResponse(res);
@@ -23,14 +22,13 @@ export default function SetsPage() {
         // 2. boşsa includeHidden ile tekrar dene
         if (!sets.length) {
           const res2 = await setApi.list({ includeHidden: true });
-          console.log("SETS PAGE - raw response (2 includeHidden):", res2);
+
           sets = normalizeSetsResponse(res2);
         }
 
         const mapped = mapSetsToCards(sets);
         if (mounted) {
           setItems(mapped);
-          console.log("SETS PAGE - mapped sets:", mapped);
         }
       } catch (e) {
         console.error("SETS PAGE - fetch error:", e);

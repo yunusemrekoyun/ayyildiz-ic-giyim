@@ -16,12 +16,16 @@ import {
   Save,
   ChevronLeft,
 } from "lucide-react";
+import AlertBanner from "../ui/AlertBanner.jsx";
+import { useConfirm } from "../ui/ConfirmDialog.jsx";
 
 /* ----- Liste + Modal tetik ----- */
 export default function AdminHeroManagerInner() {
+  const confirm = useConfirm();
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null); // item | "new" | null
   const [cats, setCats] = useState([]);
+  const [banner, setBanner] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -47,12 +51,27 @@ export default function AdminHeroManagerInner() {
   async function toggleActive(item) {
     const updated = await heroApi.update(item.id, { isActive: !item.isActive });
     setItems((arr) => arr.map((x) => (x.id === item.id ? updated : x)));
+    setBanner({
+      variant: "success",
+      message: `Hero “${updated.title}” is now ${updated.isActive ? "active" : "hidden"}.`,
+    });
   }
 
   async function remove(item) {
-    if (!confirm("Delete this hero?")) return;
-    await heroApi.remove(item.id);
-    setItems((arr) => arr.filter((x) => x.id !== item.id));
+    const ok = await confirm({
+      title: "Delete hero",
+      description: `Delete “${item.title}”? This action cannot be undone.`,
+      tone: "danger",
+      confirmText: "Delete",
+    });
+    if (!ok) return;
+    try {
+      await heroApi.remove(item.id);
+      setItems((arr) => arr.filter((x) => x.id !== item.id));
+      setBanner({ variant: "warning", message: `Hero “${item.title}” deleted.` });
+    } catch (error) {
+      setBanner({ variant: "danger", message: error?.message || "Unable to delete hero" });
+    }
   }
 
   async function move(item, dir) {
@@ -80,6 +99,14 @@ export default function AdminHeroManagerInner() {
 
   return (
     <div className="space-y-6">
+      {banner && (
+        <AlertBanner
+          variant={banner.variant}
+          message={banner.message}
+          onClose={() => setBanner(null)}
+        />
+      )}
+
       {/* Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -210,12 +237,13 @@ export default function AdminHeroManagerInner() {
           onSaved={(saved) => {
             setEditing(null);
             setItems((arr) => {
-              const i = arr.findIndex((x) => x.id === saved.id);
-              if (i === -1) return [saved, ...arr];
+              const index = arr.findIndex((x) => x.id === saved.id);
+              if (index === -1) return [saved, ...arr];
               const copy = [...arr];
-              copy[i] = saved;
+              copy[index] = saved;
               return copy;
             });
+            setBanner({ variant: "success", message: `Hero “${saved.title}” saved.` });
           }}
         />
       )}
@@ -237,6 +265,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
   const [file, setFile] = useState(null);
   const [removeMedia, setRemoveMedia] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const mediaPreview = useMemo(() => {
     if (file) return URL.createObjectURL(file);
@@ -251,6 +280,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
   const submit = async (e) => {
     e?.preventDefault?.();
     setSaving(true);
+    setError(null);
     try {
       let saved;
       if (initial?.id) {
@@ -261,7 +291,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
         });
       } else {
         if (!file) {
-          alert("Please select an image or a video.");
+          setError("Please select an image or a video.");
           setSaving(false);
           return;
         }
@@ -269,7 +299,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
       }
       onSaved(saved);
     } catch (err) {
-      alert(parseErr(err));
+      setError(parseErr(err));
     } finally {
       setSaving(false);
     }
@@ -294,6 +324,15 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
         </div>
 
         <form onSubmit={submit} className="grid gap-5 p-5 md:grid-cols-12">
+          {error && (
+            <div className="md:col-span-12">
+              <AlertBanner
+                variant="danger"
+                message={error}
+                onClose={() => setError(null)}
+              />
+            </div>
+          )}
           {/* SOL */}
           <div className="md:col-span-7 space-y-4">
             <Field
