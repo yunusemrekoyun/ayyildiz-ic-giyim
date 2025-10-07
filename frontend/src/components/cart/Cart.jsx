@@ -2,6 +2,8 @@
 import { useMemo, useState } from "react";
 import CartItem from "./CartItem";
 import { useCart } from "../../hooks/useCart";
+import { useNavigate } from "react-router-dom";
+import { getUser } from "../../api";
 
 const CURRENCY = (n) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(
@@ -12,6 +14,7 @@ const FREE_SHIPPING_THRESHOLD = 300; // €300 üzeri kargo bedava
 const SHIPPING_FEE = 9.9;
 
 export default function Cart() {
+  const navigate = useNavigate();
   const { items, updateQty, removeFromCart, subTotal } = useCart();
 
   const [coupon, setCoupon] = useState("");
@@ -181,7 +184,18 @@ export default function Cart() {
             <Row label="Total" value={CURRENCY(total)} bold />
           </div>
 
-          <button className="mt-5 w-full rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white hover:bg-accent-hover">
+          <button
+            className="mt-4 w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
+            disabled={!items.length}
+            onClick={() => {
+              const user = getUser();
+              if (!user) {
+                navigate("/account?view=login&redirect=/checkout");
+              } else {
+                navigate("/checkout");
+              }
+            }}
+          >
             Proceed to Checkout
           </button>
 

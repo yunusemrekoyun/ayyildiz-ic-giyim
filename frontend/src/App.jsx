@@ -9,6 +9,9 @@ import CartPage from "./pages/CartPage";
 import AuthSelector from "./components/auth/AuthSelector";
 import AboutPage from "./pages/AboutPage";
 import SetDetailsPage from "./pages/SetDetailsPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import SuccesPage from "./pages/SuccessPage";
+import RequireAuth from "./components/auth/RequireAuth";
 
 // Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -18,12 +21,13 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminSets from "./pages/admin/AdminSets";
 import AdminCustomers from "./pages/admin/AdminCustomers";
+import AdminSettings from "./pages/admin/AdminSettingsPage";
+import AdminHeroManager from "./pages/admin/AdminHeroManager";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Tüm siteyi tek LayoutSelector sarıyor (hem seçim hem guard) */}
         <Route element={<LayoutSelector />}>
           {/* Public */}
           <Route index element={<HomePage />} />
@@ -34,6 +38,24 @@ export default function App() {
           <Route path="/account" element={<AuthSelector />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/set/:slug" element={<SetDetailsPage />} />
+
+          {/* ✅ Checkout & Success korumalı */}
+          <Route
+            path="/checkout"
+            element={
+              <RequireAuth>
+                <CheckoutPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/checkout/success"
+            element={
+              <RequireAuth>
+                <SuccesPage />
+              </RequireAuth>
+            }
+          />
 
           {/* Admin (guard işini LayoutSelector yapıyor) */}
           <Route
@@ -47,6 +69,8 @@ export default function App() {
           <Route path="/admin/media" element={<AdminMedia />} />
           <Route path="/admin/sets" element={<AdminSets />} />
           <Route path="/admin/customers" element={<AdminCustomers />} />
+          <Route path="/admin/settings/hero" element={<AdminHeroManager />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { authApi, getUser, setUser, userDetailsApi } from "../api";
+import { authApi, getUser, setUser, userDetailsApi, orderApi } from "../api";
 import {
   Heart,
   User as UserIcon,
@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import OrderDetailsModal from "../components/orders/OrderDetailsModal";
 
 const TABS = ["Overview", "Orders", "Addresses", "Wishlist"];
 const normalizeTab = (raw) => {
@@ -521,13 +522,117 @@ function Overview({ user, profile, avatarSrc, onSave }) {
   );
 }
 
-/* ===================== Orders (placeholder) ===================== */
+/* ===================== Orders ===================== */
 function Orders() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await orderApi.mine();
+        if (mounted) setOrders(list);
+      } catch (e) {
+        console.error("orders.mine error:", e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div>
+        <h2 className="text-xl font-semibold text-primary">Orders</h2>
+        <div className="mt-4 h-28 rounded-xl border border-border bg-surface animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!orders.length) {
+    return (
+      <div>
+        <h2 className="text-xl font-semibold text-primary">Orders</h2>
+        <p className="mt-2 text-secondary">You don't have any orders yet.</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h2 className="text-xl font-semibold text-primary">Orders</h2>
-      <p className="mt-2 text-secondary">You don't have any orders yet.</p>
+
+      <ul className="mt-4 divide-y divide-border rounded-2xl border border-border overflow-hidden">
+        {orders.map((o) => {
+          const id = o.id || o._id;
+          const number = o.number || String(id).slice(-6);
+          const created = o.createdAt
+            ? new Date(o.createdAt).toLocaleString()
+            : "-";
+          const total = Number(o.totals?.grand ?? o.total ?? 0).toFixed(2);
+          const status = String(o.status || "created");
+          return (
+            <li
+              key={id}
+              className="bg-white p-4 sm:flex sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-primary">
+                  Order #{number}
+                </div>
+                <div className="mt-0.5 text-xs text-secondary">
+                  {created} &middot; Status:{" "}
+                  <span className="capitalize">{status}</span>
+                </div>
+              </div>
+              <div className="mt-3 sm:mt-0 flex items-center gap-3">
+                <div className="text-sm text-primary font-semibold">
+                  €{total}
+                </div>
+                <button
+                  onClick={() => setSelectedId(id)}
+                  className="inline-flex rounded-full border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface-hover"
+                >
+                  View details
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Modal */}
+      {selectedId && (
+        <OrderDetailsModal
+          orderId={selectedId}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function StatusBadge({ status }) {
+  const s = String(status || "created").toLowerCase();
+  const map = {
+    created: "bg-surface text-primary border-border",
+    paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    processing: "bg-amber-50 text-amber-700 border-amber-200",
+    shipped: "bg-blue-50 text-blue-700 border-blue-200",
+    cancelled: "bg-rose-50 text-rose-700 border-rose-200",
+  };
+  const cls = map[s] || map.created;
+  return (
+    <span
+      className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}
+    >
+      {s.charAt(0).toUpperCase() + s.slice(1)}
+    </span>
   );
 }
 
