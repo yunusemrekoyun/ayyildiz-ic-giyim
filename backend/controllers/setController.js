@@ -316,8 +316,9 @@ async function updateSetStock(setId) {
 
 function shapeSet(doc) {
   if (!doc) return null;
+  const id = doc._id?.toString?.() || String(doc._id);
   return {
-    id: doc._id,
+    id,
     name: doc.name,
     slug: doc.slug,
     description: doc.description,

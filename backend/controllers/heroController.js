@@ -49,7 +49,8 @@ const shapeHero = (doc) => {
   let computedLink = "/shop";
   if (doc.target?.type === "CATEGORIES" && doc.target?.categories?.length) {
     const first = String(doc.target.categories[0]);
-    computedLink = `/shop?category=${first}`;
+    const encoded = encodeURIComponent(first);
+    computedLink = `/shop?category=${encoded}`;
   }
 
   return {

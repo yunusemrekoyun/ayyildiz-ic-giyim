@@ -11,11 +11,32 @@ function makeLineId(id, { color = null, size = null, attribute = null } = {}) {
   return `${id}|${c}|${s}|${a}`;
 }
 
+function normalizeItem(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const base = { ...raw };
+  const kind = (raw.kind || raw.type || "product").toLowerCase();
+  const idCandidate =
+    raw.id || raw.productId || raw.setId || raw._id || raw.ref || null;
+  const id = idCandidate ? String(idCandidate) : null;
+  if (!id) return null;
+
+  base.id = id;
+  base.kind = kind === "set" ? "set" : "product";
+  base.productId = base.kind === "product" ? id : null;
+  base.setId = base.kind === "set" ? id : null;
+
+  return base;
+}
+
 export default function CartProvider({ children }) {
   const [items, setItems] = useState(() => {
     try {
       const stored = localStorage.getItem("cart");
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map(normalizeItem)
+        .filter(Boolean);
     } catch {
       return [];
     }
@@ -63,14 +84,22 @@ export default function CartProvider({ children }) {
       if (existing) {
         return prev.map((it) =>
           it.lineId === lineId
-            ? { ...it, qty: Math.min(999, (it.qty || 0) + (options.qty || 1)) }
+            ? {
+                ...it,
+                qty: Math.min(999, (it.qty || 0) + (options.qty || 1)),
+              }
             : it
         );
       }
 
+      const kind = (options.kind || product.kind || "product").toLowerCase();
+      const rawId = product.id || product._id || product.slug || options.productId;
+      const baseId = rawId ? String(rawId) : null;
+      if (!baseId) return prev;
+
       const newItem = {
         lineId,
-        id: product.id,
+        id: baseId,
         title: product.name || product.title,
         image: product.images?.[0]?.url || "/pd-1.jpg",
         price: Number(product.price) || 0,
@@ -79,7 +108,20 @@ export default function CartProvider({ children }) {
         colorHex: options.colorHex || null,
         size: options.size || null,
         attribute: options.attribute || null,
+        kind,
+        productId: null,
+        setId: null,
       };
+
+      if (kind === "set") {
+        newItem.kind = "set";
+        newItem.setId = String(options.setId || baseId);
+        newItem.productId = null;
+      } else {
+        newItem.kind = "product";
+        newItem.productId = String(options.productId || baseId);
+        newItem.setId = null;
+      }
 
       return [...prev, newItem];
     });

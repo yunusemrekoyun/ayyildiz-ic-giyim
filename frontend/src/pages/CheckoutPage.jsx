@@ -1,5 +1,5 @@
 // src/pages/CheckoutPage.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { useCart } from "../hooks/useCart";
@@ -88,6 +88,9 @@ export default function CheckoutPage() {
   const shippingName = shippingInfo?.name || "Shipping";
   const totalDue = Number(total || subtotal + shippingFee) || 0;
 
+  // Sipariş başarı takip
+  const orderPlacedRef = useRef(false);
+
   // Adresler
   const [addresses, setAddresses] = useState([]);
   const [addressId, setAddressId] = useState("");
@@ -114,8 +117,11 @@ export default function CheckoutPage() {
 
   // Sepet boşsa karta geri dön
   useEffect(() => {
-    if (!lines.length && !loading) navigate("/cart", { replace: true });
-  }, [lines, loading, navigate]);
+    if (orderPlacedRef.current) return;
+    if (!loading && lines.length === 0) {
+      navigate("/cart", { replace: true });
+    }
+  }, [lines.length, loading, navigate]);
 
   if (loading) {
     return (
@@ -136,6 +142,7 @@ export default function CheckoutPage() {
         addressId,
         items: checkoutItems,
       });
+      orderPlacedRef.current = true;
       clearCart();
       navigate(`/checkout/success?order=${order.id}`, { replace: true });
     } catch (e) {

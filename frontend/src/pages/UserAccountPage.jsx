@@ -588,6 +588,12 @@ function Orders() {
                 <div className="mt-0.5 text-xs text-secondary">
                   {created} &middot; Status:{" "}
                   <span className="capitalize">{status}</span>
+                  {o.shippingName && (
+                    <>
+                      {" "}· Shipping: {o.shippingName} ({"€"}
+                      {Number(o.shipping || 0).toFixed(2)})
+                    </>
+                  )}
                 </div>
               </div>
               <div className="mt-3 sm:mt-0 flex items-center gap-3">

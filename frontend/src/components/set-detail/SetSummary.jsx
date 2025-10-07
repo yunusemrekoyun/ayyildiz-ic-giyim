@@ -29,7 +29,11 @@ export default function SetSummary({
 
   const handleAdd = () => {
     if (!setDoc) return;
+    const setId = setDoc.id || setDoc._id || setDoc.slug;
+    if (!setId) return;
     addToCart(setDoc, {
+      kind: "set",
+      setId,
       qty: quantity,
     });
   };

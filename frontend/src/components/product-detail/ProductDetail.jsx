@@ -387,6 +387,8 @@ export default function ProductDetail({ product = {} }) {
             <button
               onClick={() =>
                 addToCart(product, {
+                  kind: "product",
+                  productId: product.id,
                   color: selectedColor,
                   colorHex: colorOptions.find((c) => c.value === selectedColor)
                     ?.isHex
