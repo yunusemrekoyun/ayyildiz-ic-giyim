@@ -7,7 +7,7 @@ import HomeProductComments from "../components/home-comments/HomeProductComments
 import HomeCampaigns from "../components/home-campaigns/HomeCampaigns";
 import HomeContact from "../components/home-contact/HomeContact";
 import HomeSets from "../components/home-sets/HomeSets";
-import { productApi, setApi } from "../api";
+import { productApi, setApi, heroApi } from "../api";
 
 const FALLBACK_CAMPAIGNS = [
   {
@@ -63,15 +63,41 @@ const FALLBACK_COMMENTS = [
 ];
 
 export default function HomePage() {
+  // HERO (dinamik)
+  const [heroes, setHeroes] = useState([]);
+  const [loadingHeroes, setLoadingHeroes] = useState(true);
+
+  // Products
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
-  // Sets state
+  // Sets
   const [sets, setSets] = useState([]);
   const [loadingSets, setLoadingSets] = useState(true);
 
-  const [setError] = useState(null);
+  // error
+  const [error, setError] = useState(null);
 
+  // HERO fetch
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await heroApi.list();
+        if (!mounted) return;
+        setHeroes(list || []);
+      } catch (err) {
+        if (mounted) setError(extractMessage(err));
+      } finally {
+        if (mounted) setLoadingHeroes(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [setError]);
+
+  // Products fetch
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -80,7 +106,7 @@ export default function HomePage() {
         if (!mounted) return;
         setFeaturedProducts(data.products || []);
       } catch (err) {
-        if (!mounted) setError(extractMessage(err));
+        if (mounted) setError(extractMessage(err));
       } finally {
         if (mounted) setLoadingProducts(false);
       }
@@ -90,19 +116,17 @@ export default function HomePage() {
     };
   }, [setError]);
 
-  // Fetch sets
+  // Sets fetch
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await setApi.list(); // dizi veya {sets:[...]} gelebilir
+        const data = await setApi.list();
         const rawSets = Array.isArray(data) ? data : data?.sets || [];
         if (!mounted) return;
-        const mapped = mapSetsToCards(rawSets);
-        setSets(mapped);
+        setSets(mapSetsToCards(rawSets));
       } catch (e) {
-        if (!mounted) setError(extractMessage(e));
-        // sessiz
+        if (mounted) setError(extractMessage(e));
       } finally {
         if (mounted) setLoadingSets(false);
       }
@@ -110,30 +134,60 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [setError]);
 
-  const newArrivalCards = useMemo(() => {
-    return mapProductsToHomeCards(featuredProducts.slice(0, 3));
-  }, [featuredProducts]);
-
-  const bestsellerCards = useMemo(() => {
-    return mapProductsToHomeCards(featuredProducts.slice(3, 6));
-  }, [featuredProducts]);
-
-  // Dynamic tabs from set tags
+  const newArrivalCards = useMemo(
+    () => mapProductsToHomeCards(featuredProducts.slice(0, 3)),
+    [featuredProducts]
+  );
+  const bestsellerCards = useMemo(
+    () => mapProductsToHomeCards(featuredProducts.slice(3, 6)),
+    [featuredProducts]
+  );
   const setTabs = useMemo(() => {
     const tagSet = new Set();
     (sets || []).forEach((s) => (s.tags || []).forEach((t) => tagSet.add(t)));
-    const arr = Array.from(tagSet);
-    return ["All", ...arr];
+    return ["All", ...Array.from(tagSet)];
   }, [sets]);
+
+  // Hero slaytlarına fallback
+  const heroSlides = heroes.length
+    ? heroes
+    : [
+        {
+          id: "f1",
+          title: "Celebrate Your Moments in Style",
+          subtitle: "Discover our exclusive collection.",
+          buttonText: "Shop Now",
+          image: { url: "/hero-1.jpg" },
+          video: null,
+          computedLink: "/shop",
+        },
+        {
+          id: "f2",
+          title: "Elegance for Every Day",
+          subtitle: "Timeless pieces for your wardrobe.",
+          buttonText: "Explore",
+          image: { url: "/hero-2.jpg" },
+          video: null,
+          computedLink: "/shop",
+        },
+      ];
 
   return (
     <>
-      <Hero
-        images={["/hero-1.jpg", "/hero-2.jpg", "/hero-3.jpg", "/hero-4.jpg"]}
-        onCta={() => window.scrollTo({ top: 800, behavior: "smooth" })}
-      />
+      {/* Hata bandı (error state'i aktif kullanımı) */}
+      {error && (
+        <div
+          role="alert"
+          className="mx-auto mb-4 max-w-[1400px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Dinamik HERO */}
+      <Hero slides={heroSlides} imageAutoMs={6000} loading={loadingHeroes} />
 
       <Categories />
 
@@ -156,7 +210,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Sets – stil aynı, sadece backend datası ve loading eklendi */}
       <HomeSets
         variant="compact"
         title="Trousseau Packages"
@@ -188,14 +241,12 @@ function mapProductsToHomeCards(products) {
   }));
 }
 
-/** Backend set -> HomeSets kart verisi */
 function mapSetsToCards(sets) {
   return (sets || []).map((s) => {
     const image = s.images?.[0]?.url || "/set-placeholder.jpg";
     const title = s.name || "Untitled Set";
     const desc = s.description || "";
     const to = `/set/${s.slug || s.id}`;
-    // includes: ilk 3 ürün adı
     const productNames = (s.products || [])
       .map((p) => p?.product?.name)
       .filter(Boolean);
@@ -204,8 +255,6 @@ function mapSetsToCards(sets) {
         ? productNames.slice(0, 3).join(", ") +
           (productNames.length > 3 ? " +" + (productNames.length - 3) : "")
         : "";
-
-    // tags: ürün kategorileri isimlerinden uniq
     const tags = Array.from(
       new Set(
         (s.products || [])
@@ -213,7 +262,6 @@ function mapSetsToCards(sets) {
           .filter(Boolean)
       )
     );
-
     return { image, title, desc, includes, tags, to };
   });
 }
@@ -225,7 +273,7 @@ function extractMessage(error) {
       const parsed = JSON.parse(error.message);
       if (parsed?.message) return parsed.message;
     } catch {
-      /* ignore */
+      // ignore
     }
     return error.message;
   }

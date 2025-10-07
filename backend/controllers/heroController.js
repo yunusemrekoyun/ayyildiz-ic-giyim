@@ -1,3 +1,4 @@
+// backend/controllers/heroController.js
 import Hero from "../models/Hero.js";
 import Category from "../models/Category.js";
 import {
@@ -44,7 +45,7 @@ const resolveFolder = () => {
 const shapeHero = (doc) => {
   const id = doc._id;
 
-  // Basit computedLink: SHOP => /shop, CATEGORIES => /shop?category=<firstId>
+  // SHOP => /shop, CATEGORIES => /shop?category=<firstId>
   let computedLink = "/shop";
   if (doc.target?.type === "CATEGORIES" && doc.target?.categories?.length) {
     const first = String(doc.target.categories[0]);
@@ -152,18 +153,18 @@ export async function createHero(req, res) {
         : [];
       payload.categories = await ensureCategoriesExist(arr);
       if (!payload.categories.length) {
-        return res
-          .status(400)
-          .json({ message: "CATEGORIES target requires at least one id" });
+        return res.status(400).json({
+          message: "CATEGORIES target requires at least one id",
+        });
       }
     } else {
       payload.categories = [];
     }
 
     if (!req.file) {
-      return res
-        .status(400)
-        .json({ message: "Media file is required (image or video)" });
+      return res.status(400).json({
+        message: "Media file is required (image or video)",
+      });
     }
     const { image, video } = await uploadMedia(req.file);
 
@@ -245,30 +246,40 @@ export async function updateHero(req, res) {
       const valid = await ensureCategoriesExist(arr);
       hero.target.categories = valid;
       if (hero.target.type === "CATEGORIES" && !valid.length) {
-        return res
-          .status(400)
-          .json({ message: "CATEGORIES target requires at least one id" });
+        return res.status(400).json({
+          message: "CATEGORIES target requires at least one id",
+        });
       }
     }
 
+    // Yeni medya geldiyse eskileri doğru resource_type ile sil
     if (req.file) {
       if (hero.image?.publicId) {
-        await deleteFromCloudinary(hero.image.publicId).catch(() => {});
+        await deleteFromCloudinary(hero.image.publicId, "image").catch(
+          () => {}
+        );
       }
       if (hero.video?.publicId) {
-        await deleteFromCloudinary(hero.video.publicId).catch(() => {});
+        await deleteFromCloudinary(hero.video.publicId, "video").catch(
+          () => {}
+        );
       }
       const { image, video } = await uploadMedia(req.file);
       hero.image = image;
       hero.video = video;
     }
 
+    // Medya kaldırma
     if (req.body.removeMedia === "true") {
       if (hero.image?.publicId) {
-        await deleteFromCloudinary(hero.image.publicId).catch(() => {});
+        await deleteFromCloudinary(hero.image.publicId, "image").catch(
+          () => {}
+        );
       }
       if (hero.video?.publicId) {
-        await deleteFromCloudinary(hero.video.publicId).catch(() => {});
+        await deleteFromCloudinary(hero.video.publicId, "video").catch(
+          () => {}
+        );
       }
       hero.image = null;
       hero.video = null;
@@ -295,10 +306,10 @@ export async function deleteHero(req, res) {
     if (!hero) return res.status(404).json({ message: "Hero not found" });
 
     if (hero.image?.publicId) {
-      await deleteFromCloudinary(hero.image.publicId).catch(() => {});
+      await deleteFromCloudinary(hero.image.publicId, "image").catch(() => {});
     }
     if (hero.video?.publicId) {
-      await deleteFromCloudinary(hero.video.publicId).catch(() => {});
+      await deleteFromCloudinary(hero.video.publicId, "video").catch(() => {});
     }
 
     await hero.deleteOne();

@@ -1,7 +1,8 @@
+// backend/routes/heroRoutes.js
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/roles.js";
-import upload from "../middleware/upload.js";
+import { uploadHeroMedia } from "../middleware/upload.js";
 import {
   listHeroes,
   createHero,
@@ -18,7 +19,7 @@ router.post(
   "/",
   requireAuth,
   requireRole("admin"),
-  upload.single("media"),
+  uploadHeroMedia.single("media"), // << büyük limit + video
   createHero
 );
 
@@ -26,7 +27,7 @@ router.put(
   "/:id",
   requireAuth,
   requireRole("admin"),
-  upload.single("media"),
+  uploadHeroMedia.single("media"), // << büyük limit + video
   updateHero
 );
 
