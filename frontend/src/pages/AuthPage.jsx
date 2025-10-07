@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LoginForm from "../components/auth/LoginForm";
 import RegisterForm from "../components/auth/RegisterForm";
-import { authApi } from "../api";
+import { authApi } from "../api/auth";
 
 export default function AuthPage({ initialView = "register", onAuthSuccess }) {
   const [view, setView] = useState(initialView);

@@ -12,7 +12,8 @@ import AdminModal from "../../components/admin/common/AdminModal.jsx";
 import UserStats from "../../components/admin/users/UserStats.jsx";
 import UserTable from "../../components/admin/users/UserTable.jsx";
 import UserProfileDetails from "../../components/admin/users/UserProfileDetails.jsx";
-import { getUser as getCachedUser, userApi } from "../../api.js";
+import { userApi } from "../../api/users";
+import { getUser as getCachedUser } from "../../api/client";
 
 const LIMIT_OPTIONS = [10, 20, 50, 100];
 const ROLE_OPTIONS = [

@@ -4,7 +4,8 @@ import SetInfo from "./SetInfo";
 import SetIncludes from "./SetIncludes";
 import SetSummary from "./SetSummary";
 import { Heart } from "lucide-react";
-import { getAccessToken, userDetailsApi } from "../../api";
+import { getAccessToken } from "../../api/client";
+import { userDetailsApi } from "../../api/userDetails";
 import { useNavigate } from "react-router-dom";
 
 export default function SetDetail({ setDoc }) {

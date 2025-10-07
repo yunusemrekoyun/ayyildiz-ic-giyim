@@ -52,7 +52,6 @@ export default function UserTable({
   return (
     <div className="overflow-x-auto rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-sm">
       <table className="w-full min-w-[820px] table-fixed divide-y divide-[var(--color-border-admin)]/70 text-sm">
-        {" "}
         <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
           <tr>
             <th className="px-4 py-3 text-left font-medium">Customer</th>

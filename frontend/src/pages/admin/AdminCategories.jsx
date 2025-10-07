@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { categoryApi } from "../../api";
+import { categoryApi } from "../../api/categories";
 import CategoryTree from "../../components/admin/categories/CategoryTree";
 import CategoryForm from "../../components/admin/categories/CategoryForm";
 import {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PlusCircle, RefreshCw, Search } from "lucide-react";
-import { categoryApi, productApi } from "../../api";
+import { categoryApi } from "../../api/categories";
+import { productApi } from "../../api/products";
 import ProductTable from "../../components/admin/products/ProductTable";
 import ProductForm from "../../components/admin/products/ProductForm";
 import { flattenCategoryTree } from "../../utils/catalog.js";

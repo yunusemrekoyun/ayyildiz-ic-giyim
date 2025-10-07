@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
-import { orderApi } from "../../api";
+import { orderApi } from "../../api/orders";
 
 /** Küçük yardımcılar */
 function money(v) {

@@ -20,7 +20,8 @@ import {
   Home,
   LogOut,
 } from "lucide-react";
-import { authApi, getUser as getUserCache } from "../../api";
+import { authApi } from "../../api/auth";
+import { getUser as getUserCache } from "../../api/client";
 
 /**
  * AdminLayout

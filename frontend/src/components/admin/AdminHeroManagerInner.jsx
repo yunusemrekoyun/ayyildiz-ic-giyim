@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { heroApi, categoryApi } from "../../api";
+import { heroApi } from "../../api/heroes";
+import { categoryApi } from "../../api/categories";
 import { Link } from "react-router-dom";
 import {
   Plus,

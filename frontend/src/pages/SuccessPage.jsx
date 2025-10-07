@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
-import { orderApi } from "../api";
+import { orderApi } from "../api/orders";
 
 export default function SuccessPage() {
   const location = useLocation();

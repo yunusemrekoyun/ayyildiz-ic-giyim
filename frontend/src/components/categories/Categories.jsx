@@ -1,7 +1,7 @@
 // src/components/categories/Categories.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import CategoryItem from "./CategoryItem";
-import { categoryApi } from "../../api";
+import { categoryApi } from "../../api/categories";
 import { mapCategoryTree } from "../../utils/catalog";
 
 const DESKTOP_VISIBLE = 4;

@@ -8,13 +8,13 @@ import {
 } from "react-router-dom";
 import RootLayout from "./RootLayout";
 import AdminLayout from "./AdminLayout";
+import { authApi } from "../../api/auth";
 import {
-  authApi,
   getUser as getUserCache,
   setUser as setUserCache,
   getAccessToken,
   refreshAccessToken,
-} from "../../api";
+} from "../../api/client";
 
 export default function LayoutSelector() {
   const location = useLocation();

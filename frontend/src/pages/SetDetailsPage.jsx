@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import SetDetail from "../components/set-detail/SetDetail";
 import SimilarSets from "../components/set-detail/SimilarSets";
-import { setApi } from "../api";
+import { setApi } from "../api/sets";
 
 export default function SetDetailsPage() {
   const { slug } = useParams();

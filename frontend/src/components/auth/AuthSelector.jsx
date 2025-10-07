@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import UserAccountPage from "../../pages/UserAccountPage";
 import AuthPage from "../../pages/AuthPage";
-import { authApi, getAccessToken, refreshAccessToken } from "../../api";
+import { authApi } from "../../api/auth";
+import { getAccessToken, refreshAccessToken } from "../../api/client";
 
 export default function AuthSelector() {
   const [ready, setReady] = useState(false);

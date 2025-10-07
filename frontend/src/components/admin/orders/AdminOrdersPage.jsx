@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { orderApi } from "../../../api";
+import { orderApi } from "../../../api/orders";
 import {
   ArrowLeftRight,
   RefreshCw,
@@ -123,7 +123,8 @@ export default function AdminOrdersPage() {
             Orders
           </h1>
           <p className="text-sm text-[var(--color-text-admin-muted)]">
-            Monitor incoming orders, update statuses and review shipment details.
+            Monitor incoming orders, update statuses and review shipment
+            details.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -212,7 +213,10 @@ export default function AdminOrdersPage() {
                     ? new Date(order.createdAt).toLocaleString()
                     : "-";
                   return (
-                    <tr key={order.id} className="hover:bg-[var(--color-bg-admin)]/40">
+                    <tr
+                      key={order.id}
+                      className="hover:bg-[var(--color-bg-admin)]/40"
+                    >
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-col">
                           <span className="font-semibold text-[var(--color-text-admin)]">
@@ -247,9 +251,12 @@ export default function AdminOrdersPage() {
                       </td>
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-col text-[var(--color-text-admin)]">
-                          <span className="font-semibold">{money(order.total)}</span>
+                          <span className="font-semibold">
+                            {money(order.total)}
+                          </span>
                           <span className="text-xs text-[var(--color-text-admin-muted)]">
-                            {order.shippingName || "Shipping"}: {money(order.shipping)}
+                            {order.shippingName || "Shipping"}:{" "}
+                            {money(order.shipping)}
                           </span>
                         </div>
                       </td>
@@ -260,13 +267,17 @@ export default function AdminOrdersPage() {
                             className="rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] px-2 py-1 text-xs"
                             value={order.status}
                             disabled={busyOrderId === order.id}
-                            onChange={(e) => onStatusChange(order.id, e.target.value)}
+                            onChange={(e) =>
+                              onStatusChange(order.id, e.target.value)
+                            }
                           >
-                            {STATUS_OPTIONS.filter((opt) => opt.value).map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
+                            {STATUS_OPTIONS.filter((opt) => opt.value).map(
+                              (opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              )
+                            )}
                           </select>
                         </div>
                       </td>
@@ -288,7 +299,9 @@ export default function AdminOrdersPage() {
                             <Truck className="h-3.5 w-3.5" /> View
                           </button>
                           <button
-                            onClick={() => setSelectedOrderId(order.orderNumber)}
+                            onClick={() =>
+                              setSelectedOrderId(order.orderNumber)
+                            }
                             className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
                             title="Open by order number"
                           >

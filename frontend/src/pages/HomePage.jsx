@@ -7,7 +7,9 @@ import HomeProductComments from "../components/home-comments/HomeProductComments
 import HomeCampaigns from "../components/home-campaigns/HomeCampaigns";
 import HomeContact from "../components/home-contact/HomeContact";
 import HomeSets from "../components/home-sets/HomeSets";
-import { productApi, setApi, heroApi } from "../api";
+import { productApi } from "../api/products";
+import { setApi } from "../api/sets";
+import { heroApi } from "../api/heroes";
 
 const FALLBACK_CAMPAIGNS = [
   {

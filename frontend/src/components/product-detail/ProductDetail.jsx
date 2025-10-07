@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "../../hooks/useCart";
 import { Heart } from "lucide-react";
-import { getAccessToken, userDetailsApi } from "../../api";
+import { getAccessToken } from "../../api/client";
+import { userDetailsApi } from "../../api/userDetails";
 import { useNavigate } from "react-router-dom";
 
 const currency = new Intl.NumberFormat("en-US", {

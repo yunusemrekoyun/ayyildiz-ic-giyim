@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { useCart } from "../hooks/useCart";
-import { userDetailsApi, orderApi } from "../api";
+import { userDetailsApi } from "../api/userDetails";
+import { orderApi } from "../api/orders";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();

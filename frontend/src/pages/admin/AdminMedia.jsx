@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, Search } from "lucide-react";
-import { mediaApi } from "../../api";
+import { mediaApi } from "../../api/media";
 import MediaUsageCard, {
   MediaUsageSkeleton,
 } from "../../components/admin/media/MediaUsageCard";

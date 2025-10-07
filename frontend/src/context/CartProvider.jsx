@@ -1,7 +1,7 @@
 // src/context/CartProvider.jsx
 import { useEffect, useMemo, useState } from "react";
 import { CartContext } from "./CartContext";
-import { shippingApi } from "../api";
+import { shippingApi } from "../api/shipping";
 
 // Varyantları ayırt eden benzersiz satır anahtarı
 function makeLineId(id, { color = null, size = null, attribute = null } = {}) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { shippingApi } from "../../../api";
+import { shippingApi } from "../../../api/shipping";
 import { useCart } from "../../../hooks/useCart";
 import { Coins, Loader2, Truck } from "lucide-react";
 

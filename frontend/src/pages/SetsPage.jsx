@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import SetsSets from "../components/sets-sets/SetsSets";
-import { setApi } from "../api";
+import { setApi } from "../api/sets";
 
 export default function SetsPage() {
   const [items, setItems] = useState([]);

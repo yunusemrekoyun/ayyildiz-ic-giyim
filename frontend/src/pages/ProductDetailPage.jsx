@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import ProductDetail from "../components/product-detail/ProductDetail";
 import SimilarProducts from "../components/product-detail/SimilarProducts";
-import { productApi } from "../api";
+import { productApi } from "../api/products";
 
 export default function ProductDetailPage() {
   const { slug } = useParams();

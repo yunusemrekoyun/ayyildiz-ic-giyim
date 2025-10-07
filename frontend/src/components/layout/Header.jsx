@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, ShoppingBag, Heart, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import MegaMenu from "./MegaMenu";
-import { categoryApi } from "../../api";
+import { categoryApi } from "../../api/categories";
 import { mapCategoryTree } from "../../utils/catalog";
 import { useCart } from "../../hooks/useCart";
 

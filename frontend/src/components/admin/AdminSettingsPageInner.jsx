@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { heroApi } from "../../api";
+import { heroApi } from "../../api/heroes";
 import ShippingSettingsCard from "./settings/ShippingSettingsCard.jsx";
 import { Link } from "react-router-dom";
 import {

@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import ShopPageFilter from "../components/shop/ShopPageFilter";
 import ShopPageProducts from "../components/shop/ShopPageProducts";
-import { categoryApi, productApi } from "../api";
+import { categoryApi } from "../api/categories";
+import { productApi } from "../api/products";
 import { mapCategoryTree } from "../utils/catalog";
 
 export default function ShopPage() {

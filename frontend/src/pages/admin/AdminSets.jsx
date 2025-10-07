@@ -1,7 +1,9 @@
 /* eslint-disable no-useless-catch */
 import { useEffect, useState } from "react";
 import { PlusCircle, RefreshCw } from "lucide-react";
-import { setApi, productApi, categoryApi } from "../../api";
+import { setApi } from "../../api/sets";
+import { productApi } from "../../api/products";
+import { categoryApi } from "../../api/categories";
 import SetTable from "../../components/admin/sets/SetTable";
 import SetForm from "../../components/admin/sets/SetForm";
 
