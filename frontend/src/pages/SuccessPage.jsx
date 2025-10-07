@@ -41,7 +41,15 @@ export default function SuccessPage() {
 
           {order && (
             <div className="mt-4 text-left text-sm">
-              <div className="font-medium text-primary">Order #{order.id}</div>
+              <div className="font-medium text-primary">
+                Order #{order.orderNumber || order.id}
+              </div>
+              <div className="text-xs text-secondary">
+                Status: <span className="capitalize">{order.status}</span> •
+                {" "}
+                {order.shippingName || "Shipping"}: €
+                {Number(order.shipping || 0).toFixed(2)}
+              </div>
               <ul className="mt-2 space-y-1">
                 {order.items.map((it, i) => (
                   <li key={i} className="flex justify-between">

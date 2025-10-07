@@ -10,20 +10,45 @@ export default function CheckoutPage() {
 
   // Cart verisini oku
   const cart = useCart() || {};
-  const itemsRaw = Array.isArray(cart.items) ? cart.items : [];
+  const {
+    items: itemsRaw = [],
+    subTotal = 0,
+    total = 0,
+    shipping: shippingInfo = {},
+    clearCart = () => {},
+  } = cart;
 
   // API'ye gidecek satırlar (id/kind/qty)
   const checkoutItems = useMemo(
     () =>
-      itemsRaw.map((it) => {
-        const kind =
-          it.kind || (it.productId ? "product" : it.setId ? "set" : "product");
-        const id = it.productId || it.setId || it.id || it._id;
-        const qty =
-          Number(it.qty ?? it.quantity ?? it.count ?? it.amount ?? it.q ?? 1) ||
-          1;
-        return { kind, id, qty };
-      }),
+      itemsRaw
+        .map((it) => {
+          const rawKind =
+            it.kind ||
+            (it.productId ? "product" : it.setId ? "set" : undefined);
+          const kind = rawKind === "set" ? "set" : "product";
+
+          const rawId =
+            it.ref ||
+            it.id ||
+            it.productId ||
+            it.setId ||
+            it._id ||
+            it.product?._id ||
+            it.set?._id;
+          const id = rawId ? String(rawId).trim() : "";
+          if (!id) return null;
+
+          const qty = Math.max(
+            1,
+            Number(
+              it.qty ?? it.quantity ?? it.count ?? it.amount ?? it.q ?? 1
+            ) || 1
+          );
+
+          return { kind, id, qty };
+        })
+        .filter(Boolean),
     [itemsRaw]
   );
 
@@ -58,9 +83,10 @@ export default function CheckoutPage() {
     () => lines.reduce((s, l) => s + l.qty * l.unitPrice, 0),
     [lines]
   );
-  const subtotal = Number(cart.subtotal ?? computedSubtotal) || 0;
-  const shipping = Number(cart.shipping ?? 0) || 0;
-  const total = Number(cart.total ?? subtotal + shipping) || 0;
+  const subtotal = Number(subTotal ?? computedSubtotal) || 0;
+  const shippingFee = shippingInfo?.fee ?? 0;
+  const shippingName = shippingInfo?.name || "Shipping";
+  const totalDue = Number(total || subtotal + shippingFee) || 0;
 
   // Adresler
   const [addresses, setAddresses] = useState([]);
@@ -110,7 +136,7 @@ export default function CheckoutPage() {
         addressId,
         items: checkoutItems,
       });
-      // (opsiyonel) burada cart context'inizde sepeti temizleyebilirsiniz.
+      clearCart();
       navigate(`/checkout/success?order=${order.id}`, { replace: true });
     } catch (e) {
       // 401 ise login’e gönder
@@ -200,9 +226,9 @@ export default function CheckoutPage() {
         {/* Order Summary */}
         <div className="md:col-span-5 lg:col-span-4">
           <div className="rounded-2xl border border-border bg-white p-6">
-            <h2 className="text-xl font-semibold text-primary">
-              Order Summary
-            </h2>
+              <h2 className="text-xl font-semibold text-primary">
+                Order Summary
+              </h2>
 
             <ul className="mt-4 space-y-3 max-h-56 overflow-auto pr-1">
               {lines.map((it, idx) => (
@@ -217,20 +243,22 @@ export default function CheckoutPage() {
               ))}
             </ul>
 
-            <div className="mt-4 border-t border-border pt-4 space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-secondary">Subtotal</span>
-                <span className="text-primary">€{subtotal.toFixed(2)}</span>
+              <div className="mt-4 border-t border-border pt-4 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-secondary">Subtotal</span>
+                  <span className="text-primary">€{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-secondary">
+                    {shippingName ? `Shipping (${shippingName})` : "Shipping"}
+                  </span>
+                  <span className="text-primary">€{shippingFee.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-base font-semibold">
+                  <span className="text-primary">Total</span>
+                  <span className="text-primary">€{totalDue.toFixed(2)}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-secondary">Shipping</span>
-                <span className="text-primary">€{shipping.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-base font-semibold">
-                <span className="text-primary">Total</span>
-                <span className="text-primary">€{total.toFixed(2)}</span>
-              </div>
-            </div>
 
             <button
               disabled={!canPlace}

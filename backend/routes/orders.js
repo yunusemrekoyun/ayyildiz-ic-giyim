@@ -4,14 +4,34 @@ import {
   createOrder,
   myOrders,
   getOrder,
+  listOrders,
+  adminGetOrder,
+  updateOrderStatus,
 } from "../controllers/orderController.js";
+import { requireRole } from "../middleware/roles.js";
 
 const router = Router();
 
-router.use(requireAuth);
-
-router.post("/", createOrder);
-router.get("/mine", myOrders);
-router.get("/:id", getOrder);
+router.post("/", requireAuth, createOrder);
+router.get("/mine", requireAuth, myOrders);
+router.get(
+  "/admin",
+  requireAuth,
+  requireRole("admin"),
+  listOrders
+);
+router.get(
+  "/admin/:id",
+  requireAuth,
+  requireRole("admin"),
+  adminGetOrder
+);
+router.patch(
+  "/admin/:id/status",
+  requireAuth,
+  requireRole("admin"),
+  updateOrderStatus
+);
+router.get("/:id", requireAuth, getOrder);
 
 export default router;

@@ -3,13 +3,54 @@ import Order from "../models/Order.js";
 import UserDetails from "../models/UserDetails.js";
 import Product from "../models/Product.js";
 import Set from "../models/Set.js";
+import ShippingConfig from "../models/ShippingConfig.js";
+
+function generateOrderNumber() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const rand = Math.random().toString(36).slice(-4).toUpperCase();
+  return `AYY-${y}${m}${d}-${rand}`;
+}
+
+async function createOrderNumber() {
+  for (let i = 0; i < 6; i += 1) {
+    const candidate = generateOrderNumber();
+    const exists = await Order.exists({ orderNumber: candidate });
+    if (!exists) return candidate;
+  }
+  throw new Error("Unable to generate unique order number");
+}
+
+function toBoolean(value) {
+  if (value === undefined) return undefined;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.toLowerCase() === "true";
+  return Boolean(value);
+}
 
 // Basit şekillendirici
 function shapeOrder(doc) {
   if (!doc) return null;
+  const rawUser = doc.user;
+  const populatedUser =
+    rawUser && typeof rawUser === "object" && "_id" in rawUser ? rawUser : null;
+  const userId = populatedUser
+    ? populatedUser._id.toString()
+    : rawUser?.toString?.() || rawUser;
   return {
     id: doc._id.toString(),
-    user: doc.user?.toString?.() || doc.user,
+    orderNumber: doc.orderNumber || doc._id.toString(),
+    user: populatedUser
+      ? {
+          id: userId,
+          firstName: populatedUser.firstName || "",
+          lastName: populatedUser.lastName || "",
+          email: populatedUser.email || "",
+          phone: populatedUser.phone || "",
+        }
+      : userId,
     items: doc.items.map((i) => ({
       kind: i.kind,
       ref: i.ref?.toString?.() || i.ref,
@@ -21,6 +62,7 @@ function shapeOrder(doc) {
     address: doc.address,
     subtotal: doc.subtotal,
     shipping: doc.shipping,
+    shippingName: doc.shippingName || "Standard Shipping",
     total: doc.total,
     status: doc.status,
     payment: doc.payment,
@@ -123,15 +165,24 @@ export async function createOrder(req, res) {
       (sum, i) => sum + i.unitPrice * i.qty,
       0
     );
-    const shipping = 0; // basit kural: ücretsiz
+
+    const shippingConfig = await ShippingConfig.getSingleton();
+    const threshold = Number(shippingConfig.freeThreshold || 0);
+    const feeRaw = Number(shippingConfig.fee || 0);
+    const shipping = subtotal >= threshold ? 0 : Math.max(0, feeRaw);
+    const shippingName = shippingConfig.name || "Standard Shipping";
     const total = subtotal + shipping;
 
+    const orderNumber = await createOrderNumber();
+
     const order = await Order.create({
+      orderNumber,
       user: userId,
       items: orderItems,
       address: addressSnap,
       subtotal,
       shipping,
+      shippingName,
       total,
       status: "pending",
       payment: { method: "cod" },
@@ -161,5 +212,134 @@ export async function getOrder(req, res) {
     res.json({ order: shapeOrder(o) });
   } catch (err) {
     res.status(500).json({ message: err.message || "Unable to fetch order" });
+  }
+}
+
+/** Admin: GET /api/orders */
+export async function listOrders(req, res) {
+  try {
+    const page = Math.max(1, Number(req.query.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit || 20)));
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+    if (req.query.status) {
+      filter.status = String(req.query.status).toLowerCase();
+    }
+    if (req.query.user && mongoose.Types.ObjectId.isValid(req.query.user)) {
+      filter.user = req.query.user;
+    }
+    if (req.query.q) {
+      const q = String(req.query.q).trim();
+      if (q) {
+        const sanitized = q.replace(/[^a-zA-Z0-9]/g, "");
+        const pattern = sanitized.split("").join("[-\\s]*");
+        filter.orderNumber = {
+          $regex: pattern || q,
+          $options: "i",
+        };
+      }
+    }
+
+    const [items, total] = await Promise.all([
+      Order.find(filter)
+        .sort({ createdAt: -1 })
+        .populate("user", "firstName lastName email phone")
+        .skip(skip)
+        .limit(limit),
+      Order.countDocuments(filter),
+    ]);
+
+    res.json({
+      orders: items.map(shapeOrder),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit) || 1,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Unable to list orders" });
+  }
+}
+
+function isObjectIdLike(value) {
+  return mongoose.Types.ObjectId.isValid(value);
+}
+
+async function findOrderByIdOrNumber(idOrNumber) {
+  if (isObjectIdLike(idOrNumber)) {
+    const byId = await Order.findById(idOrNumber);
+    if (byId) return byId;
+  }
+  return Order.findOne({ orderNumber: idOrNumber });
+}
+
+/** Admin: GET /api/orders/:id */
+export async function adminGetOrder(req, res) {
+  try {
+    let order = null;
+    if (isObjectIdLike(req.params.id)) {
+      order = await Order.findById(req.params.id).populate(
+        "user",
+        "firstName lastName email phone"
+      );
+    }
+    if (!order) {
+      order = await Order.findOne({
+        orderNumber: req.params.id,
+      }).populate("user", "firstName lastName email phone");
+    }
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    res.json({ order: shapeOrder(order) });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Unable to fetch order" });
+  }
+}
+
+/** Admin: PATCH /api/orders/:id/status */
+export async function updateOrderStatus(req, res) {
+  try {
+    const order = await findOrderByIdOrNumber(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const {
+      status,
+      paymentMethod,
+      paymentTxnId,
+      markPaid,
+    } = req.body || {};
+
+    if (status !== undefined) {
+      const allowed = ["pending", "paid", "shipped", "completed", "cancelled"];
+      const nextStatus = String(status).toLowerCase();
+      if (!allowed.includes(nextStatus)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      order.status = nextStatus;
+    }
+
+    if (paymentMethod !== undefined) {
+      order.payment.method = String(paymentMethod) || "cod";
+    }
+
+    if (paymentTxnId !== undefined) {
+      order.payment.txnId = String(paymentTxnId);
+    }
+
+    const markPaidBool = toBoolean(markPaid);
+
+    if (markPaidBool === true || status === "paid") {
+      order.payment.paidAt = order.payment.paidAt || new Date();
+    }
+    if (markPaidBool === false) {
+      order.payment.paidAt = null;
+    }
+
+    await order.save();
+    res.json({ order: shapeOrder(order) });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Unable to update order" });
   }
 }

@@ -60,7 +60,9 @@ export default function AdminProducts() {
         includeHidden: true,
       });
       setProducts(data.products || []);
-      setPagination(data.pagination || { page: 1, pages: 1, limit: 20, total: 0 });
+      setPagination(
+        data.pagination || { page: 1, pages: 1, limit: 20, total: 0 }
+      );
     } catch (error) {
       setBanner({ type: "error", message: extractMessage(error) });
     } finally {
@@ -164,7 +166,8 @@ export default function AdminProducts() {
           </select>
         </label>
         <div className="md:col-span-1 flex items-center justify-end text-xs text-[var(--color-text-admin-muted)]">
-          {pagination.total} products • page {pagination.page} of {pagination.pages}
+          {pagination.total} products • page {pagination.page} of{" "}
+          {pagination.pages}
         </div>
       </div>
 
@@ -234,7 +237,7 @@ function extractMessage(error) {
     try {
       const parsed = JSON.parse(error.message);
       if (parsed?.message) return parsed.message;
-    } catch (_) {
+    } catch {
       /* ignore */
     }
     return error.message;

@@ -570,7 +570,7 @@ function Orders() {
       <ul className="mt-4 divide-y divide-border rounded-2xl border border-border overflow-hidden">
         {orders.map((o) => {
           const id = o.id || o._id;
-          const number = o.number || String(id).slice(-6);
+          const number = o.orderNumber || o.number || String(id).slice(-6);
           const created = o.createdAt
             ? new Date(o.createdAt).toLocaleString()
             : "-";
@@ -621,9 +621,11 @@ function StatusBadge({ status }) {
   const s = String(status || "created").toLowerCase();
   const map = {
     created: "bg-surface text-primary border-border",
+    pending: "bg-surface text-primary border-border",
     paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
     processing: "bg-amber-50 text-amber-700 border-amber-200",
     shipped: "bg-blue-50 text-blue-700 border-blue-200",
+    completed: "bg-slate-900 text-white border-slate-800",
     cancelled: "bg-rose-50 text-rose-700 border-rose-200",
   };
   const cls = map[s] || map.created;

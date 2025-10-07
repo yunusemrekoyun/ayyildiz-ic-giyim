@@ -34,7 +34,7 @@ function normalizeImage(img) {
 }
 
 /** OrderDetailsModal */
-export default function OrderDetailsModal({ orderId, onClose }) {
+export default function OrderDetailsModal({ orderId, onClose, admin = false }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +44,9 @@ export default function OrderDetailsModal({ orderId, onClose }) {
     let mounted = true;
     (async () => {
       try {
-        const data = await orderApi.get(orderId);
+        const data = admin
+          ? await orderApi.adminGet(orderId)
+          : await orderApi.get(orderId);
         if (mounted) setOrder(data);
       } catch (e) {
         console.error("Order get error:", e);
@@ -55,7 +57,7 @@ export default function OrderDetailsModal({ orderId, onClose }) {
     return () => {
       mounted = false;
     };
-  }, [orderId]);
+  }, [orderId, admin]);
 
   // Güvenli alan okuma & normalize
   const items = useMemo(() => {
@@ -147,7 +149,7 @@ export default function OrderDetailsModal({ orderId, onClose }) {
 
   const meta = useMemo(() => {
     const id = order?.id || order?._id || "";
-    const number = order?.number || String(id).slice(-6);
+    const number = order?.orderNumber || order?.number || String(id).slice(-6);
     const status = order?.status || "created";
     const createdAt = order?.createdAt ? new Date(order.createdAt) : null;
     const payment = order?.payment || {}; // {method, status, txnId}
@@ -318,12 +320,16 @@ export default function OrderDetailsModal({ orderId, onClose }) {
                         {money(meta.totals.subtotal)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-secondary">Shipping</span>
-                      <span className="text-primary">
-                        {money(meta.totals.shipping)}
-                      </span>
-                    </div>
+              <div className="flex justify-between">
+                <span className="text-secondary">
+                  {order?.shippingName
+                    ? `Shipping (${order.shippingName})`
+                    : "Shipping"}
+                </span>
+                <span className="text-primary">
+                  {money(meta.totals.shipping)}
+                </span>
+              </div>
                     <div className="flex justify-between font-semibold">
                       <span className="text-primary">Total</span>
                       <span className="text-primary">

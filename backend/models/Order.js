@@ -27,6 +27,7 @@ const AddressSnapshotSchema = new mongoose.Schema(
 
 const OrderSchema = new mongoose.Schema(
   {
+    orderNumber: { type: String, unique: true, index: true },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -40,6 +41,7 @@ const OrderSchema = new mongoose.Schema(
 
     subtotal: { type: Number, required: true },
     shipping: { type: Number, required: true, default: 0 },
+    shippingName: { type: String, default: "Standard Shipping" },
     total: { type: Number, required: true },
 
     status: {

@@ -3,19 +3,23 @@ import { useMemo, useState } from "react";
 import CartItem from "./CartItem";
 import { useCart } from "../../hooks/useCart";
 import { useNavigate } from "react-router-dom";
-import { getUser } from "../../api";
 
 const CURRENCY = (n) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(
     n
   );
 
-const FREE_SHIPPING_THRESHOLD = 300; // €300 üzeri kargo bedava
-const SHIPPING_FEE = 9.9;
-
 export default function Cart() {
   const navigate = useNavigate();
-  const { items, updateQty, removeFromCart, subTotal } = useCart();
+  const cart = useCart() || {};
+  const {
+    items = [],
+    updateQty = () => {},
+    removeFromCart = () => {},
+    subTotal = 0,
+    total = 0,
+    shipping: shippingInfo = {},
+  } = cart;
 
   const [coupon, setCoupon] = useState("");
   const [applied, setApplied] = useState(null); // {code, type: 'percent'|'flat'|'invalid', value}
@@ -28,12 +32,12 @@ export default function Cart() {
     return 0;
   }, [applied, subTotal]);
 
-  const shipping =
-    subTotal - discount >= FREE_SHIPPING_THRESHOLD || subTotal === 0
-      ? 0
-      : SHIPPING_FEE;
+  const shippingFee = shippingInfo?.fee ?? 0;
+  const baseShippingFee = shippingInfo?.baseFee ?? shippingFee;
+  const freeThreshold = shippingInfo?.freeThreshold ?? 0;
+  const shippingName = shippingInfo?.name || "Shipping";
 
-  const total = Math.max(0, subTotal - discount + shipping);
+  const totalWithDiscount = Math.max(0, total - discount);
 
   const onQty = (lineId, next) => updateQty(lineId, next);
   const onRemove = (lineId) => removeFromCart(lineId);
@@ -144,15 +148,15 @@ export default function Cart() {
           </h3>
 
           {/* Progress to free shipping */}
-          {subTotal > 0 && (
+          {subTotal > 0 && freeThreshold > 0 && baseShippingFee > 0 && (
             <div className="mb-4 rounded-xl border border-border bg-white p-3">
               <p className="text-sm text-secondary">
-                {subTotal - discount >= FREE_SHIPPING_THRESHOLD
+                {subTotal >= freeThreshold
                   ? "You’ve unlocked Free Shipping 🎉"
                   : `Spend ${CURRENCY(
                       Math.max(
                         0,
-                        FREE_SHIPPING_THRESHOLD - (subTotal - discount)
+                        freeThreshold - subTotal
                       )
                     )} more to get Free Shipping`}
               </p>
@@ -162,7 +166,7 @@ export default function Cart() {
                   style={{
                     width: `${Math.min(
                       100,
-                      ((subTotal - discount) / FREE_SHIPPING_THRESHOLD) * 100
+                      (subTotal / freeThreshold) * 100
                     )}%`,
                   }}
                 />
@@ -177,24 +181,17 @@ export default function Cart() {
               value={discount ? `– ${CURRENCY(discount)}` : CURRENCY(0)}
             />
             <Row
-              label="Shipping"
-              value={shipping === 0 ? "Free" : CURRENCY(shipping)}
+              label={`Shipping${shippingName ? ` (${shippingName})` : ""}`}
+              value={shippingFee === 0 ? "Free" : CURRENCY(shippingFee)}
             />
             <div className="my-2 border-t border-border" />
-            <Row label="Total" value={CURRENCY(total)} bold />
+            <Row label="Total" value={CURRENCY(totalWithDiscount)} bold />
           </div>
 
           <button
             className="mt-4 w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
             disabled={!items.length}
-            onClick={() => {
-              const user = getUser();
-              if (!user) {
-                navigate("/account?view=login&redirect=/checkout");
-              } else {
-                navigate("/checkout");
-              }
-            }}
+            onClick={() => navigate("/checkout")}
           >
             Proceed to Checkout
           </button>

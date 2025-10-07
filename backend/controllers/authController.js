@@ -2,6 +2,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import UserDetails from "../models/UserDetails.js";
 import { shapeUser } from "../utils/userPresenter.js";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;

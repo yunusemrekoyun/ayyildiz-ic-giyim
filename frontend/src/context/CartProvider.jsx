@@ -1,6 +1,7 @@
 // src/context/CartProvider.jsx
 import { useEffect, useMemo, useState } from "react";
-import { CartContext } from "./cartContext";
+import { CartContext } from "./CartContext";
+import { shippingApi } from "../api";
 
 // Varyantları ayırt eden benzersiz satır anahtarı
 function makeLineId(id, { color = null, size = null, attribute = null } = {}) {
@@ -19,10 +20,39 @@ export default function CartProvider({ children }) {
       return [];
     }
   });
+  const [shippingConfig, setShippingConfig] = useState({
+    name: "Standard Shipping",
+    fee: 0,
+    freeThreshold: 0,
+  });
+  const [shippingLoading, setShippingLoading] = useState(true);
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const config = await shippingApi.getConfig();
+        if (mounted && config) setShippingConfig(config);
+      } catch {
+        if (mounted) {
+          setShippingConfig({
+            name: "Standard Shipping",
+            fee: 0,
+            freeThreshold: 0,
+          });
+        }
+      } finally {
+        if (mounted) setShippingLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Ekle
   const addToCart = (product, options = {}) => {
@@ -84,6 +114,28 @@ export default function CartProvider({ children }) {
     [items]
   );
 
+  const freeThreshold = Number(shippingConfig?.freeThreshold || 0);
+  const baseShippingFee = Math.max(0, Number(shippingConfig?.fee || 0));
+
+  const shippingFee = useMemo(() => {
+    if (subTotal <= 0) return 0;
+    if (freeThreshold > 0 && subTotal >= freeThreshold) return 0;
+    return baseShippingFee;
+  }, [subTotal, freeThreshold, baseShippingFee]);
+
+  const total = useMemo(() => subTotal + shippingFee, [subTotal, shippingFee]);
+
+  const refreshShipping = async () => {
+    try {
+      const config = await shippingApi.getConfig();
+      setShippingConfig(config);
+      return config;
+    } catch (error) {
+      setShippingConfig((prev) => prev);
+      throw error;
+    }
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -94,6 +146,16 @@ export default function CartProvider({ children }) {
         clearCart,
         totalItems,
         subTotal,
+        total,
+        shipping: {
+          name: shippingConfig?.name || "Standard Shipping",
+          fee: shippingFee,
+          baseFee: baseShippingFee,
+          freeThreshold,
+          loading: shippingLoading,
+          isFree: shippingFee === 0 && subTotal > 0,
+        },
+        refreshShipping,
       }}
     >
       {children}

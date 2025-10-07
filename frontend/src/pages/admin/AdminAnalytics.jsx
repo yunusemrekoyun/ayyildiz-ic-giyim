@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useEffect, useRef, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
@@ -508,6 +509,7 @@ function Funnel({ data }) {
   const max = Math.max(...data.map((d) => d.value));
   return (
     <div className="space-y-3">
+
       {data.map((s, i) => {
         const w = Math.round((s.value / max) * 100);
         return (

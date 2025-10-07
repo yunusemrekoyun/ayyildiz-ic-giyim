@@ -7,7 +7,8 @@ import sets from "./sets.js";
 import users from "./users.js";
 import userDetails from "./userDetails.js";
 import ordersRouter from "./orders.js";
-import heroRoutes from "./heroes.js ";
+import heroRoutes from "./heroes.js";
+import shippingRoutes from "./shipping.js";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use("/users", users);
 router.use("/user-details", userDetails);
 router.use("/orders", ordersRouter);
 router.use("/heroes", heroRoutes);
+router.use("/shipping", shippingRoutes);
 
 export default router;

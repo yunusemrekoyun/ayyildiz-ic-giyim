@@ -23,6 +23,7 @@ import AdminSets from "./pages/admin/AdminSets";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminSettings from "./pages/admin/AdminSettingsPage";
 import AdminHeroManager from "./pages/admin/AdminHeroManager";
+import AdminOrders from "./pages/admin/AdminOrders";
 
 export default function App() {
   return (
@@ -69,6 +70,7 @@ export default function App() {
           <Route path="/admin/media" element={<AdminMedia />} />
           <Route path="/admin/sets" element={<AdminSets />} />
           <Route path="/admin/customers" element={<AdminCustomers />} />
+          <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/settings/hero" element={<AdminHeroManager />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
         </Route>

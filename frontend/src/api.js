@@ -349,7 +349,7 @@ export const mediaApi = {
 export const heroApi = {
   async list({ includeInactive = false } = {}) {
     const qs = includeInactive ? `?includeInactive=true` : "";
-    const data = await http(`/heroes${qs}`, { auth: true });
+    const data = await http(`/heroes${qs}`, { auth: includeInactive });
     // backend: { heroes: [...] }
     return data.heroes || [];
   },
@@ -491,6 +491,22 @@ export const orderApi = {
     const data = await http(`/orders/${id}`, { auth: true });
     return data.order || null;
   },
+  async adminList(params = {}) {
+    const qs = toQueryString(params);
+    return http(`/orders/admin${qs}`, { auth: true });
+  },
+  async adminGet(id) {
+    const data = await http(`/orders/admin/${id}`, { auth: true });
+    return data.order || null;
+  },
+  async adminUpdateStatus(id, payload) {
+    const data = await http(`/orders/admin/${id}/status`, {
+      method: "PATCH",
+      body: payload,
+      auth: true,
+    });
+    return data.order || null;
+  },
 };
 
 // ---------- user details api ----------
@@ -600,6 +616,25 @@ export const userDetailsApi = {
   },
 };
 
+export const shippingApi = {
+  async getConfig() {
+    const data = await http("/shipping");
+    return data?.shipping || {
+      name: "Standard Shipping",
+      fee: 0,
+      freeThreshold: 0,
+    };
+  },
+  async updateConfig(payload) {
+    const data = await http("/shipping", {
+      method: "PUT",
+      body: payload,
+      auth: true,
+    });
+    return data?.shipping || null;
+  },
+};
+
 export default {
   http,
   authApi,
@@ -611,6 +646,7 @@ export default {
   heroApi,
   setApi,
   userDetailsApi,
+  shippingApi,
   getAccessToken,
   setAccessToken,
   getUser,

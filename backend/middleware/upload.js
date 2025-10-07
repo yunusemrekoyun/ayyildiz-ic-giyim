@@ -11,7 +11,7 @@ export const upload = multer({
 });
 
 /** HERO için ayrı uploader (video + büyük boyut) */
-const HERO_MAX_MB = Number(process.env.HERO_MAX_FILE_MB || 200); // .env ile yönet: HERO_MAX_FILE_MB=200
+const HERO_MAX_MB = Number(process.env.HERO_MAX_FILE_MB || 80); // .env ile yönet: HERO_MAX_FILE_MB=80
 export const uploadHeroMedia = multer({
   storage,
   limits: {
