@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CartContext } from "./CartContext";
 import { shippingApi } from "../api/shipping";
+import { couponApi } from "../api/coupons";
 
 // Varyantları ayırt eden benzersiz satır anahtarı
 function makeLineId(id, { color = null, size = null, attribute = null } = {}) {
@@ -35,7 +36,14 @@ export default function CartProvider({ children }) {
       const parsed = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(parsed)) return [];
       return parsed
-        .map(normalizeItem)
+        .map((item) => {
+          const normalized = normalizeItem(item);
+          if (!normalized) return null;
+          const original = Number(normalized.originalPrice || normalized.price || 0);
+          normalized.originalPrice = original;
+          normalized.price = Number(normalized.price || original);
+          return normalized;
+        })
         .filter(Boolean);
     } catch {
       return [];
@@ -47,6 +55,8 @@ export default function CartProvider({ children }) {
     freeThreshold: 0,
   });
   const [shippingLoading, setShippingLoading] = useState(true);
+  const [coupon, setCoupon] = useState(null);
+  const [couponMessage, setCouponMessage] = useState(null);
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(items));
@@ -102,7 +112,9 @@ export default function CartProvider({ children }) {
         id: baseId,
         title: product.name || product.title,
         image: product.images?.[0]?.url || "/pd-1.jpg",
-        price: Number(product.price) || 0,
+        price: Number(product.finalPrice ?? product.price) || 0,
+        originalPrice:
+          Number(product.price ?? product.finalPrice ?? 0) || 0,
         qty: options.qty || 1,
         color: options.color || null,
         colorHex: options.colorHex || null,
@@ -167,6 +179,30 @@ export default function CartProvider({ children }) {
 
   const total = useMemo(() => subTotal + shippingFee, [subTotal, shippingFee]);
 
+  const couponDiscount = useMemo(() => {
+    if (!coupon) return 0;
+    if (subTotal < (coupon.minSubtotal || 0)) return 0;
+    return Math.round(((subTotal * coupon.percentage) / 100) * 100) / 100;
+  }, [coupon, subTotal]);
+
+  const grandTotal = useMemo(
+    () => Math.max(0, total - couponDiscount),
+    [total, couponDiscount]
+  );
+
+  useEffect(() => {
+    if (coupon) {
+      const minRequired = Number(coupon.minSubtotal || 0);
+      if (subTotal < minRequired) {
+        setCouponMessage(
+          `Minimum subtotal for ${coupon.code} is €${minRequired.toFixed(2)}`
+        );
+      } else {
+        setCouponMessage(null);
+      }
+    }
+  }, [coupon, subTotal]);
+
   const refreshShipping = async () => {
     try {
       const config = await shippingApi.getConfig();
@@ -176,6 +212,37 @@ export default function CartProvider({ children }) {
       setShippingConfig((prev) => prev);
       throw error;
     }
+  };
+
+  const applyCoupon = async (code) => {
+    const normalized = String(code || "").trim();
+    if (!normalized) {
+      setCoupon(null);
+      setCouponMessage("Coupon code is required");
+      throw new Error("Coupon code is required");
+    }
+    setCouponMessage(null);
+    try {
+      const applied = await couponApi.apply({ code: normalized, subtotal: subTotal });
+      setCoupon(applied);
+      return applied;
+    } catch (error) {
+      let message = error?.message || "Unable to apply coupon";
+      try {
+        const parsed = JSON.parse(error.message);
+        message = parsed?.message || message;
+      } catch {
+        // ignore parse error
+      }
+      setCoupon(null);
+      setCouponMessage(message);
+      throw new Error(message);
+    }
+  };
+
+  const clearCoupon = () => {
+    setCoupon(null);
+    setCouponMessage(null);
   };
 
   return (
@@ -189,6 +256,12 @@ export default function CartProvider({ children }) {
         totalItems,
         subTotal,
         total,
+        coupon,
+        couponMessage,
+        couponDiscount,
+        grandTotal,
+        applyCoupon,
+        clearCoupon,
         shipping: {
           name: shippingConfig?.name || "Standard Shipping",
           fee: shippingFee,

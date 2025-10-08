@@ -97,6 +97,8 @@ export default function SetDetail({ setDoc }) {
           <SetInfo
             name={setDoc.name}
             price={setDoc.price}
+            finalPrice={setDoc.finalPrice}
+            discount={setDoc.discount?.percentage}
             stock={setDoc.stock}
             description={setDoc.description}
           />
@@ -106,6 +108,7 @@ export default function SetDetail({ setDoc }) {
           <SetSummary
             setDoc={setDoc}
             price={setDoc.price}
+            finalPrice={setDoc.finalPrice}
             stock={setDoc.stock}
             quantity={qty}
             maxStock={maxStock}

@@ -107,13 +107,36 @@ export function ensureSlug(doc, sourceField = "name") {
   }
 }
 
-export function shapeProduct(doc) {
+export function shapeProduct(doc, { discount = null, finalPrice = undefined } = {}) {
   if (!doc) return null;
+
+  const id = doc._id?.toString?.() || doc.id?.toString?.() || String(doc._id || doc.id);
+  const basePrice = Number(doc.price) || 0;
+  const normalizedDiscount = discount
+    ? {
+        id: discount.id || discount._id?.toString?.() || String(discount._id),
+        name: discount.name,
+        percentage: Number(discount.percentage) || 0,
+        description: discount.description || "",
+      }
+    : null;
+
+  let computedFinal = finalPrice;
+  if (!Number.isFinite(computedFinal)) {
+    computedFinal = normalizedDiscount
+      ? Math.round((basePrice - (basePrice * normalizedDiscount.percentage) / 100) * 100) /
+        100
+      : basePrice;
+  }
+
   return {
-    id: doc._id,
+    id,
     name: doc.name,
     slug: doc.slug,
-    price: doc.price,
+    price: basePrice,
+    finalPrice: Math.max(0, Number(computedFinal) || 0),
+    discount: normalizedDiscount,
+    hasDiscount: Boolean(normalizedDiscount) && basePrice !== computedFinal,
     images: doc.images,
     colors: doc.colors,
     sizes: doc.sizes,

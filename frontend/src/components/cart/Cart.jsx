@@ -1,5 +1,5 @@
 // src/components/cart/Cart.jsx
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import CartItem from "./CartItem";
 import { useCart } from "../../hooks/useCart";
 import { useNavigate } from "react-router-dom";
@@ -18,39 +18,37 @@ export default function Cart() {
     removeFromCart = () => {},
     subTotal = 0,
     total = 0,
+    grandTotal = 0,
+    coupon = null,
+    couponDiscount = 0,
+    couponMessage = null,
+    applyCoupon = async () => {},
+    clearCoupon = () => {},
     shipping: shippingInfo = {},
   } = cart;
 
-  const [coupon, setCoupon] = useState("");
-  const [applied, setApplied] = useState(null); // {code, type: 'percent'|'flat'|'invalid', value}
-
-  // Sahte kupon örneği: ROSE10 => %10; BRIDE20 => €20
-  const discount = useMemo(() => {
-    if (!applied) return 0;
-    if (applied.type === "percent") return (subTotal * applied.value) / 100;
-    if (applied.type === "flat") return applied.value;
-    return 0;
-  }, [applied, subTotal]);
+  const [couponInput, setCouponInput] = useState("");
 
   const shippingFee = shippingInfo?.fee ?? 0;
   const baseShippingFee = shippingInfo?.baseFee ?? shippingFee;
   const freeThreshold = shippingInfo?.freeThreshold ?? 0;
   const shippingName = shippingInfo?.name || "Shipping";
 
-  const totalWithDiscount = Math.max(0, total - discount);
+  const totalWithDiscount = Math.max(0, grandTotal || total);
 
   const onQty = (lineId, next) => updateQty(lineId, next);
   const onRemove = (lineId) => removeFromCart(lineId);
 
-  const applyCoupon = () => {
-    const code = coupon.trim().toUpperCase();
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim();
     if (!code) return;
-    if (code === "ROSE10") setApplied({ code, type: "percent", value: 10 });
-    else if (code === "BRIDE20") setApplied({ code, type: "flat", value: 20 });
-    else setApplied({ code, type: "invalid" });
-    setCoupon("");
+    try {
+      await applyCoupon(code);
+      setCouponInput("");
+    } catch {
+      // error message handled via couponMessage
+    }
   };
-  const clearCoupon = () => setApplied(null);
 
   // Boş sepet
   if (items.length === 0) {
@@ -101,18 +99,18 @@ export default function Cart() {
           <div className="flex flex-wrap items-center gap-3 border-t border-border px-5 py-4">
             <div className="flex flex-1 items-center gap-2">
               <input
-                value={coupon}
-                onChange={(e) => setCoupon(e.target.value)}
-                placeholder="Coupon code (ROSE10, BRIDE20)"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                placeholder="Enter coupon code"
                 className="flex-1 rounded-lg border border-border bg-contact-bg px-3 py-2 text-sm text-primary outline-none placeholder:text-secondary/60"
               />
               <button
-                onClick={applyCoupon}
+                onClick={handleApplyCoupon}
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover"
               >
                 Apply
               </button>
-              {applied && (
+              {coupon && (
                 <button
                   onClick={clearCoupon}
                   className="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-surface-hover"
@@ -122,20 +120,16 @@ export default function Cart() {
               )}
             </div>
 
-            {applied?.code && (
-              <span
-                className={[
-                  "text-sm",
-                  applied.type === "invalid"
-                    ? "text-red-500"
-                    : "text-accent font-medium",
-                ].join(" ")}
-              >
-                {applied.type === "invalid"
-                  ? `Invalid code: ${applied.code}`
-                  : `Applied: ${applied.code}`}
-              </span>
-            )}
+            <div className="flex flex-col items-start gap-1 text-sm">
+              {coupon && (
+                <span className="font-medium text-accent">
+                  Applied: {coupon.code} ({coupon.percentage}% off)
+                </span>
+              )}
+              {couponMessage && (
+                <span className="text-rose-500">{couponMessage}</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -178,7 +172,7 @@ export default function Cart() {
             <Row label="Subtotal" value={CURRENCY(subTotal)} />
             <Row
               label="Discount"
-              value={discount ? `– ${CURRENCY(discount)}` : CURRENCY(0)}
+              value={couponDiscount ? `– ${CURRENCY(couponDiscount)}` : CURRENCY(0)}
             />
             <Row
               label={`Shipping${shippingName ? ` (${shippingName})` : ""}`}

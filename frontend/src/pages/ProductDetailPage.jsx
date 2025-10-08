@@ -119,6 +119,8 @@ export default function ProductDetailPage() {
               image: item.images?.[0]?.url,
               title: item.name,
               price: item.price,
+              finalPrice: item.finalPrice ?? item.price,
+              discount: item.discount?.percentage,
               slug: item.slug,
             }))}
           />

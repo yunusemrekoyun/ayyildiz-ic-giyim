@@ -24,6 +24,8 @@ import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminSettings from "./pages/admin/AdminSettingsPage";
 import AdminHeroManager from "./pages/admin/AdminHeroManager";
 import AdminOrders from "./pages/admin/AdminOrders";
+import AdminDiscounts from "./pages/admin/AdminDiscounts";
+import AdminCoupons from "./pages/admin/AdminCoupons";
 
 export default function App() {
   return (
@@ -71,6 +73,8 @@ export default function App() {
           <Route path="/admin/sets" element={<AdminSets />} />
           <Route path="/admin/customers" element={<AdminCustomers />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/discounts" element={<AdminDiscounts />} />
+          <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/settings/hero" element={<AdminHeroManager />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
         </Route>

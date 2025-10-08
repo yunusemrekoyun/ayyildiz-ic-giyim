@@ -17,8 +17,12 @@ export default function CheckoutPage() {
     items: itemsRaw = [],
     subTotal = 0,
     total = 0,
+    grandTotal = 0,
+    coupon = null,
+    couponDiscount = 0,
     shipping: shippingInfo = {},
     clearCart = () => {},
+    clearCoupon = () => {},
   } = cart;
 
   // API'ye gidecek satırlar (id/kind/qty)
@@ -89,7 +93,7 @@ export default function CheckoutPage() {
   const subtotal = Number(subTotal ?? computedSubtotal) || 0;
   const shippingFee = shippingInfo?.fee ?? 0;
   const shippingName = shippingInfo?.name || "Shipping";
-  const totalDue = Number(total || subtotal + shippingFee) || 0;
+  const totalDue = Number(grandTotal || total || subtotal + shippingFee) || 0;
 
   // Sipariş başarı takip
   const orderPlacedRef = useRef(false);
@@ -145,9 +149,11 @@ export default function CheckoutPage() {
       const order = await orderApi.create({
         addressId,
         items: checkoutItems,
+        couponCode: coupon?.code || null,
       });
       orderPlacedRef.current = true;
       clearCart();
+      clearCoupon();
       navigate(`/checkout/success?order=${order.id}`, { replace: true });
     } catch (e) {
       // 401 ise login’e gönder
@@ -267,22 +273,30 @@ export default function CheckoutPage() {
               ))}
             </ul>
 
-              <div className="mt-4 border-t border-border pt-4 space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-secondary">Subtotal</span>
-                  <span className="text-primary">€{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-secondary">
-                    {shippingName ? `Shipping (${shippingName})` : "Shipping"}
-                  </span>
-                  <span className="text-primary">€{shippingFee.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-base font-semibold">
-                  <span className="text-primary">Total</span>
-                  <span className="text-primary">€{totalDue.toFixed(2)}</span>
-                </div>
+            <div className="mt-4 border-t border-border pt-4 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-secondary">Subtotal</span>
+                <span className="text-primary">€{subtotal.toFixed(2)}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-secondary">
+                  {shippingName ? `Shipping (${shippingName})` : "Shipping"}
+                </span>
+                <span className="text-primary">€{shippingFee.toFixed(2)}</span>
+              </div>
+              {coupon && (
+                <div className="flex justify-between text-rose-600">
+                  <span className="text-sm">
+                    Coupon ({coupon.code})
+                  </span>
+                  <span>– €{couponDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-semibold">
+                <span className="text-primary">Total</span>
+                <span className="text-primary">€{totalDue.toFixed(2)}</span>
+              </div>
+            </div>
 
             <div className="relative">
               <LoadingOverlay show={placing} />

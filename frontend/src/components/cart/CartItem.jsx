@@ -3,7 +3,14 @@ export default function CartItem({ item, onQty, onRemove }) {
   const inc = () => onQty(item.lineId, item.qty + 1);
   const dec = () => onQty(item.lineId, item.qty - 1);
 
-  const lineTotal = (Number(item.price) * Number(item.qty)).toFixed(2);
+  const qty = Number(item.qty) || 0;
+  const unitFinal = Number(item.price) || 0;
+  const unitOriginal = Number(
+    item.originalPrice != null ? item.originalPrice : item.price
+  );
+  const showStrike = unitFinal < unitOriginal;
+  const lineTotal = unitFinal * qty;
+  const originalTotal = unitOriginal * qty;
 
   return (
     <li className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-12">
@@ -65,11 +72,27 @@ export default function CartItem({ item, onQty, onRemove }) {
       {/* Fiyatlar */}
       <div className="sm:col-span-3 sm:text-right">
         <p className="text-sm text-secondary">Unit</p>
-        <p className="font-semibold text-primary">
-          €{Number(item.price).toFixed(2)}
-        </p>
+        <div className="flex items-baseline gap-2 sm:justify-end">
+          <span className="font-semibold text-primary">
+            €{unitFinal.toFixed(2)}
+          </span>
+          {showStrike && (
+            <span className="text-xs text-secondary/60 line-through">
+              €{unitOriginal.toFixed(2)}
+            </span>
+          )}
+        </div>
         <p className="mt-2 text-sm text-secondary">Total</p>
-        <p className="font-semibold text-primary">€{lineTotal}</p>
+        <div className="flex items-baseline gap-2 sm:justify-end">
+          <span className="font-semibold text-primary">
+            €{lineTotal.toFixed(2)}
+          </span>
+          {showStrike && (
+            <span className="text-xs text-secondary/60 line-through">
+              €{originalTotal.toFixed(2)}
+            </span>
+          )}
+        </div>
       </div>
     </li>
   );

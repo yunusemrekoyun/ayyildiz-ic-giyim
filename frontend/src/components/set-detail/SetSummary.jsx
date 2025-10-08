@@ -6,6 +6,7 @@ import { useCart } from "../../hooks/useCart";
 export default function SetSummary({
   setDoc,
   price = 0,
+  finalPrice = undefined,
   stock = null,
   quantity = 1,
   maxStock = 99,
@@ -16,16 +17,21 @@ export default function SetSummary({
   const hasStockInfo = stock !== null && stock !== undefined;
   const canBuy = (hasStockInfo ? stock > 0 : true) && quantity >= 1;
 
-  const priceText = useMemo(() => {
-    try {
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "EUR",
-      }).format(Number(price || 0));
-    } catch {
-      return `€${Number(price || 0).toFixed(2)}`;
-    }
-  }, [price]);
+  const { priceText, originalText, showStrike, totalText } = useMemo(() => {
+    const basePrice = Number(price ?? 0);
+    const computedFinal = Number(finalPrice ?? basePrice);
+    const formatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 2,
+    });
+    return {
+      showStrike: computedFinal < basePrice,
+      priceText: formatter.format(computedFinal),
+      originalText: formatter.format(basePrice),
+      totalText: formatter.format(computedFinal * quantity),
+    };
+  }, [price, finalPrice, quantity]);
 
   const handleAdd = () => {
     if (!setDoc) return;
@@ -54,7 +60,17 @@ export default function SetSummary({
 
         {/* Price + CTA */}
         <div className="flex items-center gap-3">
-          <div className="text-lg font-semibold text-primary">{priceText}</div>
+          <div className="flex flex-col text-right">
+            <span className="text-lg font-semibold text-primary">
+              {priceText}
+            </span>
+            {showStrike && (
+              <span className="text-xs text-secondary/60 line-through">
+                {originalText}
+              </span>
+            )}
+            <span className="text-xs text-secondary">Total {totalText}</span>
+          </div>
           <button
             type="button"
             disabled={!canBuy}

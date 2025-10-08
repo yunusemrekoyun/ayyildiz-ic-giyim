@@ -47,6 +47,8 @@ export default function SetDetailsPage() {
                 image: s.images?.[0]?.url,
                 title: s.name,
                 price: s.price,
+                finalPrice: s.finalPrice ?? s.price,
+                discount: s.discount?.percentage,
                 slug: s.slug || s.id,
                 tags,
               };

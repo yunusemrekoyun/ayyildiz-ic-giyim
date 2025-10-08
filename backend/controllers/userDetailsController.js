@@ -10,6 +10,12 @@ import {
 } from "../utils/cloudinaryUpload.js";
 import { shapeUser } from "../utils/userPresenter.js";
 import { shapeProduct } from "../utils/productHelpers.js";
+import {
+  fetchActiveDiscounts,
+  computeProductDiscountMap,
+  mapDiscountsToSets,
+  applyDiscount,
+} from "../utils/discountHelpers.js";
 
 // ------------------------------
 // Helpers / Shapers
@@ -43,14 +49,38 @@ function shapeAvatar(avatar) {
   };
 }
 
-function shapeSet(doc) {
+function setId(doc) {
   if (!doc) return null;
+  return (
+    doc._id?.toString?.() ||
+    doc.id?.toString?.() ||
+    (typeof doc === "string" ? doc : String(doc._id || doc.id || ""))
+  );
+}
+
+function shapeSet(doc, { discount = null } = {}) {
+  if (!doc) return null;
+
+  const basePrice = Number(doc.price) || 0;
+  const normalizedDiscount = discount
+    ? {
+        id: discount.id || discount._id?.toString?.() || String(discount._id),
+        name: discount.name,
+        percentage: Number(discount.percentage) || 0,
+        description: discount.description || "",
+      }
+    : null;
+  const { finalPrice } = applyDiscount(basePrice, normalizedDiscount);
+
   return {
     id: doc._id,
     name: doc.name,
     slug: doc.slug,
     description: doc.description,
-    price: doc.price,
+    price: basePrice,
+    finalPrice,
+    discount: normalizedDiscount,
+    hasDiscount: Boolean(normalizedDiscount) && finalPrice !== basePrice,
     show: doc.show,
     stock: doc.stock,
     images: doc.images,
@@ -349,10 +379,29 @@ export async function getFavorites(req, res) {
       Set.find({ _id: { $in: details.favoriteSets || [] } }).lean(),
     ]);
 
+    const activeDiscounts = await fetchActiveDiscounts();
+    const productDiscountMap = activeDiscounts.length
+      ? computeProductDiscountMap(activeDiscounts, products)
+      : new Map();
+    const setDiscountMap = activeDiscounts.length
+      ? mapDiscountsToSets(
+          activeDiscounts,
+          sets.map((set) => setId(set) || "")
+        )
+      : new Map();
+
     res.json({
       favorites: {
-        products: products.map(shapeProduct),
-        sets: sets.map(shapeSet),
+        products: products.map((product) => {
+          const id = product?._id?.toString?.() || "";
+          return shapeProduct(product, {
+            discount: id ? productDiscountMap.get(id) || null : null,
+          });
+        }),
+        sets: sets.map((set) => {
+          const id = setId(set) || "";
+          return shapeSet(set, { discount: setDiscountMap.get(id) || null });
+        }),
       },
     });
   } catch (error) {

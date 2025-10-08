@@ -51,7 +51,9 @@ export default function ShopPage() {
   // Fiyat aralığı (ürünlere göre)
   const priceRange = useMemo(() => {
     if (!products.length) return { min: 0, max: 0 };
-    const vals = products.map((p) => Number(p.price) || 0);
+    const vals = products.map(
+      (p) => Number(p.finalPrice ?? p.price ?? 0) || 0
+    );
     const mins = Math.min(...vals);
     const maxs = Math.max(...vals);
     return {
@@ -131,7 +133,7 @@ export default function ShopPage() {
       if (!product) return false;
 
       // price
-      const price = Number(product.price) || 0;
+      const price = Number(product.finalPrice ?? product.price) || 0;
       if (selectedPrice && price > selectedPrice) return false;
 
       // category (product.category id’sini normalize et)

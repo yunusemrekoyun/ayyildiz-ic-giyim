@@ -1,8 +1,21 @@
-export default function SetInfo({ name, price, stock, description }) {
-  const priceText = new Intl.NumberFormat("en-US", {
+import DiscountBadge from "../ui/DiscountBadge.jsx";
+
+export default function SetInfo({
+  name,
+  price,
+  finalPrice,
+  discount,
+  stock,
+  description,
+}) {
+  const basePrice = Number(price ?? 0);
+  const computedFinal = Number(finalPrice ?? basePrice);
+  const showStrike = Number.isFinite(basePrice) && computedFinal < basePrice;
+  const priceFormatter = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "EUR",
-  }).format(price || 0);
+    minimumFractionDigits: 2,
+  });
 
   return (
     <div>
@@ -10,8 +23,20 @@ export default function SetInfo({ name, price, stock, description }) {
         {name}
       </h1>
 
-      <div className="mt-2 flex items-center gap-3">
-        <div className="text-xl font-semibold text-primary">{priceText}</div>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-semibold text-accent">
+            {priceFormatter.format(computedFinal)}
+          </span>
+          {showStrike && (
+            <span className="text-base text-secondary/60 line-through">
+              {priceFormatter.format(basePrice)}
+            </span>
+          )}
+        </div>
+        {showStrike && (
+          <DiscountBadge percentage={discount} size="sm" />
+        )}
         <div
           className={[
             "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",

@@ -12,6 +12,10 @@ import {
   sanitizeOption,
   shapeProduct,
 } from "../utils/productHelpers.js";
+import {
+  fetchActiveDiscounts,
+  computeProductDiscountMap,
+} from "../utils/discountHelpers.js";
 
 const isValidObjectId = (val) =>
   typeof val === "string" && val.match(/^[0-9a-fA-F]{24}$/);
@@ -29,6 +33,35 @@ async function resolveCategory(category) {
   const found = await Category.findOne(filter);
   if (!found) throw new Error("Category not found");
   return found;
+}
+
+function productId(doc) {
+  if (!doc) return null;
+  return (
+    doc._id?.toString?.() ||
+    doc.id?.toString?.() ||
+    (typeof doc === "string" ? doc : String(doc._id || doc.id || ""))
+  );
+}
+
+async function shapeProductsWithDiscounts(products) {
+  if (!products?.length) return [];
+  const activeDiscounts = await fetchActiveDiscounts();
+  const discountMap = activeDiscounts.length
+    ? computeProductDiscountMap(activeDiscounts, products)
+    : new Map();
+
+  return products.map((product) => {
+    const id = productId(product);
+    const discount = id ? discountMap.get(id) || null : null;
+    return shapeProduct(product, { discount });
+  });
+}
+
+async function shapeProductWithDiscount(product) {
+  if (!product) return null;
+  const [shaped] = await shapeProductsWithDiscounts([product]);
+  return shaped || null;
 }
 
 async function uploadImages(files) {
@@ -101,7 +134,9 @@ export async function createProduct(req, res) {
     });
 
     const populated = await product.populate("category");
-    res.status(201).json({ product: shapeProduct(populated) });
+    res.status(201).json({
+      product: await shapeProductWithDiscount(populated),
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -139,7 +174,7 @@ export async function listProducts(req, res) {
     ]);
 
     res.json({
-      products: items.map(shapeProduct),
+      products: await shapeProductsWithDiscounts(items),
       pagination: {
         page: pageNumber,
         limit: pageSize,
@@ -169,7 +204,7 @@ export async function getProduct(req, res) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    res.json({ product: shapeProduct(product) });
+    res.json({ product: await shapeProductWithDiscount(product) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -263,7 +298,7 @@ export async function updateProduct(req, res) {
 
     await product.save();
     const populated = await product.populate("category");
-    res.json({ product: shapeProduct(populated) });
+    res.json({ product: await shapeProductWithDiscount(populated) });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

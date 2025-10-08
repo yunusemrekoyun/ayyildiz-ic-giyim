@@ -44,6 +44,13 @@ const OrderSchema = new mongoose.Schema(
     shippingName: { type: String, default: "Standard Shipping" },
     total: { type: Number, required: true },
 
+    coupon: {
+      code: { type: String, default: null },
+      percentage: { type: Number, default: 0 },
+      minSubtotal: { type: Number, default: 0 },
+      discountAmount: { type: Number, default: 0 },
+    },
+
     status: {
       type: String,
       enum: ["pending", "paid", "shipped", "completed", "cancelled"],

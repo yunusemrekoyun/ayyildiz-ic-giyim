@@ -4,6 +4,7 @@ import { Heart } from "lucide-react";
 import { getAccessToken } from "../../api/client";
 import { userDetailsApi } from "../../api/userDetails";
 import { useNavigate } from "react-router-dom";
+import DiscountBadge from "../ui/DiscountBadge.jsx";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -194,18 +195,29 @@ export default function ProductDetail({ product = {} }) {
   const description = product.description || "No description provided.";
   const care = product.careInstructions || "";
   const details = Array.isArray(product.details) ? product.details : [];
+  const originalPrice = Number(product.price ?? 0);
+  const finalPrice = Number(product.finalPrice ?? originalPrice);
+  const showStrike = finalPrice < originalPrice;
+  const discountPercentage = product.discount?.percentage;
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
       {/* Left: Gallery */}
       <div className="md:col-span-5">
-        <div className="overflow-hidden rounded-xl border border-border bg-white">
+        <div className="relative overflow-hidden rounded-xl border border-border bg-white">
           <img
             src={gallery[activeImg]}
             alt={product.name || product.title || "Product"}
             className="aspect-[4/5] w-full object-cover"
             draggable="false"
           />
+          {showStrike && (
+            <DiscountBadge
+              percentage={discountPercentage}
+              size="sm"
+              className="absolute left-4 top-4"
+            />
+          )}
         </div>
 
         {gallery.length > 1 && (
@@ -259,15 +271,18 @@ export default function ProductDetail({ product = {} }) {
             </button>
           </div>
 
-          <div className="mt-2 flex items-center gap-3">
-            <span className="text-xl font-semibold text-accent">
-              {currency.format(product.price || 0)}
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <span className="text-2xl font-semibold text-accent">
+              {currency.format(finalPrice)}
             </span>
-            {product.compareAtPrice || product.oldPrice ? (
-              <span className="text-secondary/60 line-through">
-                {currency.format(product.compareAtPrice || product.oldPrice)}
+            {showStrike && (
+              <span className="text-base text-secondary/60 line-through">
+                {currency.format(originalPrice)}
               </span>
-            ) : null}
+            )}
+            {showStrike && (
+              <DiscountBadge percentage={discountPercentage} size="sm" />
+            )}
           </div>
           <p
             className={`mt-1 text-sm ${

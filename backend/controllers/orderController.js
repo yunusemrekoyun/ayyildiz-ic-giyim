@@ -4,6 +4,13 @@ import UserDetails from "../models/UserDetails.js";
 import Product from "../models/Product.js";
 import Set from "../models/Set.js";
 import ShippingConfig from "../models/ShippingConfig.js";
+import Coupon from "../models/Coupon.js";
+import {
+  fetchActiveDiscounts,
+  computeProductDiscountMap,
+  mapDiscountsToSets,
+  applyDiscount,
+} from "../utils/discountHelpers.js";
 
 function generateOrderNumber() {
   const now = new Date();
@@ -64,6 +71,14 @@ function shapeOrder(doc) {
     shipping: doc.shipping,
     shippingName: doc.shippingName || "Standard Shipping",
     total: doc.total,
+    coupon: doc.coupon?.code
+      ? {
+          code: doc.coupon.code,
+          percentage: doc.coupon.percentage,
+          discountAmount: doc.coupon.discountAmount,
+          minSubtotal: doc.coupon.minSubtotal,
+        }
+      : null,
     status: doc.status,
     payment: doc.payment,
     createdAt: doc.createdAt,
@@ -82,7 +97,7 @@ function shapeOrder(doc) {
 export async function createOrder(req, res) {
   try {
     const userId = req.userId;
-    const { addressId, items = [] } = req.body || {};
+    const { addressId, items = [], couponCode = null } = req.body || {};
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
@@ -120,12 +135,24 @@ export async function createOrder(req, res) {
       .map((x) => x.id);
 
     const [products, sets] = await Promise.all([
-      productIds.length ? Product.find({ _id: { $in: productIds } }) : [],
+      productIds.length
+        ? Product.find({ _id: { $in: productIds } }).populate("category")
+        : [],
       setIds.length ? Set.find({ _id: { $in: setIds } }) : [],
     ]);
 
     const pMap = new Map(products.map((p) => [String(p._id), p]));
     const sMap = new Map(sets.map((s) => [String(s._id), s]));
+
+    const activeDiscounts = await fetchActiveDiscounts();
+    const productDiscountMap =
+      activeDiscounts.length && products.length
+        ? computeProductDiscountMap(activeDiscounts, products)
+        : new Map();
+    const setDiscountMap =
+      activeDiscounts.length && sets.length
+        ? mapDiscountsToSets(activeDiscounts, sets.map((set) => set._id))
+        : new Map();
 
     const orderItems = [];
     for (const raw of items) {
@@ -136,11 +163,14 @@ export async function createOrder(req, res) {
           return res
             .status(404)
             .json({ message: "Product not found: " + raw.id });
+        const discount = productDiscountMap.get(String(p._id)) || null;
+        const { finalPrice } = applyDiscount(Number(p.price || 0), discount);
+        const safePrice = roundCurrency(finalPrice);
         orderItems.push({
           kind: "product",
           ref: p._id,
           name: p.name,
-          unitPrice: Number(p.price || 0),
+          unitPrice: safePrice,
           qty,
           image: p.images?.[0]?.url || "",
         });
@@ -148,11 +178,14 @@ export async function createOrder(req, res) {
         const s = sMap.get(String(raw.id));
         if (!s)
           return res.status(404).json({ message: "Set not found: " + raw.id });
+        const discount = setDiscountMap.get(String(s._id)) || null;
+        const { finalPrice } = applyDiscount(Number(s.price || 0), discount);
+        const safePrice = roundCurrency(finalPrice);
         orderItems.push({
           kind: "set",
           ref: s._id,
           name: s.name,
-          unitPrice: Number(s.price || 0),
+          unitPrice: safePrice,
           qty,
           image: s.images?.[0]?.url || "",
         });
@@ -161,9 +194,8 @@ export async function createOrder(req, res) {
       }
     }
 
-    const subtotal = orderItems.reduce(
-      (sum, i) => sum + i.unitPrice * i.qty,
-      0
+    const subtotal = roundCurrency(
+      orderItems.reduce((sum, item) => sum + item.unitPrice * item.qty, 0)
     );
 
     const shippingConfig = await ShippingConfig.getSingleton();
@@ -171,7 +203,50 @@ export async function createOrder(req, res) {
     const feeRaw = Number(shippingConfig.fee || 0);
     const shipping = subtotal >= threshold ? 0 : Math.max(0, feeRaw);
     const shippingName = shippingConfig.name || "Standard Shipping";
-    const total = subtotal + shipping;
+
+    let couponSummary = null;
+    let couponDiscountAmount = 0;
+    if (couponCode) {
+      const normalized = normalizeCode(couponCode);
+      if (normalized) {
+        const now = new Date();
+        const coupon = await Coupon.findOne({
+          code: normalized,
+          active: true,
+          $and: [
+            { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] },
+            { $or: [{ endsAt: null }, { endsAt: { $gte: now } }] },
+          ],
+        }).lean();
+
+        if (!coupon) {
+          return res
+            .status(400)
+            .json({ message: "Coupon not found or inactive" });
+        }
+
+        if (subtotal < (coupon.minSubtotal || 0)) {
+          return res.status(400).json({
+            message: `Coupon requires minimum subtotal of ${coupon.minSubtotal}`,
+            reason: "minSubtotal",
+            minSubtotal: coupon.minSubtotal,
+          });
+        }
+
+        couponDiscountAmount = roundCurrency(
+          (subtotal * Number(coupon.percentage || 0)) / 100
+        );
+        couponSummary = {
+          code: coupon.code,
+          percentage: coupon.percentage,
+          minSubtotal: coupon.minSubtotal || 0,
+          discountAmount: couponDiscountAmount,
+        };
+      }
+    }
+
+    const discountedSubtotal = Math.max(0, subtotal - couponDiscountAmount);
+    const total = roundCurrency(discountedSubtotal + shipping);
 
     const orderNumber = await createOrderNumber();
 
@@ -186,12 +261,23 @@ export async function createOrder(req, res) {
       total,
       status: "pending",
       payment: { method: "cod" },
+      coupon: couponSummary,
     });
 
     res.status(201).json({ order: shapeOrder(order) });
   } catch (err) {
     res.status(500).json({ message: err.message || "Unable to create order" });
   }
+}
+
+function normalizeCode(code) {
+  return String(code || "")
+    .trim()
+    .toUpperCase();
+}
+
+function roundCurrency(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
 }
 
 /** GET /api/orders/mine  */

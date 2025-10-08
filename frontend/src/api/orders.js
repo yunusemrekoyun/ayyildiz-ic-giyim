@@ -1,11 +1,11 @@
 import { http, toQueryString } from "./client.js";
 
 export const orderApi = {
-  async create({ addressId, items }) {
+  async create({ addressId, items, couponCode = null }) {
     const data = await http("/orders", {
       method: "POST",
       auth: true,
-      body: { addressId, items },
+      body: { addressId, items, couponCode },
     });
     return data.order;
   },

@@ -136,6 +136,10 @@ function mapSetsToCards(sets) {
     const slugOrId = s?.slug || s?.id || s?._id;
     const to = slugOrId ? `/set/${slugOrId}` : "#";
 
-    return { image, title, desc, includes, tags, to };
+    const price = Number(s?.price ?? 0);
+    const finalPrice = Number(s?.finalPrice ?? price);
+    const discount = s?.discount?.percentage;
+
+    return { image, title, desc, includes, tags, to, price, finalPrice, discount };
   });
 }

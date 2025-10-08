@@ -1,7 +1,20 @@
 import { Link } from "react-router-dom";
+import DiscountBadge from "../ui/DiscountBadge.jsx";
 
-export default function SetsSetItem({ image, title, desc, includes, to }) {
+export default function SetsSetItem({
+  image,
+  title,
+  desc,
+  includes,
+  to,
+  price,
+  finalPrice,
+  discount,
+}) {
   const isDisabled = !to;
+  const basePrice = Number(price ?? 0);
+  const computedFinal = Number(finalPrice ?? basePrice);
+  const showStrike = Number.isFinite(basePrice) && computedFinal < basePrice;
 
   const Wrapper = ({ children }) =>
     isDisabled ? (
@@ -19,13 +32,20 @@ export default function SetsSetItem({ image, title, desc, includes, to }) {
   return (
     <article className="overflow-hidden rounded-2xl bg-white ring-1 ring-black/5 shadow-sm transition">
       <Wrapper>
-        <div className="overflow-hidden">
+        <div className="relative overflow-hidden">
           <img
             src={image}
             alt={title || "Set"}
             className="h-56 w-full object-cover md:h-64 transition-transform duration-300 group-hover:scale-[1.02]"
             draggable="false"
           />
+          {showStrike && (
+            <DiscountBadge
+              percentage={discount}
+              size="sm"
+              className="absolute left-4 top-4"
+            />
+          )}
         </div>
 
         <div className="p-6">
@@ -46,6 +66,17 @@ export default function SetsSetItem({ image, title, desc, includes, to }) {
             </p>
           )}
 
+          <div className="mt-4 flex items-baseline gap-2 text-lg">
+            <span className="font-semibold text-accent">
+              {formatCurrency(computedFinal)}
+            </span>
+            {showStrike && (
+              <span className="text-sm text-secondary/60 line-through">
+                {formatCurrency(basePrice)}
+              </span>
+            )}
+          </div>
+
           {!isDisabled && (
             <div className="mt-4 inline-flex items-center text-sm font-medium text-accent group-hover:underline">
               View details →
@@ -55,4 +86,12 @@ export default function SetsSetItem({ image, title, desc, includes, to }) {
       </Wrapper>
     </article>
   );
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+  }).format(Number(value) || 0);
 }

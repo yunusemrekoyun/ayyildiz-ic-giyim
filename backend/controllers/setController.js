@@ -14,9 +14,65 @@ import {
   shapeProduct,
   computeAvailableStock,
 } from "../utils/productHelpers.js";
+import {
+  fetchActiveDiscounts,
+  computeProductDiscountMap,
+  mapDiscountsToSets,
+  applyDiscount,
+} from "../utils/discountHelpers.js";
 
 const isValidObjectId = (val) =>
   typeof val === "string" && val.match(/^[0-9a-fA-F]{24}$/);
+
+function setId(doc) {
+  if (!doc) return null;
+  return (
+    doc._id?.toString?.() ||
+    doc.id?.toString?.() ||
+    (typeof doc === "string" ? doc : String(doc._id || doc.id || ""))
+  );
+}
+
+async function shapeSetsWithDiscounts(sets) {
+  if (!sets?.length) return [];
+  const activeDiscounts = await fetchActiveDiscounts();
+
+  let setDiscountMap = new Map();
+  let productDiscountMap = new Map();
+
+  if (activeDiscounts.length) {
+    setDiscountMap = mapDiscountsToSets(
+      activeDiscounts,
+      sets.map((set) => setId(set) || "")
+    );
+
+    const nestedProducts = [];
+    sets.forEach((set) => {
+      (set.products || []).forEach((entry) => {
+        if (entry?.product) nestedProducts.push(entry.product);
+      });
+    });
+
+    if (nestedProducts.length) {
+      productDiscountMap = computeProductDiscountMap(
+        activeDiscounts,
+        nestedProducts
+      );
+    }
+  }
+
+  return sets.map((set) => {
+    const id = setId(set) || "";
+    const discount = setDiscountMap.get(id) || null;
+    return shapeSet(set, { discount, productDiscountMap });
+  });
+}
+
+async function shapeSetWithDiscount(set) {
+  if (!set) return null;
+  const [shaped] = await shapeSetsWithDiscounts([set]);
+  return shaped || null;
+}
 
 export async function createSet(req, res) {
   try {
@@ -47,7 +103,10 @@ export async function createSet(req, res) {
       path: "products.product",
       populate: { path: "category" },
     });
-    res.status(201).json({ set: shapeSet(updated), createdProducts });
+    res.status(201).json({
+      set: await shapeSetWithDiscount(updated),
+      createdProducts,
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -63,7 +122,7 @@ export async function listSets(req, res) {
       .populate({ path: "products.product", populate: { path: "category" } })
       .lean();
 
-    res.json({ sets: sets.map(shapeSet) });
+    res.json({ sets: await shapeSetsWithDiscounts(sets) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -83,7 +142,7 @@ export async function getSet(req, res) {
       populate: { path: "category" },
     });
 
-    res.json({ set: shapeSet(set) });
+    res.json({ set: await shapeSetWithDiscount(set) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -138,7 +197,7 @@ export async function updateSet(req, res) {
       populate: { path: "category" },
     });
     res.json({
-      set: shapeSet(updated),
+      set: await shapeSetWithDiscount(updated),
       createdProducts: set.$locals?.createdProducts || [],
     });
   } catch (error) {
@@ -314,21 +373,46 @@ async function updateSetStock(setId) {
   return populated;
 }
 
-function shapeSet(doc) {
+function shapeSet(doc, { discount = null, productDiscountMap = new Map() } = {}) {
   if (!doc) return null;
   const id = doc._id?.toString?.() || String(doc._id);
+
+  const normalizedDiscount = discount
+    ? {
+        id: discount.id || discount._id?.toString?.() || String(discount._id),
+        name: discount.name,
+        percentage: Number(discount.percentage) || 0,
+        description: discount.description || "",
+      }
+    : null;
+
+  const basePrice = Number(doc.price) || 0;
+  const { finalPrice } = applyDiscount(basePrice, normalizedDiscount);
+
   return {
     id,
     name: doc.name,
     slug: doc.slug,
     description: doc.description,
-    price: doc.price,
+    price: basePrice,
+    finalPrice,
+    discount: normalizedDiscount,
+    hasDiscount: Boolean(normalizedDiscount) && basePrice !== finalPrice,
     show: doc.show,
     stock: doc.stock,
     images: doc.images,
     products: (doc.products || []).map((entry) => ({
       quantity: entry.quantity,
-      product: shapeProduct(entry.product) || entry.product,
+      product: entry.product
+        ? shapeProduct(entry.product, {
+            discount:
+              productDiscountMap.get(
+                entry.product?._id?.toString?.() ||
+                  entry.product?.id?.toString?.() ||
+                  ""
+              ) || null,
+          })
+        : entry.product,
     })),
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,

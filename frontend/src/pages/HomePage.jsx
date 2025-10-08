@@ -235,10 +235,9 @@ function mapProductsToHomeCards(products) {
     image: product.images?.[0]?.url || "/shop-1.jpg",
     title: product.name,
     subtitle: product.category?.name || "",
-    price: new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "EUR",
-    }).format(product.price || 0),
+    price: product.price,
+    finalPrice: product.finalPrice ?? product.price,
+    discount: product.discount?.percentage,
     to: product.slug ? `/product/${product.slug}` : `/product/${product.id}`,
   }));
 }
@@ -249,6 +248,9 @@ function mapSetsToCards(sets) {
     const title = s.name || "Untitled Set";
     const desc = s.description || "";
     const to = `/set/${s.slug || s.id}`;
+    const price = Number(s.price ?? 0);
+    const finalPrice = Number(s.finalPrice ?? price);
+    const discount = s.discount?.percentage;
     const productNames = (s.products || [])
       .map((p) => p?.product?.name)
       .filter(Boolean);
@@ -264,7 +266,7 @@ function mapSetsToCards(sets) {
           .filter(Boolean)
       )
     );
-    return { image, title, desc, includes, tags, to };
+    return { image, title, desc, includes, tags, to, price, finalPrice, discount };
   });
 }
 

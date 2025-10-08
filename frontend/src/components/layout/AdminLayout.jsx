@@ -19,6 +19,8 @@ import {
   Search,
   Home,
   LogOut,
+  Percent,
+  TicketPercent,
 } from "lucide-react";
 import { authApi } from "../../api/auth";
 import { getUser as getUserCache } from "../../api/client";
@@ -80,6 +82,13 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
       items: [
         { to: "/admin/orders", label: "Orders", Icon: ShoppingCart },
         { to: "/admin/customers", label: "Customers", Icon: Users },
+      ],
+    },
+    {
+      label: "Promotions",
+      items: [
+        { to: "/admin/discounts", label: "Discounts", Icon: Percent },
+        { to: "/admin/coupons", label: "Coupons", Icon: TicketPercent },
       ],
     },
     {
