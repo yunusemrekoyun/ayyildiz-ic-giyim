@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import ShopPageFilter from "../components/shop/ShopPageFilter";
 import ShopPageProducts from "../components/shop/ShopPageProducts";
 import { categoryApi } from "../api/categories";
 import { productApi } from "../api/products";
+import { campaignApi } from "../api/campaigns";
 import { mapCategoryTree } from "../utils/catalog";
 
 const isObjectId = (v) => typeof v === "string" && /^[0-9a-fA-F]{24}$/.test(v);
 
 export default function ShopPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [products, setProducts] = useState([]);
@@ -22,20 +24,75 @@ export default function ShopPage() {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedPrice, setSelectedPrice] = useState(0);
 
+  const [campaignContext, setCampaignContext] = useState(null);
+  const [campaignError, setCampaignError] = useState("");
+
   const [error, setError] = useState(null);
 
-  // Ürünler + kategori ağacı
+  const campaignId = searchParams.get("campaign");
+
+  // Kampanya parametresi aşaması
+  useEffect(() => {
+    if (!campaignId) {
+      setCampaignContext(null);
+      setCampaignError("");
+      return;
+    }
+
+    let mounted = true;
+    (async () => {
+      try {
+        setCampaignError("");
+        const data = await campaignApi.resolve(campaignId);
+        if (!mounted) return;
+        if (data.targetType === "SETS") {
+          navigate(`/sets?campaign=${campaignId}`, { replace: true });
+          return;
+        }
+        setCampaignContext(data);
+      } catch (err) {
+        if (!mounted) return;
+        setCampaignContext(null);
+        setCampaignError(extractMessage(err));
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [campaignId, navigate]);
+
+  // Kategori ağacı
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [{ products: productList }, treeRes] = await Promise.all([
-          productApi.list({ limit: 200 }),
-          categoryApi.tree(),
-        ]);
+        const treeRes = await categoryApi.tree();
         if (!mounted) return;
-        setProducts(productList || []);
         setCategoryTree(mapCategoryTree(treeRes));
+      } catch (err) {
+        if (!mounted) return;
+        setError((prev) => prev || extractMessage(err));
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Ürünler
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingProducts(true);
+        if (campaignContext?.items) {
+          if (!mounted) return;
+          setProducts(campaignContext.items || []);
+        } else {
+          const { products: productList } = await productApi.list({ limit: 200 });
+          if (!mounted) return;
+          setProducts(productList || []);
+        }
       } catch (err) {
         if (!mounted) return;
         setError(extractMessage(err));
@@ -46,7 +103,7 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [campaignContext]);
 
   // Fiyat aralığı (ürünlere göre)
   const priceRange = useMemo(() => {
@@ -167,6 +224,8 @@ export default function ShopPage() {
     });
   }, [products, selectedCategory, selectedColor, selectedSize, selectedPrice]);
 
+  const activeCampaign = campaignContext?.campaign || null;
+
   // Filtre eventleri (URL senkron)
   const handleCategoryChange = (id) => {
     setSelectedCategory(id);
@@ -195,6 +254,12 @@ export default function ShopPage() {
     setSearchParams(params);
   };
 
+  const handleClearCampaign = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("campaign");
+    setSearchParams(params);
+  };
+
   return (
     <section className="mx-auto max-w-[1400px] px-4 sm:px-6 py-8">
       <BreadCrumb items={[{ label: "Home", to: "/" }, { label: "Shop" }]} />
@@ -208,6 +273,38 @@ export default function ShopPage() {
           category, colour, size and price to find your perfect match.
         </p>
       </div>
+
+      {campaignError && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <span>{campaignError}</span>
+          <button
+            type="button"
+            onClick={handleClearCampaign}
+            className="text-rose-700 underline underline-offset-4 hover:text-rose-800"
+          >
+            Clear campaign filter
+          </button>
+        </div>
+      )}
+
+      {activeCampaign && !campaignError && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
+          <div>
+            Showing campaign{" "}
+            <span className="font-semibold">“{activeCampaign.name}”</span>
+            {activeCampaign.description
+              ? ` — ${activeCampaign.description}`
+              : ""}
+          </div>
+          <button
+            type="button"
+            onClick={handleClearCampaign}
+            className="text-primary underline underline-offset-4 hover:text-primary/80"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

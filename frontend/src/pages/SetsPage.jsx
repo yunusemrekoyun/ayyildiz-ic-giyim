@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import SetsSets from "../components/sets-sets/SetsSets";
 import { setApi } from "../api/sets";
+import { campaignApi } from "../api/campaigns";
 
 export default function SetsPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [campaignContext, setCampaignContext] = useState(null);
+  const [campaignError, setCampaignError] = useState("");
+
+  const campaignId = searchParams.get("campaign");
 
   useEffect(() => {
     let mounted = true;
@@ -13,22 +21,20 @@ export default function SetsPage() {
       try {
         setLoading(true);
 
-        // 1. normal istek
-        let res = await setApi.list(); // beklenen { sets: [...] }
+        if (campaignContext?.items) {
+          const mapped = mapSetsToCards(campaignContext.items);
+          if (mounted) setItems(mapped);
+        } else {
+          let res = await setApi.list();
+          let sets = normalizeSetsResponse(res);
 
-        // esnek okuma
-        let sets = normalizeSetsResponse(res);
+          if (!sets.length) {
+            const res2 = await setApi.list({ includeHidden: true });
+            sets = normalizeSetsResponse(res2);
+          }
 
-        // 2. boşsa includeHidden ile tekrar dene
-        if (!sets.length) {
-          const res2 = await setApi.list({ includeHidden: true });
-
-          sets = normalizeSetsResponse(res2);
-        }
-
-        const mapped = mapSetsToCards(sets);
-        if (mounted) {
-          setItems(mapped);
+          const mapped = mapSetsToCards(sets);
+          if (mounted) setItems(mapped);
         }
       } catch (e) {
         console.error("SETS PAGE - fetch error:", e);
@@ -40,13 +46,51 @@ export default function SetsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [campaignContext]);
+
+  useEffect(() => {
+    if (!campaignId) {
+      setCampaignContext(null);
+      setCampaignError("");
+      return;
+    }
+
+    let mounted = true;
+    (async () => {
+      try {
+        setCampaignError("");
+        const data = await campaignApi.resolve(campaignId);
+        if (!mounted) return;
+        if (data.targetType === "PRODUCTS") {
+          navigate(`/shop?campaign=${campaignId}`, { replace: true });
+          return;
+        }
+        setCampaignContext(data);
+      } catch (e) {
+        if (!mounted) return;
+        setCampaignContext(null);
+        setCampaignError(extractMessage(e));
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [campaignId, navigate]);
 
   const tabs = useMemo(() => {
     const tagSet = new Set();
     for (const s of items) (s.tags || []).forEach((t) => tagSet.add(String(t)));
     return ["All", ...Array.from(tagSet)];
   }, [items]);
+
+  const activeCampaign = campaignContext?.campaign || null;
+
+  const handleClearCampaign = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("campaign");
+    setSearchParams(params);
+  };
 
   return (
     <>
@@ -70,6 +114,41 @@ export default function SetsPage() {
           </div>
         </div>
       </section>
+
+      {campaignError && (
+        <div className="mx-auto mt-6 max-w-[1400px] px-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <span>{campaignError}</span>
+            <button
+              type="button"
+              onClick={handleClearCampaign}
+              className="text-rose-700 underline underline-offset-4 hover:text-rose-800"
+            >
+              Clear campaign filter
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeCampaign && !campaignError && (
+        <div className="mx-auto mt-6 max-w-[1400px] px-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
+            <div>
+              Showing campaign <span className="font-semibold">“{activeCampaign.name}”</span>
+              {activeCampaign.description
+                ? ` — ${activeCampaign.description}`
+                : ""}
+            </div>
+            <button
+              type="button"
+              onClick={handleClearCampaign}
+              className="text-primary underline underline-offset-4 hover:text-primary/80"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       <SetsSets
         title="Explore the Collections"
@@ -142,4 +221,18 @@ function mapSetsToCards(sets) {
 
     return { image, title, desc, includes, tags, to, price, finalPrice, discount };
   });
+}
+
+function extractMessage(error) {
+  if (!error) return "Unexpected error";
+  if (error instanceof Error) {
+    try {
+      const parsed = JSON.parse(error.message);
+      if (parsed?.message) return parsed.message;
+    } catch {
+      /* ignore */
+    }
+    return error.message;
+  }
+  return String(error);
 }

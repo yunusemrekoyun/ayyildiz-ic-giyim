@@ -73,18 +73,21 @@ export default function AdminDiscounts() {
       setSetOptionsList(mappedSets);
 
       const flatCategories = flattenCategoryTree(categoryRes || []);
-      const mappedCategories = flatCategories.map((item) => {
-        const catId = item.id || item._id || item.value || item.slug;
-        const label =
-          (Array.isArray(item.path) && item.path.length
-            ? item.path.join(" / ")
-            : item.label || item.name || String(catId)) || "Unnamed";
-        const hint =
-          typeof item.level === "number"
-            ? `Level ${item.level + 1}`
-            : undefined;
-        return { id: String(catId), label, hint };
-      });
+      const mappedCategories = flatCategories
+        .map((item) => {
+          const catId = item.id || item._id || item.value; // ← slug YOK
+          if (!catId) return null; // id’sizleri at
+          const label =
+            (Array.isArray(item.path) && item.path.length
+              ? item.path.join(" / ")
+              : item.label || item.name || String(catId)) || "Unnamed";
+          const hint =
+            typeof item.level === "number"
+              ? `Level ${item.level + 1}`
+              : undefined;
+          return { id: String(catId), label, hint };
+        })
+        .filter(Boolean);
       setCategoryOptions(mappedCategories);
     } catch (error) {
       setBanner(

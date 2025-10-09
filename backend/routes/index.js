@@ -11,6 +11,7 @@ import heroRoutes from "./heroes.js";
 import shippingRoutes from "./shipping.js";
 import discountRoutes from "./discounts.js";
 import couponRoutes from "./coupons.js";
+import campaignRoutes from "./campaigns.js";
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use("/heroes", heroRoutes);
 router.use("/shipping", shippingRoutes);
 router.use("/discounts", discountRoutes);
 router.use("/coupons", couponRoutes);
+router.use("/campaigns", campaignRoutes);
 
 export default router;

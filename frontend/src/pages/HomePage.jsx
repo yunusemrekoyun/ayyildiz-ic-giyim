@@ -10,6 +10,7 @@ import HomeSets from "../components/home-sets/HomeSets";
 import { productApi } from "../api/products";
 import { setApi } from "../api/sets";
 import { heroApi } from "../api/heroes";
+import { campaignApi } from "../api/campaigns";
 
 const FALLBACK_CAMPAIGNS = [
   {
@@ -18,6 +19,7 @@ const FALLBACK_CAMPAIGNS = [
     subtitle: "Up to 30% off on premium duvet & sheet sets.",
     badge: "Limited",
     to: "/campaign/autumn-bedding",
+    variant: "big",
   },
   {
     image: "/cmp-2.jpg",
@@ -25,18 +27,21 @@ const FALLBACK_CAMPAIGNS = [
     subtitle: "Elegant designs for your special day.",
     badge: "Top Picks",
     to: "/campaign/bridal-lingerie",
+    variant: "wide",
   },
   {
     image: "/cmp-3.jpg",
     title: "Home Towels Bundle",
     subtitle: "Egyptian cotton towels bundle prices.",
     to: "/campaign/towels-bundle",
+    variant: "small",
   },
   {
     image: "/cmp-4.jpg",
     title: "Trousseau Essentials",
     subtitle: "Complete wedding trousseau sets.",
     to: "/campaign/trousseau-essentials",
+    variant: "small",
   },
 ];
 
@@ -76,6 +81,10 @@ export default function HomePage() {
   // Sets
   const [sets, setSets] = useState([]);
   const [loadingSets, setLoadingSets] = useState(true);
+
+  // Campaigns
+  const [campaigns, setCampaigns] = useState([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
 
   // error
   const [error, setError] = useState(null);
@@ -138,6 +147,27 @@ export default function HomePage() {
     };
   }, [setError]);
 
+  // Campaign fetch
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await campaignApi.listHome();
+        if (!mounted) return;
+        setCampaigns(list || []);
+      } catch (err) {
+        if (mounted) {
+          setError((prev) => prev || extractMessage(err));
+        }
+      } finally {
+        if (mounted) setLoadingCampaigns(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const newArrivalCards = useMemo(
     () => mapProductsToHomeCards(featuredProducts.slice(0, 3)),
     [featuredProducts]
@@ -151,6 +181,14 @@ export default function HomePage() {
     (sets || []).forEach((s) => (s.tags || []).forEach((t) => tagSet.add(t)));
     return ["All", ...Array.from(tagSet)];
   }, [sets]);
+
+  const campaignItems = useMemo(() => {
+    if (!campaigns.length) return [];
+    return mapCampaignsToHomeCards(campaigns.slice(0, 4));
+  }, [campaigns]);
+
+  const campaignsToRender =
+    campaignItems.length > 0 ? campaignItems : FALLBACK_CAMPAIGNS;
 
   // Hero slaytlarına fallback
   const heroSlides = heroes.length
@@ -223,7 +261,7 @@ export default function HomePage() {
       />
 
       <HomeProductComments items={FALLBACK_COMMENTS} />
-      <HomeCampaigns items={FALLBACK_CAMPAIGNS} />
+      <HomeCampaigns items={campaignsToRender} loading={loadingCampaigns} />
       <HomeContact />
     </>
   );
@@ -268,6 +306,26 @@ function mapSetsToCards(sets) {
     );
     return { image, title, desc, includes, tags, to, price, finalPrice, discount };
   });
+}
+
+function mapCampaignsToHomeCards(list) {
+  return (list || []).map((campaign) => ({
+    id: campaign.id,
+    to: campaign.computedLink || "/shop",
+    image: campaign.image?.url || "/cmp-1.jpg",
+    title: campaign.name || "Campaign",
+    subtitle: campaign.description || "",
+    badge: campaign.badge || "",
+    ctaText: campaign.ctaText || "Shop Now",
+    variant: mapLayoutToVariant(campaign.layout),
+  }));
+}
+
+function mapLayoutToVariant(layout) {
+  const normalized = String(layout || "").toUpperCase();
+  if (normalized === "BIG") return "big";
+  if (normalized === "WIDE") return "wide";
+  return "small";
 }
 
 function extractMessage(error) {

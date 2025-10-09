@@ -21,6 +21,7 @@ import {
   LogOut,
   Percent,
   TicketPercent,
+  Megaphone,
 } from "lucide-react";
 import { authApi } from "../../api/auth";
 import { getUser as getUserCache } from "../../api/client";
@@ -93,7 +94,10 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
     },
     {
       label: "Settings",
-      items: [{ to: "/admin/settings", label: "Settings", Icon: Settings }],
+      items: [
+        { to: "/admin/settings", label: "Settings", Icon: Settings },
+        { to: "/admin/campaigns", label: "Campaigns", Icon: Megaphone },
+      ],
     },
   ];
 

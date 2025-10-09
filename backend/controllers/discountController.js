@@ -16,23 +16,19 @@ async function validateObjectIds(ids = [], model, label = "item") {
   const objectIds = [];
   for (const value of ids) {
     const raw = String(value ?? "").trim();
-    if (!raw) {
-      throw new Error(`Empty ${label} id supplied`);
-    }
+    if (!raw) throw new Error(`Empty ${label} id supplied`);
     let objectId;
     try {
       objectId = new mongoose.Types.ObjectId(raw);
-    } catch (error) {
+    } catch {
       throw new Error(`Invalid ${label} id supplied (${raw})`);
     }
     objectIds.push(objectId);
   }
 
-  const docs = await model
-    .find({ _id: { $in: objectIds } }, { _id: 1 })
-    .lean();
+  const docs = await model.find({ _id: { $in: objectIds } }, { _id: 1 }).lean();
   if (docs.length !== objectIds.length) {
-    const existing = new Set(docs.map((doc) => doc._id.toString()));
+    const existing = new Set(docs.map((d) => d._id.toString()));
     const missing = objectIds
       .map((id) => id.toString())
       .filter((id) => !existing.has(id));
@@ -47,10 +43,9 @@ async function validateObjectIds(ids = [], model, label = "item") {
 }
 
 async function collectDescendantCategoryIds(categoryIds = []) {
-  if (!Array.isArray(categoryIds) || categoryIds.length === 0) return [];
-
-  const normalizedIds = categoryIds.map((id) =>
-    new mongoose.Types.ObjectId(id)
+  if (!categoryIds.length) return [];
+  const normalizedIds = categoryIds.map(
+    (id) => new mongoose.Types.ObjectId(id)
   );
 
   const [categories, descendants] = await Promise.all([
@@ -59,10 +54,9 @@ async function collectDescendantCategoryIds(categoryIds = []) {
   ]);
 
   const allIds = [
-    ...(categories || []).map((doc) => doc._id.toString()),
-    ...(descendants || []).map((doc) => doc._id.toString()),
+    ...categories.map((d) => d._id.toString()),
+    ...descendants.map((d) => d._id.toString()),
   ];
-
   return Array.from(new Set(allIds));
 }
 
@@ -71,7 +65,11 @@ async function collectProductsForCategories(categoryIds) {
   const allCategoryIds = await collectDescendantCategoryIds(categoryIds);
   if (!allCategoryIds.length) return [];
   const products = await Product.find(
-    { category: { $in: allCategoryIds.map((id) => new mongoose.Types.ObjectId(id)) } },
+    {
+      category: {
+        $in: allCategoryIds.map((id) => new mongoose.Types.ObjectId(id)),
+      },
+    },
     { _id: 1 }
   ).lean();
   return products.map((p) => p._id.toString());
@@ -102,40 +100,26 @@ function intersectValues(source = [], target = []) {
   return target.filter((value) => lookup.has(value));
 }
 
-async function computeConflicts({ products, sets, categories }, existingDiscounts) {
+async function computeConflicts(
+  { products, sets, categories },
+  existingDiscounts
+) {
   const newCoverage = await expandCoverage({ products, sets, categories });
   if (
     !newCoverage.products.length &&
     !newCoverage.sets.length &&
     !newCoverage.categories.length
-  ) {
+  )
     return [];
-  }
-
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[discounts] new coverage", {
-      products: newCoverage.products,
-      sets: newCoverage.sets,
-      categories: newCoverage.categories,
-    });
-  }
 
   const conflicts = [];
-
   for (const discount of existingDiscounts) {
     const coverage = await expandCoverage({
       products: discount.appliesTo?.products || [],
       sets: discount.appliesTo?.sets || [],
       categories: discount.appliesTo?.categories || [],
     });
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[discounts] checking against", {
-        discountId: discount._id?.toString?.(),
-        products: coverage.products,
-        sets: coverage.sets,
-        categories: coverage.categories,
-      });
-    }
+
     const overlappingProducts = intersectValues(
       newCoverage.products,
       coverage.products
@@ -151,14 +135,6 @@ async function computeConflicts({ products, sets, categories }, existingDiscount
       overlappingSets.length ||
       overlappingCategories.length
     ) {
-      if (process.env.NODE_ENV !== "production") {
-        console.log("[discounts] conflict detected", {
-          existingId: discount._id?.toString?.(),
-          overlappingProducts,
-          overlappingSets,
-          overlappingCategories,
-        });
-      }
       conflicts.push({
         discount,
         products: overlappingProducts,
@@ -202,25 +178,20 @@ export async function createDiscount(req, res) {
       resolve = null,
     } = req.body;
 
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[discounts] create payload", {
-        name,
-        percentage,
-        products,
-        sets,
-        categories,
-        resolve,
-      });
-    }
-
-    if (!name || percentage === undefined) {
-      return res.status(400).json({ message: "Name and percentage are required" });
-    }
+    if (!name || percentage === undefined)
+      return res
+        .status(400)
+        .json({ message: "Name and percentage are required" });
 
     const parsedPercentage = Number(percentage);
-    if (!Number.isFinite(parsedPercentage) || parsedPercentage <= 0 || parsedPercentage > 100) {
-      return res.status(400).json({ message: "Percentage must be between 1-100" });
-    }
+    if (
+      !Number.isFinite(parsedPercentage) ||
+      parsedPercentage <= 0 ||
+      parsedPercentage > 100
+    )
+      return res
+        .status(400)
+        .json({ message: "Percentage must be between 1-100" });
 
     const productIds = await validateObjectIds(products, Product, "product");
     const setIds = await validateObjectIds(sets, Set, "set");
@@ -230,62 +201,95 @@ export async function createDiscount(req, res) {
       "category"
     );
 
-    if (!productIds.length && !setIds.length && !categoryIds.length) {
+    if (!productIds.length && !setIds.length && !categoryIds.length)
       return res.status(400).json({ message: "Select at least one target" });
+
+    const now = new Date();
+    const allActiveFlagged = await Discount.find({ active: true }).lean();
+    const activeDiscounts = allActiveFlagged.filter((d) => {
+      const startsOk = !d.startsAt || new Date(d.startsAt) <= now;
+      const endsOk = !d.endsAt || new Date(d.endsAt) >= now;
+      return startsOk && endsOk;
+    });
+
+    // --- FAST PATH: aynı ürüne aktif indirim var mı? (startsAt NULL dahil)
+    if (productIds.length) {
+      const directOverlap = await Discount.exists({
+        active: true,
+        $and: [
+          { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] },
+          { $or: [{ endsAt: null }, { endsAt: { $gte: now } }] },
+        ],
+        "appliesTo.products": { $in: productIds },
+      });
+      if (directOverlap && !resolve) {
+        return res.status(409).json({
+          message: "Discount conflicts detected",
+          conflicts: [
+            {
+              id: null,
+              name: "Existing discount",
+              percentage: null,
+              productIds: productIds.map(String),
+              setIds: [],
+              categoryIds: [],
+            },
+          ],
+        });
+      }
     }
 
-    const activeDiscounts = await Discount.find({ active: true }).lean();
     const conflicts = await computeConflicts(
-      {
-        products: productIds,
-        sets: setIds,
-        categories: categoryIds,
-      },
+      { products: productIds, sets: setIds, categories: categoryIds },
       activeDiscounts
     );
 
-    if (conflicts.length && !resolve) {
+    if (conflicts.length && !resolve)
       return res.status(409).json({
         message: "Discount conflicts detected",
         conflicts: serializeConflicts(conflicts),
       });
-    }
 
+    // Çakışma çözümü
     let finalProducts = productIds;
     let finalSets = setIds;
     let finalCategories = categoryIds;
 
     if (conflicts.length && resolve) {
       const conflictingProductSet = new Set(
-        conflicts.flatMap((entry) => entry.products)
+        conflicts.flatMap((e) => e.products)
       );
-      const conflictingSetIds = new Set(
-        conflicts.flatMap((entry) => entry.sets)
-      );
+      const conflictingSetIds = new Set(conflicts.flatMap((e) => e.sets));
       const conflictingCategoryIds = new Set(
-        conflicts.flatMap((entry) => entry.categories)
+        conflicts.flatMap((e) => e.categories)
       );
 
       if (resolve === "skip") {
-        finalProducts = finalProducts.filter((id) => !conflictingProductSet.has(id.toString()));
-        finalSets = finalSets.filter((id) => !conflictingSetIds.has(id.toString()));
+        finalProducts = finalProducts.filter(
+          (id) => !conflictingProductSet.has(id.toString())
+        );
+        finalSets = finalSets.filter(
+          (id) => !conflictingSetIds.has(id.toString())
+        );
         finalCategories = finalCategories.filter(
           (id) => !conflictingCategoryIds.has(id.toString())
         );
-        if (!finalProducts.length && !finalSets.length && !finalCategories.length) {
-          return res.status(400).json({
-            message: "No targets remain after skipping conflicts",
-          });
-        }
+        if (
+          !finalProducts.length &&
+          !finalSets.length &&
+          !finalCategories.length
+        )
+          return res
+            .status(400)
+            .json({ message: "No targets remain after skipping conflicts" });
       } else if (resolve === "overwrite") {
-        const conflictIds = conflicts.map((entry) => entry.discount._id);
+        const conflictIds = conflicts.map((e) => e.discount._id);
         await Discount.updateMany(
           { _id: { $in: conflictIds } },
           { $set: { active: false } }
         );
-      } else if (resolve === "cancel") {
+      } else if (resolve === "cancel")
         return res.status(200).json({ cancelled: true });
-      }
     }
 
     const discount = await Discount.create({
@@ -301,7 +305,6 @@ export async function createDiscount(req, res) {
     });
 
     await discount.populate(TARGET_POPULATE);
-
     res.status(201).json({ discount: shapeDiscount(discount) });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -312,9 +315,8 @@ export async function updateDiscount(req, res) {
   try {
     const { id } = req.params;
     const discount = await Discount.findById(id);
-    if (!discount) {
+    if (!discount)
       return res.status(404).json({ message: "Discount not found" });
-    }
 
     const {
       name,
@@ -331,9 +333,10 @@ export async function updateDiscount(req, res) {
     if (description !== undefined) discount.description = String(description);
     if (percentage !== undefined) {
       const parsed = Number(percentage);
-      if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 100) {
-        return res.status(400).json({ message: "Percentage must be between 1-100" });
-      }
+      if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 100)
+        return res
+          .status(400)
+          .json({ message: "Percentage must be between 1-100" });
       discount.percentage = parsed;
     }
     if (active !== undefined) discount.active = Boolean(active);
@@ -346,57 +349,89 @@ export async function updateDiscount(req, res) {
       productIds = await validateObjectIds(products, Product, "product");
       setIds = await validateObjectIds(sets, Set, "set");
       categoryIds = await validateObjectIds(categories, Category, "category");
-      if (!productIds.length && !setIds.length && !categoryIds.length) {
-        return res.status(400).json({ message: "Select at least one target" });
-      }
 
-      const activeDiscounts = await Discount.find({
+      if (!productIds.length && !setIds.length && !categoryIds.length)
+        return res.status(400).json({ message: "Select at least one target" });
+
+      const now = new Date();
+      const allActiveFlagged = await Discount.find({
         active: true,
         _id: { $ne: discount._id },
       }).lean();
+      const activeDiscounts = allActiveFlagged.filter((d) => {
+        const startsOk = !d.startsAt || new Date(d.startsAt) <= now;
+        const endsOk = !d.endsAt || new Date(d.endsAt) >= now;
+        return startsOk && endsOk;
+      });
+
+      // --- FAST PATH: aynı ürüne başka aktif indirim var mı? (startsAt NULL dahil)
+      if (productIds.length) {
+        const directOverlap = await Discount.exists({
+          active: true,
+          _id: { $ne: discount._id },
+          $and: [
+            { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] },
+            { $or: [{ endsAt: null }, { endsAt: { $gte: now } }] },
+          ],
+          "appliesTo.products": { $in: productIds },
+        });
+        if (directOverlap && !resolve) {
+          return res.status(409).json({
+            message: "Discount conflicts detected",
+            conflicts: [
+              {
+                id: null,
+                name: "Existing discount",
+                percentage: null,
+                productIds: productIds.map(String),
+                setIds: [],
+                categoryIds: [],
+              },
+            ],
+          });
+        }
+      }
+
       const conflicts = await computeConflicts(
         { products: productIds, sets: setIds, categories: categoryIds },
         activeDiscounts
       );
 
-      if (conflicts.length && !resolve) {
+      if (conflicts.length && !resolve)
         return res.status(409).json({
           message: "Discount conflicts detected",
           conflicts: serializeConflicts(conflicts),
         });
-      }
 
       if (conflicts.length && resolve) {
         const conflictingProductSet = new Set(
-          conflicts.flatMap((entry) => entry.products)
+          conflicts.flatMap((e) => e.products)
         );
-        const conflictingSetIds = new Set(
-          conflicts.flatMap((entry) => entry.sets)
-        );
+        const conflictingSetIds = new Set(conflicts.flatMap((e) => e.sets));
         const conflictingCategoryIds = new Set(
-          conflicts.flatMap((entry) => entry.categories)
+          conflicts.flatMap((e) => e.categories)
         );
 
         if (resolve === "skip") {
-          productIds = productIds.filter((id) => !conflictingProductSet.has(id.toString()));
+          productIds = productIds.filter(
+            (id) => !conflictingProductSet.has(id.toString())
+          );
           setIds = setIds.filter((id) => !conflictingSetIds.has(id.toString()));
           categoryIds = categoryIds.filter(
             (id) => !conflictingCategoryIds.has(id.toString())
           );
-          if (!productIds.length && !setIds.length && !categoryIds.length) {
-            return res.status(400).json({
-              message: "No targets remain after skipping conflicts",
-            });
-          }
+          if (!productIds.length && !setIds.length && !categoryIds.length)
+            return res
+              .status(400)
+              .json({ message: "No targets remain after skipping conflicts" });
         } else if (resolve === "overwrite") {
-          const conflictIds = conflicts.map((entry) => entry.discount._id);
+          const conflictIds = conflicts.map((e) => e.discount._id);
           await Discount.updateMany(
             { _id: { $in: conflictIds } },
             { $set: { active: false } }
           );
-        } else if (resolve === "cancel") {
+        } else if (resolve === "cancel")
           return res.status(200).json({ cancelled: true });
-        }
       }
 
       discount.appliesTo = {
@@ -426,13 +461,8 @@ export async function deleteDiscount(req, res) {
 
 function normalizeRef(item) {
   if (!item) return null;
-  if (typeof item === "string") {
-    return { id: item, name: "" };
-  }
+  if (typeof item === "string") return { id: item, name: "" };
   const id = item._id?.toString?.() || item.id?.toString?.();
-  if (!id) {
-    return { id: String(item), name: item.name || "" };
-  }
   return {
     id,
     name: item.name || item.title || "",
@@ -443,9 +473,7 @@ function normalizeRef(item) {
 }
 
 function shapeTargets(list = []) {
-  return list
-    .map((item) => normalizeRef(item))
-    .filter((entry) => entry && entry.id);
+  return list.map((i) => normalizeRef(i)).filter((e) => e && e.id);
 }
 
 function shapeDiscount(doc) {

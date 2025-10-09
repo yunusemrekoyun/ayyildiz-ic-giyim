@@ -8,10 +8,15 @@ import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
 import AuthSelector from "./components/auth/AuthSelector";
 import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
+import FAQPage from "./pages/FAQPage";
 import SetDetailsPage from "./pages/SetDetailsPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import SuccesPage from "./pages/SuccessPage";
 import RequireAuth from "./components/auth/RequireAuth";
+import ShippingReturnsPage from "./pages/ShippingReturnsPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsPage from "./pages/TermsPage";
 
 // Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -26,6 +31,8 @@ import AdminHeroManager from "./pages/admin/AdminHeroManager";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDiscounts from "./pages/admin/AdminDiscounts";
 import AdminCoupons from "./pages/admin/AdminCoupons";
+import AdminCampaignLayout from "./pages/admin/AdminCampaignLayout";
+import AdminCampaigns from "./pages/admin/AdminCampaigns";
 
 export default function App() {
   return (
@@ -40,7 +47,12 @@ export default function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/account" element={<AuthSelector />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/faq" element={<FAQPage />} />
           <Route path="/set/:slug" element={<SetDetailsPage />} />
+          <Route path="/shipping-returns" element={<ShippingReturnsPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
 
           {/* ✅ Checkout & Success korumalı */}
           <Route
@@ -75,6 +87,8 @@ export default function App() {
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/discounts" element={<AdminDiscounts />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
+          <Route path="/admin/campaigns/layout" element={<AdminCampaignLayout />} />
+          <Route path="/admin/campaigns" element={<AdminCampaigns />} />
           <Route path="/admin/settings/hero" element={<AdminHeroManager />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
         </Route>

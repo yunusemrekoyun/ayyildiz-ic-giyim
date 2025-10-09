@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { heroApi } from "../../api/heroes";
+import { campaignApi } from "../../api/campaigns";
 import ShippingSettingsCard from "./settings/ShippingSettingsCard.jsx";
 import { Link } from "react-router-dom";
 import {
@@ -8,11 +9,14 @@ import {
   Image as ImageIcon,
   Video,
   Palette,
+  Megaphone,
 } from "lucide-react";
 
 export default function AdminSettingsPageInner() {
   const [heroes, setHeroes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
 
   const topHero = useMemo(
     () =>
@@ -21,15 +25,30 @@ export default function AdminSettingsPageInner() {
     [heroes]
   );
 
+  const topCampaign = useMemo(
+    () =>
+      [...campaigns].sort(
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+      )[0] || null,
+    [campaigns]
+  );
+
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const list = await heroApi.list({ includeInactive: true });
+        const [heroList, campaignList] = await Promise.all([
+          heroApi.list({ includeInactive: true }),
+          campaignApi.listManage({ includeInactive: true }),
+        ]);
         if (!mounted) return;
-        setHeroes(list);
+        setHeroes(heroList);
+        setCampaigns(campaignList);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setLoadingCampaigns(false);
+        }
       }
     })();
     return () => {
@@ -127,6 +146,74 @@ export default function AdminSettingsPageInner() {
                 </div>
               </div>
             </Link>
+
+            <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] transition-colors">
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
+                {loadingCampaigns ? (
+                  <div className="h-full w-full animate-pulse bg-[var(--color-bg-hover)]" />
+                ) : topCampaign ? (
+                  topCampaign.image ? (
+                    <img
+                      src={topCampaign.image.url}
+                      alt={topCampaign.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
+                      No image
+                    </div>
+                  )
+                ) : (
+                  <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
+                    No campaigns yet
+                  </div>
+                )}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+                {topCampaign && (
+                  <div className="absolute bottom-0 left-0 p-4 text-white">
+                    <div className="text-lg font-semibold line-clamp-1">
+                      {topCampaign.name}
+                    </div>
+                    <div className="text-xs opacity-90 line-clamp-2">
+                      {topCampaign.description || ""}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
+                    <Megaphone className="h-5 w-5 text-white/90" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Home Campaigns</div>
+                    <div className="text-xs text-[var(--color-text-admin-muted)]">
+                      {campaigns.length
+                        ? `${campaigns.length} total • top: ${
+                            topCampaign?.name || "—"
+                          }`
+                        : "Create your first campaign"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/admin/campaigns"
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                  >
+                    Manage
+                  </Link>
+                  <Link
+                    to="/admin/campaigns/layout"
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-xs font-semibold text-[var(--color-bg-admin)] hover:opacity-90"
+                  >
+                    Layout
+                  </Link>
+                </div>
+              </div>
+            </div>
 
             <ShippingSettingsCard />
 
