@@ -5,6 +5,7 @@ import { getAccessToken } from "../../api/client";
 import { userDetailsApi } from "../../api/userDetails";
 import { useNavigate } from "react-router-dom";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
+import ReviewSectionCard from "../reviews/ReviewSectionCard.jsx";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -243,7 +244,7 @@ export default function ProductDetail({ product = {} }) {
       </div>
 
       {/* Right: Info */}
-      <div className="md:col-span-7">
+      <div className="md:col-span-7 space-y-6">
         <div className="rounded-xl border border-border bg-contact-bg p-6">
           {/* Başlık + Kalp */}
           <div className="flex items-start justify-between gap-3">
@@ -442,6 +443,13 @@ export default function ProductDetail({ product = {} }) {
             </div>
           )}
         </div>
+
+        <ReviewSectionCard
+          targetType="product"
+          targetId={product.id}
+          targetSlug={product.slug}
+          targetName={product.name || product.title}
+        />
       </div>
     </div>
   );

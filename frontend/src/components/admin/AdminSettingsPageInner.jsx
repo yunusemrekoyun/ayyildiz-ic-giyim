@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { heroApi } from "../../api/heroes";
 import { campaignApi } from "../../api/campaigns";
 import ShippingSettingsCard from "./settings/ShippingSettingsCard.jsx";
+import ReviewSettingsCard from "./settings/ReviewSettingsCard.jsx";
 import { Link } from "react-router-dom";
 import {
   Wand2,
@@ -216,6 +217,7 @@ export default function AdminSettingsPageInner() {
             </div>
 
             <ShippingSettingsCard />
+            <ReviewSettingsCard />
 
             <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]">
               <div className="flex items-center gap-3 p-4">

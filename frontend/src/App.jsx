@@ -33,6 +33,7 @@ import AdminDiscounts from "./pages/admin/AdminDiscounts";
 import AdminCoupons from "./pages/admin/AdminCoupons";
 import AdminCampaignLayout from "./pages/admin/AdminCampaignLayout";
 import AdminCampaigns from "./pages/admin/AdminCampaigns";
+import AdminReviews from "./pages/admin/AdminReviews";
 
 export default function App() {
   return (
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="/admin/campaigns/layout" element={<AdminCampaignLayout />} />
           <Route path="/admin/campaigns" element={<AdminCampaigns />} />
           <Route path="/admin/settings/hero" element={<AdminHeroManager />} />
+          <Route path="/admin/settings/reviews" element={<AdminReviews />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
         </Route>
       </Routes>

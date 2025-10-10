@@ -53,7 +53,7 @@ export default function AdminCampaignLayout() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
-  const [draggingId, setDraggingId] = useState(null);
+  const [, setDraggingId] = useState(null);
   const [dragOverSlot, setDragOverSlot] = useState(null);
 
   useEffect(() => {

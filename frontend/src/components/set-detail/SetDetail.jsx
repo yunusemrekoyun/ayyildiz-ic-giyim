@@ -7,6 +7,7 @@ import { Heart } from "lucide-react";
 import { getAccessToken } from "../../api/client";
 import { userDetailsApi } from "../../api/userDetails";
 import { useNavigate } from "react-router-dom";
+import ReviewSectionCard from "../reviews/ReviewSectionCard.jsx";
 
 export default function SetDetail({ setDoc }) {
   // Hook'lar her zaman çağrılıyor (ESLint hatası çözümü)
@@ -69,7 +70,7 @@ export default function SetDetail({ setDoc }) {
       </div>
 
       {/* Right: Info */}
-      <div className="md:col-span-7">
+      <div className="md:col-span-7 space-y-5">
         <div className="space-y-5 rounded-xl bg-white p-5 ring-1 ring-black/5 md:p-6">
           {/* Üst sağ: Favori kalbi */}
           <div className="flex items-start justify-between">
@@ -115,6 +116,13 @@ export default function SetDetail({ setDoc }) {
             onChangeQuantity={setQty}
           />
         </div>
+
+        <ReviewSectionCard
+          targetType="set"
+          targetId={setDoc.id}
+          targetSlug={setDoc.slug}
+          targetName={setDoc.name}
+        />
       </div>
     </div>
   );

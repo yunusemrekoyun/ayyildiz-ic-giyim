@@ -12,6 +12,7 @@ import shippingRoutes from "./shipping.js";
 import discountRoutes from "./discounts.js";
 import couponRoutes from "./coupons.js";
 import campaignRoutes from "./campaigns.js";
+import reviewRoutes from "./reviews.js";
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use("/shipping", shippingRoutes);
 router.use("/discounts", discountRoutes);
 router.use("/coupons", couponRoutes);
 router.use("/campaigns", campaignRoutes);
+router.use("/reviews", reviewRoutes);
 
 export default router;
