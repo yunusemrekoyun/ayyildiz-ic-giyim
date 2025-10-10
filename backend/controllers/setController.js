@@ -1,3 +1,4 @@
+// backend/controllers/setController.js
 import Set from "../models/Set.js";
 import Product from "../models/Product.js";
 import Category from "../models/Category.js";
@@ -10,7 +11,6 @@ import {
   parseBoolean,
   parseAttribute,
   parseInventory,
-  sanitizeOption,
   shapeProduct,
   computeAvailableStock,
 } from "../utils/productHelpers.js";
@@ -31,6 +31,49 @@ function setId(doc) {
     doc.id?.toString?.() ||
     (typeof doc === "string" ? doc : String(doc._id || doc.id || ""))
   );
+}
+
+// "setOnly" olan mevcut ürünleri katalogdan gizle
+async function applyScopeVisibilityChanges(setProducts = []) {
+  const hideIds = setProducts
+    .filter((p) => p?.product && p.scope === "setOnly")
+    .map((p) => p.product);
+  if (hideIds.length) {
+    await Product.updateMany(
+      { _id: { $in: hideIds } },
+      { $set: { listedInCatalog: false } }
+    );
+  }
+}
+
+// products[<index>].images  veya  products.<index>.images  -> index → File[] map
+function groupProductFiles(files = []) {
+  const map = new Map();
+  for (const f of files || []) {
+    const fn = String(f.fieldname || "");
+    const m = fn.match(/products[\[\.\]](\d+)[\]\.]images/);
+    if (m) {
+      const idx = m[1];
+      if (!map.has(idx)) map.set(idx, []);
+      map.get(idx).push(f);
+    }
+  }
+  return map;
+}
+
+// Cloudinary upload helper
+async function processImages(files = []) {
+  if (!files || !files.length) return [];
+  const uploads = files.map((file) =>
+    uploadBufferToCloudinary(file.buffer).then((result) => ({
+      url: result.secure_url,
+      publicId: result.public_id,
+      width: result.width,
+      height: result.height,
+      format: result.format,
+    }))
+  );
+  return Promise.all(uploads);
 }
 
 async function shapeSetsWithDiscounts(sets) {
@@ -85,9 +128,20 @@ export async function createSet(req, res) {
       return res.status(400).json({ message: "Price must be a valid number" });
     }
 
-    const { products, createdProducts } = await resolveSetProducts(req.body.products);
+    // ---- dosyaları ayrıştır
+    const files = Array.isArray(req.files) ? req.files : [];
+    const setImageFiles = files.filter((f) => f.fieldname === "images");
 
-    const images = await processImages(req.files);
+    const { products, createdProducts } = await resolveSetProducts(
+      req.body.products,
+      req.files // tüm dosyaları ver; ürün dosyalarını içeride gruplayacağız
+    );
+
+    // "setOnly" olan mevcut ürünleri katalogdan düş
+    await applyScopeVisibilityChanges(products);
+
+    // set'in kendi görsellerini yükle
+    const images = await processImages(setImageFiles);
 
     const set = await Set.create({
       name,
@@ -164,19 +218,32 @@ export async function updateSet(req, res) {
     if (price !== undefined) {
       const parsedPrice = Number(price);
       if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
-        return res.status(400).json({ message: "Price must be a valid number" });
+        return res
+          .status(400)
+          .json({ message: "Price must be a valid number" });
       }
       set.price = parsedPrice;
     }
     if (show !== undefined) set.show = parseBoolean(show, set.show);
 
+    // ---- dosyaları ayrıştır
+    const files = Array.isArray(req.files) ? req.files : [];
+    const setImageFiles = files.filter((f) => f.fieldname === "images");
+
     if (req.body.products !== undefined) {
-      const { products, createdProducts } = await resolveSetProducts(req.body.products);
+      const { products, createdProducts } = await resolveSetProducts(
+        req.body.products,
+        req.files
+      );
       set.products = products;
       set.$locals = set.$locals || {};
       set.$locals.createdProducts = createdProducts;
+
+      // scope değişikliklerini uygula
+      await applyScopeVisibilityChanges(products);
     }
 
+    // set görsel silme
     const removeImageIds = parseIdList(req.body.removeImagePublicIds);
     if (removeImageIds.length) {
       await Promise.all(removeImageIds.map((id) => deleteFromCloudinary(id)));
@@ -185,8 +252,9 @@ export async function updateSet(req, res) {
       );
     }
 
-    if (req.files?.length) {
-      const newImages = await processImages(req.files);
+    // yeni set görselleri ekle
+    if (setImageFiles.length) {
+      const newImages = await processImages(setImageFiles);
       set.images.push(...newImages);
     }
 
@@ -214,7 +282,9 @@ export async function deleteSet(req, res) {
 
     if (!set) return res.status(404).json({ message: "Set not found" });
 
-    await Promise.all(set.images.map((img) => deleteFromCloudinary(img.publicId)));
+    await Promise.all(
+      set.images.map((img) => deleteFromCloudinary(img.publicId))
+    );
     await set.deleteOne();
     res.json({ ok: true });
   } catch (error) {
@@ -222,8 +292,12 @@ export async function deleteSet(req, res) {
   }
 }
 
-async function resolveSetProducts(value) {
+async function resolveSetProducts(value, reqFiles = []) {
   if (!value) return { products: [], createdProducts: [] };
+
+  // ürün indexine göre gönderilen dosyaları grupla
+  const filesByProductIndex = groupProductFiles(reqFiles);
+
   let payload = value;
   if (typeof value === "string") {
     try {
@@ -239,22 +313,27 @@ async function resolveSetProducts(value) {
   const products = [];
   const createdProducts = [];
 
-  for (const item of payload) {
+  for (let i = 0; i < payload.length; i++) {
+    const item = payload[i];
     if (!item) continue;
     const quantity = Math.max(1, Number(item.quantity) || 1);
+    const scope = item.scope === "setOnly" ? "setOnly" : "both";
 
     if (item.productId) {
       const product = await Product.findById(item.productId);
       if (!product) throw new Error("Product not found: " + item.productId);
-      products.push({ product: product._id, quantity });
+      products.push({ product: product._id, quantity, scope });
       continue;
     }
 
     if (item.newProduct) {
+      // bu index için yüklenen dosyalar
+      const filesForThis = filesByProductIndex.get(String(i)) || [];
       const { document, payload: shaped } = await createProductFromPayload(
-        item.newProduct
+        item.newProduct,
+        filesForThis
       );
-      products.push({ product: document._id, quantity });
+      products.push({ product: document._id, quantity, scope });
       createdProducts.push(shapeProduct({ ...document.toObject(), ...shaped }));
       continue;
     }
@@ -265,7 +344,7 @@ async function resolveSetProducts(value) {
   return { products, createdProducts };
 }
 
-async function createProductFromPayload(data) {
+async function createProductFromPayload(data, files = []) {
   const {
     name,
     price,
@@ -279,8 +358,8 @@ async function createProductFromPayload(data) {
     showSizes,
     customAttribute,
     inventory,
-    images,
-    includeInCatalog = true,
+    listedInCatalog = true,
+    // images: dosyaları parametreden alıyoruz
     ...rest
   } = data || {};
 
@@ -297,23 +376,26 @@ async function createProductFromPayload(data) {
     categoryDoc = await resolveCategoryRef(category);
   }
 
+  let uploadedImages = [];
+  if (Array.isArray(files) && files.length) {
+    uploadedImages = await processImages(files);
+  }
+
   const document = await Product.create({
     name,
     price: parsedPrice,
     description: description ?? "",
     careInstructions: careInstructions ?? "",
     details: normalizeArray(details),
-      category: categoryDoc?._id ?? null,
+    category: categoryDoc?._id ?? null,
     colors: normalizeArray(colors),
     sizes: normalizeArray(sizes),
     showColors: parseBoolean(showColors, true),
     showSizes: parseBoolean(showSizes, true),
     customAttribute: parseAttribute(customAttribute),
     inventory: parseInventory(inventory),
-    listedInCatalog: parseBoolean(includeInCatalog, true),
-    images: Array.isArray(images)
-      ? images
-      : [],
+    listedInCatalog: parseBoolean(listedInCatalog, true),
+    images: uploadedImages,
     isActive: parseBoolean(rest.isActive, true),
   });
 
@@ -325,55 +407,24 @@ async function createProductFromPayload(data) {
       description: description ?? "",
       careInstructions: careInstructions ?? "",
       details: normalizeArray(details),
-     category: categoryDoc,
+      category: categoryDoc,
       colors: normalizeArray(colors),
       sizes: normalizeArray(sizes),
       showColors: parseBoolean(showColors, true),
       showSizes: parseBoolean(showSizes, true),
       customAttribute: parseAttribute(customAttribute),
       inventory: parseInventory(inventory),
-      listedInCatalog: parseBoolean(includeInCatalog, true),
+      listedInCatalog: parseBoolean(listedInCatalog, true),
       images: document.images,
       isActive: parseBoolean(rest.isActive, true),
     },
   };
 }
 
-async function processImages(files = []) {
-  if (!files || !files.length) return [];
-  const uploads = files.map((file) =>
-    uploadBufferToCloudinary(file.buffer).then((result) => ({
-      url: result.secure_url,
-      publicId: result.public_id,
-      width: result.width,
-      height: result.height,
-      format: result.format,
-    }))
-  );
-  return Promise.all(uploads);
-}
-
-async function updateSetStock(setId) {
-  const populated = await Set.findById(setId).populate("products.product");
-  if (!populated) return null;
-
-  let minStock = Infinity;
-  populated.products.forEach((entry) => {
-    const product = entry.product;
-    if (!product) return;
-    const available = computeAvailableStock(product);
-    if (available === Infinity) return;
-    const effective = Math.floor(available / Math.max(entry.quantity, 1));
-    minStock = Math.min(minStock, effective);
-  });
-
-  populated.stock =
-    minStock === Infinity ? Number.MAX_SAFE_INTEGER : Math.max(minStock, 0);
-  await populated.save();
-  return populated;
-}
-
-function shapeSet(doc, { discount = null, productDiscountMap = new Map() } = {}) {
+function shapeSet(
+  doc,
+  { discount = null, productDiscountMap = new Map() } = {}
+) {
   if (!doc) return null;
   const id = doc._id?.toString?.() || String(doc._id);
 
@@ -403,6 +454,7 @@ function shapeSet(doc, { discount = null, productDiscountMap = new Map() } = {})
     images: doc.images,
     products: (doc.products || []).map((entry) => ({
       quantity: entry.quantity,
+      scope: entry.scope === "setOnly" ? "setOnly" : "both",
       product: entry.product
         ? shapeProduct(entry.product, {
             discount:
@@ -429,6 +481,27 @@ async function resolveCategoryRef(category) {
   return doc;
 }
 
+async function updateSetStock(setId) {
+  const populated = await Set.findById(setId).populate("products.product");
+  if (!populated) return null;
+
+  let minStock = Infinity;
+  populated.products.forEach((entry) => {
+    const product = entry.product;
+    if (!product) return;
+    // Set stoğu SET havuzundan düşülür
+    const available = computeAvailableStock(product, { for: "set" });
+    if (available === Infinity) return;
+    const effective = Math.floor(available / Math.max(entry.quantity, 1));
+    minStock = Math.min(minStock, effective);
+  });
+
+  populated.stock =
+    minStock === Infinity ? Number.MAX_SAFE_INTEGER : Math.max(minStock, 0);
+  await populated.save();
+  return populated;
+}
+
 function parseIdList(value) {
   if (!value) return [];
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -436,8 +509,11 @@ function parseIdList(value) {
     try {
       const parsed = JSON.parse(value);
       if (Array.isArray(parsed)) return parsed.filter(Boolean);
-    } catch (_) {
-      return value.split(",").map((item) => item.trim()).filter(Boolean);
+    } catch {
+      return value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
     }
   }
   return [];

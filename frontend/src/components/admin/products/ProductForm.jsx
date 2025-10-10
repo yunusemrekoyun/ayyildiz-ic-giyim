@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, Upload } from "lucide-react";
 import AdminModal from "../common/AdminModal";
 import TagInput from "../common/TagInput";
+import ColorSelector from "./ColorSelector.jsx";
+import {
+  dedupeColors,
+  getColorInfo,
+  normalizeColorValue,
+} from "../../../utils/colors.js";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -51,17 +57,33 @@ export default function ProductForm({
     setDescription(initialProduct?.description ?? "");
     setCareInstructions(initialProduct?.careInstructions ?? "");
     setDetailsInput((initialProduct?.details || []).join("\n"));
-    setColors(initialProduct?.colors || []);
-    setSizes(initialProduct?.sizes || []);
+    const inv = initialProduct?.inventory || [];
+    const invColors = dedupeColors(inv.map((i) => i.color).filter(Boolean));
+    const invSizes = Array.from(
+      new Set(inv.map((i) => i.size).filter(Boolean))
+    );
+    const invAttrs = Array.from(
+      new Set(inv.map((i) => i.attributeValue).filter(Boolean))
+    );
+
+    setColors(
+      dedupeColors(
+        (initialProduct?.colors?.length ? initialProduct.colors : invColors) ||
+          []
+      )
+    );
+    setSizes(
+      (initialProduct?.sizes?.length ? initialProduct.sizes : invSizes) || []
+    );
     setShowColors(initialProduct?.showColors ?? true);
     setShowSizes(initialProduct?.showSizes ?? true);
     const attr = initialProduct?.customAttribute || {};
     setAttributeTitle(attr.title || "");
-    setAttributeValues(attr.values || []);
+    setAttributeValues((attr.values?.length ? attr.values : invAttrs) || []);
     setShowAttribute(attr.show ?? false);
     setInventory(
       (initialProduct?.inventory || []).map((item) => ({
-        color: sanitizeOption(item.color),
+        color: normalizeColorValue(item.color),
         size: sanitizeOption(item.size),
         attributeValue: sanitizeOption(item.attributeValue),
         stock: Number(item.stock) || 0,
@@ -89,19 +111,55 @@ export default function ProductForm({
       attributeValues.length > 0
     );
   }, [showAttribute, attributeTitle, attributeValues.length]);
-
   useEffect(() => {
     if (!open) return;
-    const colorList = showColors && colors.length ? colors : [null];
-    const sizeList = showSizes && sizes.length ? sizes : [null];
-    const attributeList = attributeActive ? attributeValues : [null];
+    const inv = initialProduct?.inventory || [];
+
+    // Düzenleme modunda inventory'den fallback havuzları
+    const invColors = Array.from(
+      new Set(inv.map((i) => i?.color).filter(Boolean))
+    );
+    const invSizes = Array.from(
+      new Set(inv.map((i) => i?.size).filter(Boolean))
+    );
+    const invAttrs = Array.from(
+      new Set(inv.map((i) => i?.attributeValue).filter(Boolean))
+    );
+
+    // Listeleri şu öncelikle kur:
+    // 1) Kullanıcının seçtikleri
+    // 2) (Edit modunda) Inventory’den türeyenler
+    // 3) Hiçbiri yoksa [null] (Default varyant)
+    const colorList = showColors
+      ? colors.length
+        ? colors
+        : isEditing && invColors.length
+        ? invColors
+        : [null]
+      : [null];
+
+    const sizeList = showSizes
+      ? sizes.length
+        ? sizes
+        : isEditing && invSizes.length
+        ? invSizes
+        : [null]
+      : [null];
+
+    const attributeList = attributeActive
+      ? attributeValues.length
+        ? attributeValues
+        : isEditing && invAttrs.length
+        ? invAttrs
+        : [null]
+      : [null];
 
     const nextCombos = [];
     colorList.forEach((color) => {
       sizeList.forEach((size) => {
         attributeList.forEach((attributeValue) => {
           nextCombos.push({
-            color: sanitizeOption(color),
+            color: showColors ? normalizeColorValue(color) : null,
             size: sanitizeOption(size),
             attributeValue: sanitizeOption(attributeValue),
           });
@@ -110,19 +168,23 @@ export default function ProductForm({
     });
 
     setInventory((prev) => {
+      // Mevcut stokları anahtara göre birleştir (renk/beden/opsiyon normalize!)
       const aggregated = new Map();
       prev.forEach((item) => {
-        const normalizedKey = makeKey({
-          color: showColors ? item.color : null,
-          size: showSizes ? item.size : null,
-          attributeValue: attributeActive ? item.attributeValue : null,
+        const colorValue = showColors ? normalizeColorValue(item.color) : null;
+        const sizeValue = showSizes ? sanitizeOption(item.size) : null;
+        const attrVal = attributeActive
+          ? sanitizeOption(item.attributeValue)
+          : null;
+        const k = makeKey({
+          color: colorValue,
+          size: sizeValue,
+          attributeValue: attrVal,
         });
-        aggregated.set(
-          normalizedKey,
-          (aggregated.get(normalizedKey) || 0) + (Number(item.stock) || 0)
-        );
+        aggregated.set(k, (aggregated.get(k) || 0) + (Number(item.stock) || 0));
       });
 
+      // Yeni kombinasyon listesine stokları dök
       return nextCombos.map((combo) => ({
         ...combo,
         stock: aggregated.get(makeKey(combo)) || 0,
@@ -136,8 +198,9 @@ export default function ProductForm({
     showColors,
     showSizes,
     attributeActive,
+    isEditing,
+    initialProduct?.inventory,
   ]);
-
   const totalImages = useMemo(
     () => existingImages.length + newImages.length,
     [existingImages.length, newImages.length]
@@ -210,6 +273,8 @@ export default function ProductForm({
     setError("");
 
     try {
+      const normalizedColors = dedupeColors(colors);
+
       const payload = {
         name: name.trim(),
         price: priceValue,
@@ -220,7 +285,7 @@ export default function ProductForm({
           .split(/\n+/)
           .map((line) => line.trim())
           .filter(Boolean),
-        colors,
+        colors: showColors ? normalizedColors : [],
         sizes,
         showColors,
         showSizes,
@@ -233,8 +298,9 @@ export default function ProductForm({
             attributeValues.length > 0,
         },
         inventory: inventory.map((item) => ({
-          color: item.color ?? null,
-          size: item.size ?? null,
+          color:
+            showColors && item.color ? normalizeColorValue(item.color) : null,
+          size: showSizes && item.size ? item.size : null,
           attributeValue:
             attributeActive && item.attributeValue ? item.attributeValue : null,
           stock: Number(item.stock) || 0,
@@ -274,6 +340,14 @@ export default function ProductForm({
     attributeActive,
     attributeTitle,
   ]);
+
+  const renderVariantValue = (columnKey, combo) => {
+    if (columnKey === "variant") return "Default";
+    if (columnKey === "color") {
+      return <ColorBadge value={combo.color} />;
+    }
+    return combo[columnKey] || "—";
+  };
 
   return (
     <AdminModal
@@ -438,14 +512,15 @@ export default function ProductForm({
             checked={showColors}
             onToggle={() => setShowColors((prev) => !prev)}
           >
-            <TagInput
-              label="Color options"
+            <ColorSelector
               values={colors}
               onChange={setColors}
-              placeholder="Add color and press Enter"
-              helper="Displayed if visible is on."
               disabled={!showColors}
             />
+            <p className="text-[11px] text-[var(--color-text-admin-muted)]">
+              Choose from curated swatches or add custom HEX colours for this
+              product.
+            </p>
           </SelectionCard>
 
           <SelectionCard
@@ -534,9 +609,7 @@ export default function ProductForm({
                       <tr key={comboKey}>
                         {variantColumns.map((column) => (
                           <td key={column.key} className="px-3 py-2">
-                            {column.key === "variant"
-                              ? "Default"
-                              : combo[column.key] || "—"}
+                            {renderVariantValue(column.key, combo)}
                           </td>
                         ))}
                         <td className="px-3 py-2">
@@ -690,5 +763,23 @@ function SelectionCard({ title, description, checked, onToggle, children }) {
       </div>
       <div className="mt-3 space-y-3">{children}</div>
     </div>
+  );
+}
+
+function ColorBadge({ value }) {
+  const info = getColorInfo(value);
+  if (!info.value) {
+    return <span className="text-[var(--color-text-admin-muted)]">—</span>;
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2 text-sm">
+      <span
+        className="h-4 w-4 rounded-full border border-white/70 shadow-inner"
+        style={{ background: info.swatch }}
+        aria-hidden="true"
+      />
+      <span>{info.label}</span>
+    </span>
   );
 }

@@ -79,9 +79,14 @@ export default function AdminProducts() {
     setModalOpen(true);
   };
 
-  const handleEditProduct = (product) => {
-    setEditingProduct(product);
-    setModalOpen(true);
+  const handleEditProduct = async (product) => {
+    try {
+      const full = await productApi.get(product.id || product.slug);
+      setEditingProduct(full);
+      setModalOpen(true);
+    } catch (err) {
+      console.error("Product load failed:", err);
+    }
   };
 
   const handleDeleteProduct = async (product) => {

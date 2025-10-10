@@ -13,7 +13,17 @@ function buildSetFormData(payload = {}) {
     form.append("products", JSON.stringify(payload.products));
   }
 
+  // Set'in kendi görselleri
   (payload.images || []).forEach((file) => form.append("images", file));
+
+  // 🔧 Yeni ürün görselleri — DOT NOTASYON
+  if (payload.productImages && typeof payload.productImages === "object") {
+    Object.entries(payload.productImages).forEach(([idx, files]) => {
+      (files || []).forEach((file) => {
+        form.append(`products.${idx}.images`, file); // <<< ürün index’i
+      });
+    });
+  }
 
   if (payload.removeImagePublicIds?.length) {
     form.append(
@@ -37,26 +47,13 @@ export const setApi = {
   },
   async create(payload) {
     const form = buildSetFormData(payload);
-    const data = await http("/sets", {
-      method: "POST",
-      body: form,
-      auth: true,
-    });
-    return data;
+    return http("/sets", { method: "POST", body: form, auth: true });
   },
   async update(idOrSlug, payload) {
     const form = buildSetFormData(payload);
-    const data = await http(`/sets/${idOrSlug}`, {
-      method: "PUT",
-      body: form,
-      auth: true,
-    });
-    return data;
+    return http(`/sets/${idOrSlug}`, { method: "PUT", body: form, auth: true });
   },
   async remove(idOrSlug) {
-    return http(`/sets/${idOrSlug}`, {
-      method: "DELETE",
-      auth: true,
-    });
+    return http(`/sets/${idOrSlug}`, { method: "DELETE", auth: true });
   },
 };

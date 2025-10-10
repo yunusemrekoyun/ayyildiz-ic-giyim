@@ -5,6 +5,7 @@ import { getAccessToken } from "../../api/client";
 import { userDetailsApi } from "../../api/userDetails";
 import { useNavigate } from "react-router-dom";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
+import { getColorInfo } from "../../utils/colors.js";
 import ReviewSectionCard from "../reviews/ReviewSectionCard.jsx";
 
 const currency = new Intl.NumberFormat("en-US", {
@@ -12,8 +13,6 @@ const currency = new Intl.NumberFormat("en-US", {
   currency: "EUR",
   minimumFractionDigits: 2,
 });
-
-const isHexColor = (value) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value || "");
 
 const pillIdle = "border-border bg-white text-primary hover:bg-surface-hover";
 
@@ -35,21 +34,24 @@ export default function ProductDetail({ product = {} }) {
   const colorOptions = useMemo(() => {
     if (product.showColors === false) return [];
     const map = new Map();
-    const register = (color) => {
-      if (!color) return;
-      const value = String(color).trim();
-      if (!value) return;
-      const key = value.toLowerCase();
+
+    const register = (input) => {
+      const info = getColorInfo(input);
+      if (!info.value) return;
+      const key = info.value.toLowerCase();
       if (!map.has(key)) {
         map.set(key, {
-          value,
-          label: value,
-          isHex: isHexColor(value),
+          value: info.value,
+          label: info.label,
+          swatch: info.swatch,
+          isHex: info.isHex,
         });
       }
     };
+
     (product.colors || []).forEach(register);
     inventory.forEach((item) => register(item.color));
+
     return Array.from(map.values());
   }, [inventory, product.colors, product.showColors]);
 
@@ -88,6 +90,15 @@ export default function ProductDetail({ product = {} }) {
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedAttribute, setSelectedAttribute] = useState(null);
+
+  const activeColorOption = useMemo(() => {
+    if (!selectedColor) return null;
+    return (
+      colorOptions.find(
+        (option) => normalize(option.value) === normalize(selectedColor)
+      ) || null
+    );
+  }, [colorOptions, selectedColor]);
 
   // Favori durumu yükle
   useEffect(() => {
@@ -314,19 +325,13 @@ export default function ProductDetail({ product = {} }) {
                       }`}
                     >
                       <span
-                        className="h-4 w-4 rounded-full border border-border"
-                        style={{
-                          background: option.isHex
-                            ? option.value
-                            : "linear-gradient(135deg, #f3f4f6, #e5e7eb)",
-                        }}
+                        className="grid h-5 w-5 place-items-center rounded-full border border-white/70 shadow-inner"
+                        style={{ background: option.swatch }}
                         aria-hidden="true"
-                      />
-                      {option.isHex ? (
+                      >
                         <span className="sr-only">{option.label}</span>
-                      ) : (
-                        <span>{option.label}</span>
-                      )}
+                      </span>
+                      <span>{option.label}</span>
                     </button>
                   );
                 })}
@@ -407,9 +412,8 @@ export default function ProductDetail({ product = {} }) {
                   kind: "product",
                   productId: product.id,
                   color: selectedColor,
-                  colorHex: colorOptions.find((c) => c.value === selectedColor)
-                    ?.isHex
-                    ? selectedColor
+                  colorHex: activeColorOption?.isHex
+                    ? activeColorOption.swatch
                     : null,
                   size: selectedSize,
                   attribute: selectedAttribute,
@@ -458,5 +462,5 @@ export default function ProductDetail({ product = {} }) {
 function normalize(value) {
   if (value === undefined || value === null) return null;
   const trimmed = String(value).trim();
-  return trimmed || null;
+  return trimmed ? trimmed.toLowerCase() : null;
 }

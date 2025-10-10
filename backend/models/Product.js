@@ -20,13 +20,16 @@ const AttributeSchema = new mongoose.Schema(
   },
   { _id: false }
 );
-
 const InventorySchema = new mongoose.Schema(
   {
     color: { type: String, default: null },
     size: { type: String, default: null },
     attributeValue: { type: String, default: null },
+    // Eski alan: geriye dönük uyum için tutalım (okuma amaçlı)
     stock: { type: Number, default: 0, min: 0 },
+    // Yeni ayrı havuzlar
+    stockCatalog: { type: Number, default: 0, min: 0 },
+    stockSet: { type: Number, default: 0, min: 0 },
   },
   { _id: false }
 );

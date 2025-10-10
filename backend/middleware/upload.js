@@ -1,21 +1,19 @@
-// backend/middleware/upload.js
 import multer from "multer";
 
 const storage = multer.memoryStorage();
 
-/** Genel upload (görseller için) – mevcut davranış */
+// 5MB sınırı kalsın; sadece toplam dosya adedini artırıyoruz.
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 export const upload = multer({
   storage,
-  limits: { fileSize: MAX_FILE_SIZE, files: 10 },
+  limits: { fileSize: MAX_FILE_SIZE, files: 50 }, // <<< 10 -> 50
 });
 
-/** HERO için ayrı uploader (video + büyük boyut) */
-const HERO_MAX_MB = Number(process.env.HERO_MAX_FILE_MB || 80); // .env ile yönet: HERO_MAX_FILE_MB=80
+const HERO_MAX_MB = Number(process.env.HERO_MAX_FILE_MB || 80);
 export const uploadHeroMedia = multer({
   storage,
   limits: {
-    fileSize: HERO_MAX_MB * 1024 * 1024, // örn 200MB
+    fileSize: HERO_MAX_MB * 1024 * 1024,
     files: 1,
   },
   fileFilter: (req, file, cb) => {

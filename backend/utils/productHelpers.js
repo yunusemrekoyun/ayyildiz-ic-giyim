@@ -2,7 +2,8 @@ import slugify from "slugify";
 
 export function normalizeArray(value) {
   if (!value) return [];
-  if (Array.isArray(value)) return value.filter(Boolean).map((v) => String(v).trim());
+  if (Array.isArray(value))
+    return value.filter(Boolean).map((v) => String(v).trim());
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (!trimmed) return [];
@@ -43,7 +44,7 @@ export function parseAttribute(value) {
   if (typeof value === "string") {
     try {
       payload = JSON.parse(value);
-    } catch (error) {
+    } catch {
       return { title: value, values: [], show: true };
     }
   }
@@ -60,41 +61,57 @@ export function parseAttribute(value) {
       .map((item) => item.trim())
       .filter(Boolean);
   }
-  return {
-    title,
-    values,
-    show: parseBoolean(payload.show, true),
-  };
+  return { title, values, show: parseBoolean(payload.show, true) };
 }
 
+/**
+ * Envanter parser:
+ * - stockCatalog & stockSet: yeni ikili havuz
+ * - legacy "stock" verilirse stockCatalog olarak kabul edilir (set havuzu 0)
+ * - aynı varyant anahtarını (color|size|attribute) tekilleştirir
+ */
 export function parseInventory(value) {
   if (!value) return [];
   let payload = value;
   if (typeof value === "string") {
     try {
       payload = JSON.parse(value);
-    } catch (error) {
+    } catch {
       return [];
     }
   }
   if (!Array.isArray(payload)) return [];
 
+  const toSafeInt = (n, fallback = 0) => {
+    const x = Number(n);
+    return Number.isFinite(x) && x >= 0 ? Math.floor(x) : fallback;
+  };
+
   const map = new Map();
-  payload.forEach((item) => {
-    if (!item) return;
+  for (const item of payload) {
+    if (!item) continue;
     const color = sanitizeOption(item.color);
     const size = sanitizeOption(item.size);
     const attributeValue = sanitizeOption(item.attributeValue);
-    const stock = Number(item.stock);
-    const safeStock = Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : 0;
+
+    const legacy = toSafeInt(item.stock, undefined); // undefined => yok
+    const stockCatalog = toSafeInt(
+      item.stockCatalog,
+      legacy !== undefined ? legacy : 0
+    );
+    const stockSet = toSafeInt(item.stockSet, 0);
+
     const key = [color || "", size || "", attributeValue || ""].join("||");
     map.set(key, {
       color: color ?? null,
       size: size ?? null,
       attributeValue: attributeValue ?? null,
-      stock: safeStock,
+      // legacy uyum: "stock" alanını da döndürelim, katalog havuzunu yansıtsın
+      stock: stockCatalog,
+      stockCatalog,
+      stockSet,
     });
-  });
+  }
 
   return Array.from(map.values());
 }
@@ -107,11 +124,16 @@ export function ensureSlug(doc, sourceField = "name") {
   }
 }
 
-export function shapeProduct(doc, { discount = null, finalPrice = undefined } = {}) {
+export function shapeProduct(
+  doc,
+  { discount = null, finalPrice = undefined } = {}
+) {
   if (!doc) return null;
 
-  const id = doc._id?.toString?.() || doc.id?.toString?.() || String(doc._id || doc.id);
+  const id =
+    doc._id?.toString?.() || doc.id?.toString?.() || String(doc._id || doc.id);
   const basePrice = Number(doc.price) || 0;
+
   const normalizedDiscount = discount
     ? {
         id: discount.id || discount._id?.toString?.() || String(discount._id),
@@ -124,10 +146,32 @@ export function shapeProduct(doc, { discount = null, finalPrice = undefined } = 
   let computedFinal = finalPrice;
   if (!Number.isFinite(computedFinal)) {
     computedFinal = normalizedDiscount
-      ? Math.round((basePrice - (basePrice * normalizedDiscount.percentage) / 100) * 100) /
-        100
+      ? Math.round(
+          (basePrice - (basePrice * normalizedDiscount.percentage) / 100) * 100
+        ) / 100
       : basePrice;
   }
+
+  // inventory’yi üç alanla yansıt (legacy "stock" = stockCatalog)
+  const inventory = Array.isArray(doc.inventory)
+    ? doc.inventory.map((row) => {
+        const stockCatalog =
+          typeof row.stockCatalog === "number"
+            ? row.stockCatalog
+            : typeof row.stock === "number" // legacy
+            ? row.stock
+            : 0;
+        const stockSet = typeof row.stockSet === "number" ? row.stockSet : 0;
+        return {
+          color: row?.color ?? null,
+          size: row?.size ?? null,
+          attributeValue: row?.attributeValue ?? null,
+          stock: stockCatalog, // legacy alanı doldurmaya devam
+          stockCatalog,
+          stockSet,
+        };
+      })
+    : [];
 
   return {
     id,
@@ -146,17 +190,10 @@ export function shapeProduct(doc, { discount = null, finalPrice = undefined } = 
       ? {
           title: doc.customAttribute.title || "",
           values: doc.customAttribute.values || [],
-          show: Boolean(doc.customAttribute.show),
+          show: !!doc.customAttribute.show,
         }
       : { title: "", values: [], show: false },
-    inventory: Array.isArray(doc.inventory)
-      ? doc.inventory.map((item) => ({
-          color: item?.color ?? null,
-          size: item?.size ?? null,
-          attributeValue: item?.attributeValue ?? null,
-          stock: Number(item?.stock) || 0,
-        }))
-      : [],
+    inventory,
     description: doc.description,
     careInstructions: doc.careInstructions,
     details: doc.details,
@@ -169,14 +206,26 @@ export function shapeProduct(doc, { discount = null, finalPrice = undefined } = 
   };
 }
 
-export function computeAvailableStock(product) {
-  if (!product) return 0;
-  if (Array.isArray(product.inventory) && product.inventory.length) {
-    return product.inventory.reduce(
-      (sum, entry) => sum + (Number(entry?.stock) || 0),
-      0
-    );
+/**
+ * pool = "catalog" | "set"
+ * Stok tanımsızsa (envanter yoksa) Infinity döner (set stok hesabı için)
+ */
+export function computeAvailableStock(product, context = { for: "catalog" }) {
+  const pool = context?.for === "set" ? "stockSet" : "stockCatalog";
+  const inv = Array.isArray(product?.inventory) ? product.inventory : [];
+  if (inv.length === 0) return Infinity;
+
+  let total = 0;
+  for (const row of inv) {
+    const val =
+      typeof row[pool] === "number"
+        ? row[pool]
+        : typeof row.stock === "number" // legacy: catalog say
+        ? context?.for === "set"
+          ? 0
+          : row.stock
+        : 0;
+    total += Math.max(0, Math.floor(val));
   }
-  if (product.inStock === false) return 0;
-  return Number.isFinite(product.stock) ? Number(product.stock) : Infinity;
+  return total;
 }

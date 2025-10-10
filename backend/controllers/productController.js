@@ -161,7 +161,9 @@ export async function listProducts(req, res) {
       filter.category = { $in: [categoryDoc._id, ...descendantIds] };
     }
 
-    const mongoFilter = includeHidden ? filter : { ...filter, listedInCatalog: true };
+    const mongoFilter = includeHidden
+      ? filter
+      : { ...filter, listedInCatalog: true };
 
     const [items, total] = await Promise.all([
       Product.find(mongoFilter)
@@ -243,7 +245,9 @@ export async function updateProduct(req, res) {
     if (price !== undefined) {
       const parsedPrice = Number(price);
       if (Number.isNaN(parsedPrice)) {
-        return res.status(400).json({ message: "Price must be a valid number" });
+        return res
+          .status(400)
+          .json({ message: "Price must be a valid number" });
       }
       product.price = parsedPrice;
     }
@@ -262,8 +266,22 @@ export async function updateProduct(req, res) {
       product.showSizes = parseBoolean(showSizes, product.showSizes);
     if (customAttribute !== undefined)
       product.customAttribute = parseAttribute(customAttribute);
-    if (inventory !== undefined)
-      product.inventory = parseInventory(inventory);
+
+    // ✅ STOK SIFIRLAMA KORUMASI
+    if (inventory !== undefined) {
+      let parsedInv = [];
+      try {
+        parsedInv =
+          typeof inventory === "string" ? JSON.parse(inventory) : inventory;
+      } catch (_) {
+        parsedInv = [];
+      }
+      if (Array.isArray(parsedInv) && parsedInv.length > 0) {
+        product.inventory = parseInventory(parsedInv);
+      }
+      // boşsa dokunma
+    }
+
     if (listedInCatalog !== undefined)
       product.listedInCatalog = parseBoolean(
         listedInCatalog,
@@ -283,9 +301,7 @@ export async function updateProduct(req, res) {
       const deletions = [];
       product.images = product.images.filter((img) => {
         const shouldRemove = ids.includes(img.publicId);
-        if (shouldRemove) {
-          deletions.push(deleteFromCloudinary(img.publicId));
-        }
+        if (shouldRemove) deletions.push(deleteFromCloudinary(img.publicId));
         return !shouldRemove;
       });
       if (deletions.length) await Promise.allSettled(deletions);
@@ -315,7 +331,9 @@ export async function deleteProduct(req, res) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    await Promise.all(product.images.map((img) => deleteFromCloudinary(img.publicId)));
+    await Promise.all(
+      product.images.map((img) => deleteFromCloudinary(img.publicId))
+    );
     await product.deleteOne();
     res.json({ ok: true });
   } catch (error) {

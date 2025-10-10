@@ -15,27 +15,17 @@ const router = Router();
 router.get("/", listSets);
 router.get("/:idOrSlug", getSet);
 
-router.post(
-  "/",
-  requireAuth,
-  requireRole("admin"),
-  upload.array("images", 10),
-  createSet
-);
+// Dinamik alanlar için any()
+router.post("/", requireAuth, requireRole("admin"), upload.any(), createSet);
 
 router.put(
   "/:idOrSlug",
   requireAuth,
   requireRole("admin"),
-  upload.array("images", 10),
+  upload.any(),
   updateSet
 );
 
-router.delete(
-  "/:idOrSlug",
-  requireAuth,
-  requireRole("admin"),
-  deleteSet
-);
+router.delete("/:idOrSlug", requireAuth, requireRole("admin"), deleteSet);
 
 export default router;

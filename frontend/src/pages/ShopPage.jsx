@@ -89,7 +89,9 @@ export default function ShopPage() {
           if (!mounted) return;
           setProducts(campaignContext.items || []);
         } else {
-          const { products: productList } = await productApi.list({ limit: 200 });
+          const { products: productList } = await productApi.list({
+            limit: 200,
+          });
           if (!mounted) return;
           setProducts(productList || []);
         }
@@ -108,9 +110,7 @@ export default function ShopPage() {
   // Fiyat aralığı (ürünlere göre)
   const priceRange = useMemo(() => {
     if (!products.length) return { min: 0, max: 0 };
-    const vals = products.map(
-      (p) => Number(p.finalPrice ?? p.price ?? 0) || 0
-    );
+    const vals = products.map((p) => Number(p.finalPrice ?? p.price ?? 0) || 0);
     const mins = Math.min(...vals);
     const maxs = Math.max(...vals);
     return {
@@ -197,7 +197,10 @@ export default function ShopPage() {
       if (selectedCategory !== "all") {
         const catId =
           product.category?.id || product.category?._id || product.category;
-        if (String(catId) !== String(selectedCategory)) return false;
+        const ancestors = product.category?.ancestors || [];
+        // Ürün hem kendi kategorisi hem de ancestors içinde olabilir
+        const allRelatedIds = [String(catId), ...ancestors.map(String)];
+        if (!allRelatedIds.includes(String(selectedCategory))) return false;
       }
 
       // color

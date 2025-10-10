@@ -47,7 +47,7 @@ export const productApi = {
       );
     if (payload.customAttribute)
       form.append("customAttribute", JSON.stringify(payload.customAttribute));
-    if (payload.inventory)
+    if (Array.isArray(payload.inventory) && payload.inventory.length > 0)
       form.append("inventory", JSON.stringify(payload.inventory));
     (payload.images || []).forEach((file) => form.append("images", file));
 
@@ -89,13 +89,13 @@ export const productApi = {
     if (payload.customAttribute !== undefined)
       form.append("customAttribute", JSON.stringify(payload.customAttribute));
     (payload.images || []).forEach((file) => form.append("images", file));
-    if (payload.removeImagePublicIds?.length) {
+    if (payload.removeImagePublicIds?.length)
       form.append(
         "removeImagePublicIds",
         toJsonArray(payload.removeImagePublicIds)
       );
-    }
-    if (payload.inventory !== undefined)
+    // ✅ STOK BOŞ GİTMESİN
+    if (Array.isArray(payload.inventory) && payload.inventory.length > 0)
       form.append("inventory", JSON.stringify(payload.inventory));
 
     const data = await http(`/products/${idOrSlug}`, {
