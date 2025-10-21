@@ -1,3 +1,4 @@
+// backend/models/Set.js
 import mongoose from "mongoose";
 import slugify from "slugify";
 
@@ -20,7 +21,6 @@ const SetProductSchema = new mongoose.Schema(
       required: true,
     },
     quantity: { type: Number, default: 1, min: 1 },
-    scope: { type: String, enum: ["setOnly", "both"], default: "both" },
   },
   { _id: false }
 );

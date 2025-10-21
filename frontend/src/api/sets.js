@@ -1,3 +1,4 @@
+// frontend/src/api/sets.js
 import { http, toQueryString } from "./client.js";
 
 function buildSetFormData(payload = {}) {
@@ -10,20 +11,12 @@ function buildSetFormData(payload = {}) {
     form.append("show", payload.show ? "true" : "false");
 
   if (payload.products) {
+    // sadece { productId, quantity } listesi
     form.append("products", JSON.stringify(payload.products));
   }
 
   // Set'in kendi görselleri
   (payload.images || []).forEach((file) => form.append("images", file));
-
-  // 🔧 Yeni ürün görselleri — DOT NOTASYON
-  if (payload.productImages && typeof payload.productImages === "object") {
-    Object.entries(payload.productImages).forEach(([idx, files]) => {
-      (files || []).forEach((file) => {
-        form.append(`products.${idx}.images`, file); // <<< ürün index’i
-      });
-    });
-  }
 
   if (payload.removeImagePublicIds?.length) {
     form.append(

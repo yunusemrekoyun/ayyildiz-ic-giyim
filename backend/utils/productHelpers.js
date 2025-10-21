@@ -76,42 +76,48 @@ export function parseInventory(value) {
   if (typeof value === "string") {
     try {
       payload = JSON.parse(value);
-    } catch {
+    } catch (error) {
       return [];
     }
   }
   if (!Array.isArray(payload)) return [];
 
-  const toSafeInt = (n, fallback = 0) => {
-    const x = Number(n);
-    return Number.isFinite(x) && x >= 0 ? Math.floor(x) : fallback;
-  };
-
   const map = new Map();
-  for (const item of payload) {
-    if (!item) continue;
+  payload.forEach((item) => {
+    if (!item) return;
     const color = sanitizeOption(item.color);
     const size = sanitizeOption(item.size);
     const attributeValue = sanitizeOption(item.attributeValue);
 
-    const legacy = toSafeInt(item.stock, undefined); // undefined => yok
-    const stockCatalog = toSafeInt(
-      item.stockCatalog,
-      legacy !== undefined ? legacy : 0
-    );
-    const stockSet = toSafeInt(item.stockSet, 0);
+    // legacy
+    const stock = Number(item.stock);
+    const safeStock =
+      Number.isFinite(stock) && stock >= 0 ? Math.floor(stock) : 0;
+
+    // yeni havuzlar (varsa onları al, yoksa legacy stock'a eşitle)
+    const stockCatalogRaw = Number(item.stockCatalog);
+    const stockSetRaw = Number(item.stockSet);
+    const stockCatalog =
+      Number.isFinite(stockCatalogRaw) && stockCatalogRaw >= 0
+        ? Math.floor(stockCatalogRaw)
+        : safeStock;
+    const stockSet =
+      Number.isFinite(stockSetRaw) && stockSetRaw >= 0
+        ? Math.floor(stockSetRaw)
+        : safeStock;
 
     const key = [color || "", size || "", attributeValue || ""].join("||");
     map.set(key, {
       color: color ?? null,
       size: size ?? null,
       attributeValue: attributeValue ?? null,
-      // legacy uyum: "stock" alanını da döndürelim, katalog havuzunu yansıtsın
-      stock: stockCatalog,
+      // legacy alanı elde tutuyoruz
+      stock: safeStock,
+      // yeni havuzlar
       stockCatalog,
       stockSet,
     });
-  }
+  });
 
   return Array.from(map.values());
 }
@@ -211,21 +217,36 @@ export function shapeProduct(
  * Stok tanımsızsa (envanter yoksa) Infinity döner (set stok hesabı için)
  */
 export function computeAvailableStock(product, context = { for: "catalog" }) {
+  // context.for: "catalog" | "set"
   const pool = context?.for === "set" ? "stockSet" : "stockCatalog";
+
   const inv = Array.isArray(product?.inventory) ? product.inventory : [];
-  if (inv.length === 0) return Infinity;
+  if (inv.length === 0) {
+    // stok tanımlı değilse sonsuz kabul (set stok hesabında bu "∞" için kullanılıyor)
+    return Infinity;
+  }
 
   let total = 0;
   for (const row of inv) {
-    const val =
-      typeof row[pool] === "number"
-        ? row[pool]
-        : typeof row.stock === "number" // legacy: catalog say
-        ? context?.for === "set"
-          ? 0
-          : row.stock
-        : 0;
-    total += Math.max(0, Math.floor(val));
+    let s;
+    if (typeof row[pool] === "number") {
+      // yeni havuzlar varsa direkt onları kullan
+      s = row[pool];
+    } else if (
+      typeof row.stockCatalog !== "number" &&
+      typeof row.stockSet !== "number" &&
+      typeof row.stock === "number"
+    ) {
+      // geri uyum: sadece legacy "stock" varsa her iki havuz için de onu kabul et
+      s = row.stock;
+    } else if (typeof row.stock === "number") {
+      // ekstra geri uyum: pool yok ama legacy var
+      s = row.stock;
+    } else {
+      s = 0;
+    }
+
+    total += Math.max(0, Math.floor(s));
   }
   return total;
 }

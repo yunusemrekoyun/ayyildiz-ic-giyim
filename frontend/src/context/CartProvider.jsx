@@ -1,15 +1,45 @@
-// src/context/CartProvider.jsx
 import { useEffect, useMemo, useState } from "react";
 import { CartContext } from "./CartContext";
 import { shippingApi } from "../api/shipping";
 import { couponApi } from "../api/coupons";
 
 // Varyantları ayırt eden benzersiz satır anahtarı
-function makeLineId(id, { color = null, size = null, attribute = null } = {}) {
-  const c = color ?? "";
-  const s = size ?? "";
-  const a = attribute ?? "";
-  return `${id}|${c}|${s}|${a}`;
+function makeLineId(
+  id,
+  { color = null, size = null, attribute = null, items = null } = {}
+) {
+  // ürün hattı (eski davranış)
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    const c = color ?? "";
+    const s = size ?? "";
+    const a = attribute ?? "";
+    return `${id}|${c}|${s}|${a}`;
+  }
+  // set hattı — deterministik sıralama ile anahtar
+  const sorted = [...items].sort((a, b) => {
+    const key = (x) =>
+      [
+        String(x.productId || ""),
+        String(x.color || ""),
+        String(x.size || ""),
+        String(x.attribute || ""),
+        String(x.qtyInSet || 1),
+      ].join("\u0001");
+    return key(a).localeCompare(key(b));
+  });
+
+  const key = sorted
+    .map((it) =>
+      [
+        it.productId || "",
+        it.color || "",
+        it.size || "",
+        it.attribute || "",
+        it.qtyInSet || 1,
+      ].join("~")
+    )
+    .join("|");
+  return `${id}||SET||${key}`;
 }
 
 function normalizeItem(raw) {
@@ -39,7 +69,9 @@ export default function CartProvider({ children }) {
         .map((item) => {
           const normalized = normalizeItem(item);
           if (!normalized) return null;
-          const original = Number(normalized.originalPrice || normalized.price || 0);
+          const original = Number(
+            normalized.originalPrice || normalized.price || 0
+          );
           normalized.originalPrice = original;
           normalized.price = Number(normalized.price || original);
           return normalized;
@@ -103,7 +135,8 @@ export default function CartProvider({ children }) {
       }
 
       const kind = (options.kind || product.kind || "product").toLowerCase();
-      const rawId = product.id || product._id || product.slug || options.productId;
+      const rawId =
+        product.id || product._id || product.slug || options.productId;
       const baseId = rawId ? String(rawId) : null;
       if (!baseId) return prev;
 
@@ -113,8 +146,7 @@ export default function CartProvider({ children }) {
         title: product.name || product.title,
         image: product.images?.[0]?.url || "/pd-1.jpg",
         price: Number(product.finalPrice ?? product.price) || 0,
-        originalPrice:
-          Number(product.price ?? product.finalPrice ?? 0) || 0,
+        originalPrice: Number(product.price ?? product.finalPrice ?? 0) || 0,
         qty: options.qty || 1,
         color: options.color || null,
         colorHex: options.colorHex || null,
@@ -129,6 +161,8 @@ export default function CartProvider({ children }) {
         newItem.kind = "set";
         newItem.setId = String(options.setId || baseId);
         newItem.productId = null;
+        // set seçimleri
+        newItem.items = Array.isArray(options.items) ? options.items : [];
       } else {
         newItem.kind = "product";
         newItem.productId = String(options.productId || baseId);
@@ -223,7 +257,10 @@ export default function CartProvider({ children }) {
     }
     setCouponMessage(null);
     try {
-      const applied = await couponApi.apply({ code: normalized, subtotal: subTotal });
+      const applied = await couponApi.apply({
+        code: normalized,
+        subtotal: subTotal,
+      });
       setCoupon(applied);
       return applied;
     } catch (error) {

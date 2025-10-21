@@ -163,7 +163,11 @@ export async function listProducts(req, res) {
 
     const mongoFilter = includeHidden
       ? filter
-      : { ...filter, listedInCatalog: true };
+      : {
+          ...filter,
+          listedInCatalog: true,
+          isActive: true,
+        };
 
     const [items, total] = await Promise.all([
       Product.find(mongoFilter)
@@ -202,8 +206,17 @@ export async function getProduct(req, res) {
       ? await Product.findById(idOrSlug).populate("category")
       : await Product.findOne({ slug: idOrSlug }).populate("category");
 
+    // ✅ önce var mı kontrol et
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
+    }
+
+    const includeHidden = parseBoolean(req.query.includeHidden, false);
+    const isAdmin = Boolean(req.user?.role === "admin");
+    if (!includeHidden && !isAdmin) {
+      if (product.listedInCatalog !== true || product.isActive !== true) {
+        return res.status(404).json({ message: "Product not found" });
+      }
     }
 
     res.json({ product: await shapeProductWithDiscount(product) });

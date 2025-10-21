@@ -25,16 +25,17 @@ export default function CheckoutPage() {
     clearCoupon = () => {},
   } = cart;
 
-  // API'ye gidecek satırlar (id/kind/qty)
   const checkoutItems = useMemo(
     () =>
       itemsRaw
         .map((it) => {
+          // kind
           const rawKind =
             it.kind ||
             (it.productId ? "product" : it.setId ? "set" : undefined);
           const kind = rawKind === "set" ? "set" : "product";
 
+          // id
           const rawId =
             it.ref ||
             it.id ||
@@ -46,6 +47,7 @@ export default function CheckoutPage() {
           const id = rawId ? String(rawId).trim() : "";
           if (!id) return null;
 
+          // qty
           const qty = Math.max(
             1,
             Number(
@@ -53,6 +55,38 @@ export default function CheckoutPage() {
             ) || 1
           );
 
+          // <<< ÖNEMLİ: set satırları için selections ekle
+          if (kind === "set") {
+            const selections = Array.isArray(it.items)
+              ? it.items
+                  .map((s) => {
+                    const productId =
+                      s.productId ||
+                      s.id ||
+                      s._id ||
+                      s.ref ||
+                      s.product?._id ||
+                      s.productId?._id;
+                    if (!productId) return null;
+
+                    return {
+                      productId: String(productId),
+                      color: s.color ?? null,
+                      size: s.size ?? null,
+                      attribute: s.attribute ?? null,
+                      qtyInSet: Math.max(1, Number(s.qtyInSet || 1)),
+                      // colorHex backend için şart değilse göndermene gerek yok;
+                      // istiyorsan ekleyebilirsin:
+                      // colorHex: s.colorHex ?? null,
+                    };
+                  })
+                  .filter(Boolean)
+              : [];
+
+            return { kind, id, qty, selections };
+          }
+
+          // ürün satırı
           return { kind, id, qty };
         })
         .filter(Boolean),
@@ -286,9 +320,7 @@ export default function CheckoutPage() {
               </div>
               {coupon && (
                 <div className="flex justify-between text-rose-600">
-                  <span className="text-sm">
-                    Coupon ({coupon.code})
-                  </span>
+                  <span className="text-sm">Coupon ({coupon.code})</span>
                   <span>– €{couponDiscount.toFixed(2)}</span>
                 </div>
               )}

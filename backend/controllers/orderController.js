@@ -11,6 +11,7 @@ import {
   mapDiscountsToSets,
   applyDiscount,
 } from "../utils/discountHelpers.js";
+import { computeAvailableStock } from "../utils/productHelpers.js";
 
 function generateOrderNumber() {
   const now = new Date();
@@ -37,7 +38,13 @@ function toBoolean(value) {
   return Boolean(value);
 }
 
-// Basit şekillendirici
+// normalize helpers
+function normalize(v) {
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  return s ? s.toLowerCase() : null;
+}
+
 function shapeOrder(doc) {
   if (!doc) return null;
   const rawUser = doc.user;
@@ -65,6 +72,16 @@ function shapeOrder(doc) {
       unitPrice: i.unitPrice,
       qty: i.qty,
       image: i.image || "",
+      selections:
+        Array.isArray(i.selections) && i.selections.length
+          ? i.selections.map((s) => ({
+              productId: s.productId?.toString?.() || s.productId,
+              color: s.color || null,
+              size: s.size || null,
+              attribute: s.attribute || null,
+              qtyInSet: s.qtyInSet || 1,
+            }))
+          : [],
     })),
     address: doc.address,
     subtotal: doc.subtotal,
@@ -90,7 +107,14 @@ function shapeOrder(doc) {
  * POST /api/orders
  * Body: {
  *   addressId: string,
- *   items: [{ kind: "product"|"set", id: "<ObjectId>", qty: number }]
+ *   items: [{
+ *     kind: "product"|"set",
+ *     id: "<ObjectId>",
+ *     qty: number,
+ *     // kind === 'set' için zorunlu:
+ *     selections?: [{ productId, color, size, attribute, qtyInSet }]
+ *   }],
+ *   couponCode?: string
  * }
  * Not: Fiyat güvenliği için backend fiyatı DB'den çeker.
  */
@@ -122,23 +146,51 @@ export async function createOrder(req, res) {
     };
 
     // Ürün/Setleri DB'den çekip güvenli fiyat hesapla
-    const productIds = items
+    const productLineIds = items
       .filter(
         (x) =>
           String(x.kind) === "product" && mongoose.Types.ObjectId.isValid(x.id)
       )
       .map((x) => x.id);
+
     const setIds = items
       .filter(
         (x) => String(x.kind) === "set" && mongoose.Types.ObjectId.isValid(x.id)
       )
       .map((x) => x.id);
 
+    // Seçimlerde geçen tüm productId'ler (set için)
+    const selectionProductIds = [];
+    for (const it of items) {
+      if (String(it.kind) === "set") {
+        if (!Array.isArray(it.selections) || it.selections.length === 0) {
+          return res
+            .status(400)
+            .json({ message: "Set selections are required" });
+        }
+        for (const s of it.selections) {
+          if (!mongoose.Types.ObjectId.isValid(s.productId)) {
+            return res
+              .status(400)
+              .json({ message: "Invalid selection productId" });
+          }
+          selectionProductIds.push(s.productId);
+        }
+      }
+    }
+
+    // Tek seferde tüm ihtiyaç duyulan ürünleri çek
+    const allProductIds = Array.from(
+      new Set([...productLineIds, ...selectionProductIds])
+    );
+
     const [products, sets] = await Promise.all([
-      productIds.length
-        ? Product.find({ _id: { $in: productIds } }).populate("category")
+      allProductIds.length
+        ? Product.find({ _id: { $in: allProductIds } }).populate("category")
         : [],
-      setIds.length ? Set.find({ _id: { $in: setIds } }) : [],
+      setIds.length
+        ? Set.find({ _id: { $in: setIds } }).populate("products.product")
+        : [],
     ]);
 
     const pMap = new Map(products.map((p) => [String(p._id), p]));
@@ -151,10 +203,15 @@ export async function createOrder(req, res) {
         : new Map();
     const setDiscountMap =
       activeDiscounts.length && sets.length
-        ? mapDiscountsToSets(activeDiscounts, sets.map((set) => set._id))
+        ? mapDiscountsToSets(
+            activeDiscounts,
+            sets.map((set) => set._id)
+          )
         : new Map();
 
     const orderItems = [];
+
+    // 1) Önce fiyatlandırma snapshot'ı oluştur
     for (const raw of items) {
       const qty = Math.max(1, Number(raw.qty || 1));
       if (String(raw.kind) === "product") {
@@ -173,14 +230,25 @@ export async function createOrder(req, res) {
           unitPrice: safePrice,
           qty,
           image: p.images?.[0]?.url || "",
+          selections: [], // ürün satırında boş
         });
       } else if (String(raw.kind) === "set") {
         const s = sMap.get(String(raw.id));
         if (!s)
           return res.status(404).json({ message: "Set not found: " + raw.id });
+
+        // selections doğrulama
+        const selections = Array.isArray(raw.selections) ? raw.selections : [];
+        if (selections.length === 0) {
+          return res
+            .status(400)
+            .json({ message: "Set selections are required" });
+        }
+
         const discount = setDiscountMap.get(String(s._id)) || null;
         const { finalPrice } = applyDiscount(Number(s.price || 0), discount);
         const safePrice = roundCurrency(finalPrice);
+
         orderItems.push({
           kind: "set",
           ref: s._id,
@@ -188,12 +256,127 @@ export async function createOrder(req, res) {
           unitPrice: safePrice,
           qty,
           image: s.images?.[0]?.url || "",
+          selections: selections.map((sel) => ({
+            productId: sel.productId,
+            color: sel.color ?? null,
+            size: sel.size ?? null,
+            attribute: sel.attribute ?? null,
+            qtyInSet: Math.max(1, Number(sel.qtyInSet || 1)),
+          })),
         });
       } else {
         return res.status(400).json({ message: "Invalid item kind" });
       }
     }
 
+    // 2) Stok yeterliliği kontrolü (set seçimleri için)
+    // İhtiyaç tablosu: productId -> variant key -> required qty
+    const needMap = new Map(); // productId -> Map(variantKey -> required)
+    for (const it of orderItems) {
+      if (it.kind !== "set") continue;
+      const multiplier = Math.max(1, Number(it.qty || 1));
+      for (const sel of it.selections) {
+        const pid = String(sel.productId);
+        if (!needMap.has(pid)) needMap.set(pid, new Map());
+        const vkey = makeVariantKey(sel);
+        const curr = needMap.get(pid).get(vkey) || 0;
+        needMap.get(pid).set(vkey, curr + sel.qtyInSet * multiplier);
+      }
+    }
+
+    // Çekilen ürünlerden stok doğrulaması
+    for (const [pid, vmap] of needMap.entries()) {
+      const prod = pMap.get(pid);
+      if (!prod) {
+        return res
+          .status(400)
+          .json({ message: "Selection product missing: " + pid });
+      }
+      const inv = Array.isArray(prod.inventory) ? prod.inventory : [];
+      for (const [vkey, needed] of vmap.entries()) {
+        const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
+        const row = idx >= 0 ? inv[idx] : null;
+        const available =
+          typeof row?.stockSet === "number"
+            ? row.stockSet
+            : typeof row?.stock === "number"
+            ? row.stock
+            : 0;
+        if (available < needed) {
+          return res.status(400).json({
+            message: "Insufficient stock for selection",
+            productId: pid,
+            needed,
+            available,
+          });
+        }
+      }
+    }
+
+    // 3) Stok düşümü (set selections -> stockSet öncelikli, yoksa legacy stock)
+    const dirtyProducts = new Set();
+    for (const [pid, vmap] of needMap.entries()) {
+      const prod = pMap.get(pid);
+      const inv = Array.isArray(prod.inventory) ? prod.inventory : [];
+      let changed = false;
+      for (const [vkey, needed] of vmap.entries()) {
+        const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
+        if (idx < 0) continue; // normalde olmamalı
+        const row = inv[idx];
+
+        if (typeof row.stockSet === "number") {
+          row.stockSet = Math.max(0, Number(row.stockSet || 0) - needed);
+        } else if (typeof row.stock === "number") {
+          row.stock = Math.max(0, Number(row.stock || 0) - needed);
+        } else {
+          // güvenlik
+          row.stockSet = 0;
+        }
+        inv[idx] = row;
+        changed = true;
+      }
+      if (changed) {
+        prod.markModified("inventory");
+        dirtyProducts.add(pid);
+      }
+    }
+
+    // 4) Ürünleri kaydet
+    if (dirtyProducts.size) {
+      await Promise.all(
+        Array.from(dirtyProducts).map((pid) => pMap.get(pid).save())
+      );
+    }
+
+    // 5) Etkilenen setlerin stoklarını yeniden hesapla
+    const impactedSetIds = new Set(
+      orderItems.filter((it) => it.kind === "set").map((it) => String(it.ref))
+    );
+    if (impactedSetIds.size) {
+      const impactedSets = await Set.find({
+        _id: { $in: Array.from(impactedSetIds) },
+      }).populate("products.product");
+      for (const s of impactedSets) {
+        let minStock = Infinity;
+        (s.products || []).forEach((entry) => {
+          const product = entry.product;
+          if (!product) return;
+          const available = computeAvailableStock(product, { for: "set" });
+          if (available === Infinity) return;
+          const effective = Math.floor(
+            Number(available) / Math.max(1, Number(entry.quantity || 1))
+          );
+          minStock = Math.min(minStock, effective);
+        });
+        s.stock =
+          minStock === Infinity
+            ? Number.MAX_SAFE_INTEGER
+            : Math.max(0, Number(minStock) || 0);
+        await s.save();
+      }
+    }
+
+    // 6) Fiyat hesapları
     const subtotal = roundCurrency(
       orderItems.reduce((sum, item) => sum + item.unitPrice * item.qty, 0)
     );
@@ -280,6 +463,22 @@ function roundCurrency(value) {
   return Math.round(Number(value || 0) * 100) / 100;
 }
 
+function makeVariantKey(sel) {
+  return [
+    normalize(sel.color) || "",
+    normalize(sel.size) || "",
+    normalize(sel.attribute) || "",
+  ].join("||");
+}
+
+function variantKeyOf(row) {
+  return [
+    normalize(row?.color) || "",
+    normalize(row?.size) || "",
+    normalize(row?.attributeValue) || "",
+  ].join("||");
+}
+
 /** GET /api/orders/mine  */
 export async function myOrders(req, res) {
   try {
@@ -297,7 +496,7 @@ export async function getOrder(req, res) {
     if (!o) return res.status(404).json({ message: "Order not found" });
     res.json({ order: shapeOrder(o) });
   } catch (err) {
-    res.status(500).json({ message: err.message || "Unable to fetch order" });
+    res.status(500).json({ message: err.message || "Unable to fetch orders" });
   }
 }
 
@@ -390,12 +589,7 @@ export async function updateOrderStatus(req, res) {
     const order = await findOrderByIdOrNumber(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const {
-      status,
-      paymentMethod,
-      paymentTxnId,
-      markPaid,
-    } = req.body || {};
+    const { status, paymentMethod, paymentTxnId, markPaid } = req.body || {};
 
     if (status !== undefined) {
       const allowed = ["pending", "paid", "shipped", "completed", "cancelled"];
@@ -426,6 +620,8 @@ export async function updateOrderStatus(req, res) {
     await order.save();
     res.json({ order: shapeOrder(order) });
   } catch (error) {
-    res.status(500).json({ message: error.message || "Unable to update order" });
+    res
+      .status(500)
+      .json({ message: error.message || "Unable to update order" });
   }
 }

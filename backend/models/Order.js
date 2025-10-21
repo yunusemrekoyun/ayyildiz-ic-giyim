@@ -1,5 +1,20 @@
 import mongoose from "mongoose";
 
+const SetSelectionSchema = new mongoose.Schema(
+  {
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    color: { type: String, default: null },
+    size: { type: String, default: null },
+    attribute: { type: String, default: null },
+    qtyInSet: { type: Number, min: 1, default: 1 },
+  },
+  { _id: false }
+);
+
 const OrderItemSchema = new mongoose.Schema(
   {
     kind: { type: String, enum: ["product", "set"], required: true }, // ürün mü set mi
@@ -8,6 +23,8 @@ const OrderItemSchema = new mongoose.Schema(
     unitPrice: { type: Number, required: true }, // fiyat snapshot
     qty: { type: Number, min: 1, default: 1 },
     image: { type: String, default: "" }, // küçük görsel (opsiyonel)
+    // sadece kind === 'set' için anlamlı
+    selections: { type: [SetSelectionSchema], default: [] },
   },
   { _id: false }
 );
