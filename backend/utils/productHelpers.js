@@ -218,35 +218,41 @@ export function shapeProduct(
  */
 export function computeAvailableStock(product, context = { for: "catalog" }) {
   // context.for: "catalog" | "set"
-  const pool = context?.for === "set" ? "stockSet" : "stockCatalog";
-
   const inv = Array.isArray(product?.inventory) ? product.inventory : [];
   if (inv.length === 0) {
-    // stok tanımlı değilse sonsuz kabul (set stok hesabında bu "∞" için kullanılıyor)
-    return Infinity;
+    return context?.for === "set" ? 0 : Infinity;
   }
 
-  let total = 0;
-  for (const row of inv) {
-    let s;
-    if (typeof row[pool] === "number") {
-      // yeni havuzlar varsa direkt onları kullan
-      s = row[pool];
-    } else if (
+  const resolveRowStock = (row, pool) => {
+    if (typeof row[pool] === "number") return row[pool];
+    if (
       typeof row.stockCatalog !== "number" &&
       typeof row.stockSet !== "number" &&
       typeof row.stock === "number"
     ) {
-      // geri uyum: sadece legacy "stock" varsa her iki havuz için de onu kabul et
-      s = row.stock;
-    } else if (typeof row.stock === "number") {
-      // ekstra geri uyum: pool yok ama legacy var
-      s = row.stock;
-    } else {
-      s = 0;
+      return row.stock;
     }
+    if (typeof row.stock === "number") return row.stock;
+    return 0;
+  };
 
-    total += Math.max(0, Math.floor(s));
+  if (context?.for === "set") {
+    let min = Infinity;
+    for (const row of inv) {
+      const raw = resolveRowStock(row, "stockSet");
+      const numeric = Number(raw);
+      const value = Number.isFinite(numeric)
+        ? Math.max(0, Math.floor(numeric))
+        : 0;
+      min = Math.min(min, value);
+    }
+    return min === Infinity ? 0 : min;
+  }
+
+  let total = 0;
+  for (const row of inv) {
+    const raw = resolveRowStock(row, "stockCatalog");
+    total += Math.max(0, Math.floor(Number(raw) || 0));
   }
   return total;
 }

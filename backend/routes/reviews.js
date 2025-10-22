@@ -12,6 +12,7 @@ import {
   reviewSummary,
   listApprovedForSet,
   setReviewStats,
+  listHomeFeaturedReviews,
 } from "../controllers/reviewController.js";
 
 const router = Router();
@@ -21,7 +22,7 @@ router.get("/product/:idOrSlug", listApprovedForProduct);
 router.get("/product/:idOrSlug/stats", productReviewStats);
 router.get("/set/:idOrSlug", listApprovedForSet);
 router.get("/set/:idOrSlug/stats", setReviewStats);
-
+router.get("/home", listHomeFeaturedReviews);
 /** Authenticated user creates a review (goes to pending) */
 router.post("/", requireAuth, createReview);
 

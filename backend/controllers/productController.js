@@ -16,6 +16,7 @@ import {
   fetchActiveDiscounts,
   computeProductDiscountMap,
 } from "../utils/discountHelpers.js";
+import { recalculateSetStockForProductIds } from "../utils/setStock.js";
 
 const isValidObjectId = (val) =>
   typeof val === "string" && val.match(/^[0-9a-fA-F]{24}$/);
@@ -281,7 +282,10 @@ export async function updateProduct(req, res) {
       product.customAttribute = parseAttribute(customAttribute);
 
     // ✅ STOK SIFIRLAMA KORUMASI
+    let inventoryChanged = false;
+
     if (inventory !== undefined) {
+      inventoryChanged = true;
       let parsedInv = [];
       try {
         parsedInv =
@@ -326,6 +330,10 @@ export async function updateProduct(req, res) {
     }
 
     await product.save();
+
+    if (inventoryChanged) {
+      await recalculateSetStockForProductIds([product._id]);
+    }
     const populated = await product.populate("category");
     res.json({ product: await shapeProductWithDiscount(populated) });
   } catch (error) {

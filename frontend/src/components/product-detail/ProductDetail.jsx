@@ -35,14 +35,22 @@ export default function ProductDetail({ product = {} }) {
     if (product.showColors === false) return [];
     const map = new Map();
 
+    const sanitizeOption = (value) => {
+      if (value === undefined || value === null) return null;
+      const trimmed = String(value).trim();
+      return trimmed || null;
+    };
+
     const register = (input) => {
-      const info = getColorInfo(input);
-      if (!info.value) return;
-      const key = info.value.toLowerCase();
+      const raw = sanitizeOption(input);
+      const info = getColorInfo(raw);
+      if (!raw && !info.value) return;
+      const key = (info.value || raw || "").toLowerCase();
       if (!map.has(key)) {
         map.set(key, {
-          value: info.value,
-          label: info.label,
+          key: key || String(map.size),
+          value: raw,
+          label: info.label || raw || "Default",
           swatch: info.swatch,
           isHex: info.isHex,
         });
@@ -318,7 +326,7 @@ export default function ProductDetail({ product = {} }) {
                     normalize(option.value) === normalize(selectedColor);
                   return (
                     <button
-                      key={option.value}
+                      key={option.key || option.value || "color"}
                       onClick={() => setSelectedColor(option.value)}
                       className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition ${
                         active ? "border-accent bg-accent text-white" : pillIdle

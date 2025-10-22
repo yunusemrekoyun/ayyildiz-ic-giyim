@@ -11,7 +11,10 @@ import {
   mapDiscountsToSets,
   applyDiscount,
 } from "../utils/discountHelpers.js";
-import { computeAvailableStock } from "../utils/productHelpers.js";
+import {
+  recalculateSetStockForSetIds,
+  recalculateSetStockForProductIds,
+} from "../utils/setStock.js";
 
 function generateOrderNumber() {
   const now = new Date();
@@ -72,6 +75,13 @@ function shapeOrder(doc) {
       unitPrice: i.unitPrice,
       qty: i.qty,
       image: i.image || "",
+      variant: i.variant
+        ? {
+            color: i.variant.color || null,
+            size: i.variant.size || null,
+            attribute: i.variant.attribute || null,
+          }
+        : null,
       selections:
         Array.isArray(i.selections) && i.selections.length
           ? i.selections.map((s) => ({
@@ -114,14 +124,20 @@ function shapeOrder(doc) {
  *     // kind === 'set' için zorunlu:
  *     selections?: [{ productId, color, size, attribute, qtyInSet }]
  *   }],
- *   couponCode?: string
+ *   couponCode?: string,
+ *   paymentSimulation?: "success"|"failure"
  * }
  * Not: Fiyat güvenliği için backend fiyatı DB'den çeker.
  */
 export async function createOrder(req, res) {
   try {
     const userId = req.userId;
-    const { addressId, items = [], couponCode = null } = req.body || {};
+    const {
+      addressId,
+      items = [],
+      couponCode = null,
+      paymentSimulation = null,
+    } = req.body || {};
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
@@ -130,7 +146,6 @@ export async function createOrder(req, res) {
       return res.status(400).json({ message: "Invalid address id" });
     }
 
-    // Adres snapshot'ı
     const details = await UserDetails.findOne({ user: userId });
     const addr = details?.addresses?.id(addressId);
     if (!addr) return res.status(404).json({ message: "Address not found" });
@@ -145,51 +160,44 @@ export async function createOrder(req, res) {
       addressLine: addr.addressLine,
     };
 
-    // Ürün/Setleri DB'den çekip güvenli fiyat hesapla
     const productLineIds = items
       .filter(
         (x) =>
-          String(x.kind) === "product" && mongoose.Types.ObjectId.isValid(x.id)
+          String(x.kind) === 'product' && mongoose.Types.ObjectId.isValid(x.id)
       )
       .map((x) => x.id);
 
     const setIds = items
       .filter(
-        (x) => String(x.kind) === "set" && mongoose.Types.ObjectId.isValid(x.id)
+        (x) => String(x.kind) === 'set' && mongoose.Types.ObjectId.isValid(x.id)
       )
       .map((x) => x.id);
 
-    // Seçimlerde geçen tüm productId'ler (set için)
     const selectionProductIds = [];
     for (const it of items) {
-      if (String(it.kind) === "set") {
+      if (String(it.kind) === 'set') {
         if (!Array.isArray(it.selections) || it.selections.length === 0) {
-          return res
-            .status(400)
-            .json({ message: "Set selections are required" });
+          fail(400, 'Set selections are required');
         }
         for (const s of it.selections) {
           if (!mongoose.Types.ObjectId.isValid(s.productId)) {
-            return res
-              .status(400)
-              .json({ message: "Invalid selection productId" });
+            fail(400, 'Invalid selection productId');
           }
           selectionProductIds.push(s.productId);
         }
       }
     }
 
-    // Tek seferde tüm ihtiyaç duyulan ürünleri çek
     const allProductIds = Array.from(
       new Set([...productLineIds, ...selectionProductIds])
     );
 
     const [products, sets] = await Promise.all([
       allProductIds.length
-        ? Product.find({ _id: { $in: allProductIds } }).populate("category")
+        ? Product.find({ _id: { $in: allProductIds } }).populate('category')
         : [],
       setIds.length
-        ? Set.find({ _id: { $in: setIds } }).populate("products.product")
+        ? Set.find({ _id: { $in: setIds } }).populate('products.product')
         : [],
     ]);
 
@@ -210,102 +218,124 @@ export async function createOrder(req, res) {
         : new Map();
 
     const orderItems = [];
+    const catalogNeedMap = new Map();
+    const setNeedMap = new Map();
 
-    // 1) Önce fiyatlandırma snapshot'ı oluştur
     for (const raw of items) {
       const qty = Math.max(1, Number(raw.qty || 1));
-      if (String(raw.kind) === "product") {
-        const p = pMap.get(String(raw.id));
+      const rawKind = String(raw.kind || "product");
+
+      if (rawKind === "product") {
+        const p = await ensureProductLoaded(pMap, raw.id);
         if (!p)
-          return res
-            .status(404)
-            .json({ message: "Product not found: " + raw.id });
+          fail(404, "Product not found: " + raw.id, { productId: raw.id });
+
         const discount = productDiscountMap.get(String(p._id)) || null;
         const { finalPrice } = applyDiscount(Number(p.price || 0), discount);
         const safePrice = roundCurrency(finalPrice);
+
+        const variantInfo = resolveCatalogVariant(p, raw);
+        if (variantInfo.status === 'missing') {
+          fail(400, 'Variant selection required for product', {
+            productId: String(p._id),
+          });
+        }
+        if (variantInfo.status === 'invalid') {
+          fail(400, 'Variant not available for product', {
+            productId: String(p._id),
+            variant: variantInfo.variant,
+          });
+        }
+
+        if (
+          typeof variantInfo.index === 'number' &&
+          variantInfo.index >= 0 &&
+          variantInfo.key
+        ) {
+          const pid = String(p._id);
+          if (!catalogNeedMap.has(pid)) catalogNeedMap.set(pid, new Map());
+          const bucket = catalogNeedMap.get(pid);
+          const entry = bucket.get(variantInfo.key) || {
+            qty: 0,
+            index: variantInfo.index,
+            variant: variantInfo.variant,
+          };
+          entry.qty += qty;
+          bucket.set(variantInfo.key, entry);
+        }
+
         orderItems.push({
-          kind: "product",
+          kind: 'product',
           ref: p._id,
           name: p.name,
           unitPrice: safePrice,
           qty,
-          image: p.images?.[0]?.url || "",
-          selections: [], // ürün satırında boş
+          image: p.images?.[0]?.url || '',
+          selections: [],
+          variant: variantInfo.variant,
         });
-      } else if (String(raw.kind) === "set") {
+      } else if (rawKind === "set") {
         const s = sMap.get(String(raw.id));
-        if (!s)
-          return res.status(404).json({ message: "Set not found: " + raw.id });
+        if (!s) fail(404, "Set not found: " + raw.id, { setId: raw.id });
 
-        // selections doğrulama
-        const selections = Array.isArray(raw.selections) ? raw.selections : [];
-        if (selections.length === 0) {
-          return res
-            .status(400)
-            .json({ message: "Set selections are required" });
+        const rawSelections = Array.isArray(raw.selections)
+          ? raw.selections
+          : [];
+        if (rawSelections.length === 0) {
+          fail(400, "Set selections are required");
         }
 
         const discount = setDiscountMap.get(String(s._id)) || null;
         const { finalPrice } = applyDiscount(Number(s.price || 0), discount);
         const safePrice = roundCurrency(finalPrice);
 
+        const normalizedSelections = rawSelections.map((sel) => ({
+          productId: String(sel.productId),
+          color: sel.color ?? null,
+          size: sel.size ?? null,
+          attribute: sel.attribute ?? null,
+          qtyInSet: Math.max(1, Number(sel.qtyInSet || 1)),
+        }));
+
+        const multiplier = qty;
+        for (const sel of normalizedSelections) {
+          const pid = sel.productId;
+          if (!setNeedMap.has(pid)) setNeedMap.set(pid, new Map());
+          const vkey = makeVariantKey(sel);
+          const current = setNeedMap.get(pid).get(vkey) || 0;
+          setNeedMap
+            .get(pid)
+            .set(vkey, current + sel.qtyInSet * multiplier);
+        }
+
         orderItems.push({
-          kind: "set",
+          kind: 'set',
           ref: s._id,
           name: s.name,
           unitPrice: safePrice,
           qty,
-          image: s.images?.[0]?.url || "",
-          selections: selections.map((sel) => ({
-            productId: sel.productId,
-            color: sel.color ?? null,
-            size: sel.size ?? null,
-            attribute: sel.attribute ?? null,
-            qtyInSet: Math.max(1, Number(sel.qtyInSet || 1)),
-          })),
+          image: s.images?.[0]?.url || '',
+          selections: normalizedSelections,
         });
       } else {
-        return res.status(400).json({ message: "Invalid item kind" });
+        fail(400, 'Invalid item kind');
       }
     }
 
-    // 2) Stok yeterliliği kontrolü (set seçimleri için)
-    // İhtiyaç tablosu: productId -> variant key -> required qty
-    const needMap = new Map(); // productId -> Map(variantKey -> required)
-    for (const it of orderItems) {
-      if (it.kind !== "set") continue;
-      const multiplier = Math.max(1, Number(it.qty || 1));
-      for (const sel of it.selections) {
-        const pid = String(sel.productId);
-        if (!needMap.has(pid)) needMap.set(pid, new Map());
-        const vkey = makeVariantKey(sel);
-        const curr = needMap.get(pid).get(vkey) || 0;
-        needMap.get(pid).set(vkey, curr + sel.qtyInSet * multiplier);
-      }
-    }
-
-    // Çekilen ürünlerden stok doğrulaması
-    for (const [pid, vmap] of needMap.entries()) {
-      const prod = pMap.get(pid);
+    for (const [pid, variants] of setNeedMap.entries()) {
+      const prod = await ensureProductLoaded(pMap, pid);
       if (!prod) {
-        return res
-          .status(400)
-          .json({ message: "Selection product missing: " + pid });
+        fail(400, "Selection product missing: " + pid, { productId: pid });
       }
       const inv = Array.isArray(prod.inventory) ? prod.inventory : [];
-      for (const [vkey, needed] of vmap.entries()) {
+      for (const [vkey, needed] of variants.entries()) {
         const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
         const row = idx >= 0 ? inv[idx] : null;
-        const available =
-          typeof row?.stockSet === "number"
-            ? row.stockSet
-            : typeof row?.stock === "number"
-            ? row.stock
-            : 0;
+        const available = getInventoryStock(row, "set");
         if (available < needed) {
-          return res.status(400).json({
-            message: "Insufficient stock for selection",
+          fail(400, "Insufficient stock for selection", {
             productId: pid,
+            variant: decodeVariantKey(vkey),
             needed,
             available,
           });
@@ -313,70 +343,37 @@ export async function createOrder(req, res) {
       }
     }
 
-    // 3) Stok düşümü (set selections -> stockSet öncelikli, yoksa legacy stock)
-    const dirtyProducts = new Set();
-    for (const [pid, vmap] of needMap.entries()) {
-      const prod = pMap.get(pid);
-      const inv = Array.isArray(prod.inventory) ? prod.inventory : [];
-      let changed = false;
-      for (const [vkey, needed] of vmap.entries()) {
-        const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
-        if (idx < 0) continue; // normalde olmamalı
-        const row = inv[idx];
-
-        if (typeof row.stockSet === "number") {
-          row.stockSet = Math.max(0, Number(row.stockSet || 0) - needed);
-        } else if (typeof row.stock === "number") {
-          row.stock = Math.max(0, Number(row.stock || 0) - needed);
-        } else {
-          // güvenlik
-          row.stockSet = 0;
-        }
-        inv[idx] = row;
-        changed = true;
-      }
-      if (changed) {
-        prod.markModified("inventory");
-        dirtyProducts.add(pid);
-      }
-    }
-
-    // 4) Ürünleri kaydet
-    if (dirtyProducts.size) {
-      await Promise.all(
-        Array.from(dirtyProducts).map((pid) => pMap.get(pid).save())
-      );
-    }
-
-    // 5) Etkilenen setlerin stoklarını yeniden hesapla
-    const impactedSetIds = new Set(
-      orderItems.filter((it) => it.kind === "set").map((it) => String(it.ref))
-    );
-    if (impactedSetIds.size) {
-      const impactedSets = await Set.find({
-        _id: { $in: Array.from(impactedSetIds) },
-      }).populate("products.product");
-      for (const s of impactedSets) {
-        let minStock = Infinity;
-        (s.products || []).forEach((entry) => {
-          const product = entry.product;
-          if (!product) return;
-          const available = computeAvailableStock(product, { for: "set" });
-          if (available === Infinity) return;
-          const effective = Math.floor(
-            Number(available) / Math.max(1, Number(entry.quantity || 1))
-          );
-          minStock = Math.min(minStock, effective);
+    for (const [pid, variants] of catalogNeedMap.entries()) {
+      const prod = await ensureProductLoaded(pMap, pid);
+      if (!prod) {
+        fail(400, "Product missing for catalog stock: " + pid, {
+          productId: pid,
         });
-        s.stock =
-          minStock === Infinity
-            ? Number.MAX_SAFE_INTEGER
-            : Math.max(0, Number(minStock) || 0);
-        await s.save();
+      }
+      const inv = Array.isArray(prod.inventory) ? prod.inventory : [];
+      for (const [vkey, entry] of variants.entries()) {
+        if (entry.index < 0) continue;
+        const row =
+          inv[entry.index] ||
+          inv.find((candidate) => variantKeyOf(candidate) === vkey);
+        if (!row) {
+          fail(400, "Variant not found for product", {
+            productId: pid,
+            variant: decodeVariantKey(vkey),
+          });
+        }
+        const available = getInventoryStock(row, "catalog");
+        if (available < entry.qty) {
+          fail(400, "Insufficient stock for product", {
+            productId: pid,
+            variant: decodeVariantKey(vkey),
+            needed: entry.qty,
+            available,
+          });
+        }
       }
     }
 
-    // 6) Fiyat hesapları
     const subtotal = roundCurrency(
       orderItems.reduce((sum, item) => sum + item.unitPrice * item.qty, 0)
     );
@@ -385,7 +382,7 @@ export async function createOrder(req, res) {
     const threshold = Number(shippingConfig.freeThreshold || 0);
     const feeRaw = Number(shippingConfig.fee || 0);
     const shipping = subtotal >= threshold ? 0 : Math.max(0, feeRaw);
-    const shippingName = shippingConfig.name || "Standard Shipping";
+    const shippingName = shippingConfig.name || 'Standard Shipping';
 
     let couponSummary = null;
     let couponDiscountAmount = 0;
@@ -403,17 +400,18 @@ export async function createOrder(req, res) {
         }).lean();
 
         if (!coupon) {
-          return res
-            .status(400)
-            .json({ message: "Coupon not found or inactive" });
+          fail(400, 'Coupon not found or inactive', { code: normalized });
         }
 
         if (subtotal < (coupon.minSubtotal || 0)) {
-          return res.status(400).json({
-            message: `Coupon requires minimum subtotal of ${coupon.minSubtotal}`,
-            reason: "minSubtotal",
-            minSubtotal: coupon.minSubtotal,
-          });
+          fail(
+            400,
+            `Coupon requires minimum subtotal of ${coupon.minSubtotal}`,
+            {
+              reason: 'minSubtotal',
+              minSubtotal: coupon.minSubtotal,
+            }
+          );
         }
 
         couponDiscountAmount = roundCurrency(
@@ -431,7 +429,81 @@ export async function createOrder(req, res) {
     const discountedSubtotal = Math.max(0, subtotal - couponDiscountAmount);
     const total = roundCurrency(discountedSubtotal + shipping);
 
+    const simulation = normalizeSimulation(paymentSimulation);
+    if (simulation === 'failure') {
+      fail(402, 'Payment simulation failed');
+    }
+
     const orderNumber = await createOrderNumber();
+
+    const dirtyProductIds = [];
+    for (const [pid, variants] of catalogNeedMap.entries()) {
+      if (!variants.size) continue;
+      const product = await ensureProductLoaded(pMap, pid);
+      if (!product) continue;
+      const inv = Array.isArray(product.inventory) ? product.inventory : [];
+      let changed = false;
+      for (const [vkey, entry] of variants.entries()) {
+        if (entry.index < 0) continue;
+        if (!inv[entry.index]) continue;
+        const row = inv[entry.index];
+        const available = getInventoryStock(row, "catalog");
+        const next = Math.max(0, available - entry.qty);
+        inv[entry.index] = setInventoryStock(row, "catalog", next);
+        changed = true;
+      }
+      if (changed) {
+        product.markModified('inventory');
+        if (!dirtyProductIds.includes(pid)) dirtyProductIds.push(pid);
+      }
+    }
+
+    for (const [pid, variants] of setNeedMap.entries()) {
+      if (!variants.size) continue;
+      const product = await ensureProductLoaded(pMap, pid);
+      if (!product) continue;
+      const inv = Array.isArray(product.inventory) ? product.inventory : [];
+      let changed = false;
+      for (const [vkey, needed] of variants.entries()) {
+        const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
+        if (idx < 0) continue;
+        const row = inv[idx];
+        const available = getInventoryStock(row, "set");
+        const next = Math.max(0, available - needed);
+        inv[idx] = setInventoryStock(row, "set", next);
+        changed = true;
+      }
+      if (changed) {
+        product.markModified('inventory');
+        if (!dirtyProductIds.includes(pid)) dirtyProductIds.push(pid);
+      }
+    }
+
+    if (dirtyProductIds.length) {
+      await Promise.all(dirtyProductIds.map((pid) => pMap.get(pid)?.save()));
+      await recalculateSetStockForProductIds(dirtyProductIds);
+    }
+
+    const impactedSetIds = new Set(
+      orderItems.filter((it) => it.kind === 'set').map((it) => String(it.ref))
+    );
+    if (impactedSetIds.size) {
+      await recalculateSetStockForSetIds(Array.from(impactedSetIds));
+    }
+
+    const paymentPayload =
+      simulation === "success"
+        ? {
+            method: "simulated",
+            status: "success",
+            simulation: "success",
+            paidAt: new Date(),
+          }
+        : {
+            method: "cod",
+            status: "pending",
+            simulation,
+          };
 
     const order = await Order.create({
       orderNumber,
@@ -442,14 +514,19 @@ export async function createOrder(req, res) {
       shipping,
       shippingName,
       total,
-      status: "pending",
-      payment: { method: "cod" },
+      status: simulation === 'success' ? 'paid' : 'pending',
+      payment: paymentPayload,
       coupon: couponSummary,
     });
 
     res.status(201).json({ order: shapeOrder(order) });
   } catch (err) {
-    res.status(500).json({ message: err.message || "Unable to create order" });
+    if (err.status) {
+      const payload = { message: err.message || 'Request failed' };
+      if (err.extra) payload.details = err.extra;
+      return res.status(err.status).json(payload);
+    }
+    res.status(500).json({ message: err.message || 'Unable to create order' });
   }
 }
 
@@ -478,6 +555,198 @@ function variantKeyOf(row) {
     normalize(row?.attributeValue) || "",
   ].join("||");
 }
+
+function fail(status, message, extra = null) {
+  const error = new Error(message);
+  error.status = status;
+  if (extra && Object.keys(extra || {}).length) {
+    error.extra = extra;
+  }
+  throw error;
+}
+
+function sanitizeVariantValue(value) {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed ? trimmed : null;
+}
+
+function normalizeVariantInput(raw) {
+  const variant =
+    raw?.variant && typeof raw.variant === "object" ? raw.variant : {};
+  return {
+    color: sanitizeVariantValue(
+      variant.color ??
+        variant.colour ??
+        raw.color ??
+        raw.colour ??
+        variant.selectedColor ??
+        null
+    ),
+    size: sanitizeVariantValue(variant.size ?? raw.size ?? null),
+    attribute: sanitizeVariantValue(
+      variant.attribute ??
+        variant.attributeValue ??
+        raw.attribute ??
+        raw.attributeValue ??
+        null
+    ),
+  };
+}
+
+function resolveCatalogVariant(product, rawItem) {
+  const inventory = Array.isArray(product?.inventory)
+    ? product.inventory
+    : [];
+  const normalized = normalizeVariantInput(rawItem);
+  const hasSelection =
+    normalized.color !== null ||
+    normalized.size !== null ||
+    normalized.attribute !== null;
+
+  if (!inventory.length) {
+    return {
+      status: "ok",
+      variant: normalized,
+      index: -1,
+      key: hasSelection ? makeVariantKey(normalized) : null,
+    };
+  }
+
+  const candidateKey = makeVariantKey(normalized);
+
+  if (hasSelection) {
+    const idx = inventory.findIndex((row) => variantKeyOf(row) === candidateKey);
+    if (idx < 0) {
+      return {
+        status: "invalid",
+        variant: normalized,
+        index: -1,
+        key: candidateKey,
+      };
+    }
+    const row = inventory[idx];
+    return {
+      status: "ok",
+      variant: {
+        color: row?.color ?? normalized.color ?? null,
+        size: row?.size ?? normalized.size ?? null,
+        attribute: row?.attributeValue ?? normalized.attribute ?? null,
+      },
+      index: idx,
+      key: candidateKey,
+    };
+  }
+
+  if (inventory.length === 1) {
+    const row = inventory[0];
+    const variant = {
+      color: row?.color ?? null,
+      size: row?.size ?? null,
+      attribute: row?.attributeValue ?? null,
+    };
+    return {
+      status: "ok",
+      variant,
+      index: 0,
+      key: makeVariantKey(variant),
+    };
+  }
+
+  const uniqueKeys = Array.from(
+    new Set(inventory.map((row) => variantKeyOf(row)))
+  ).filter(Boolean);
+
+  if (uniqueKeys.length === 1) {
+    const key = uniqueKeys[0];
+    const idx = inventory.findIndex((row) => variantKeyOf(row) === key);
+    const row = inventory[idx];
+    const variant = {
+      color: row?.color ?? null,
+      size: row?.size ?? null,
+      attribute: row?.attributeValue ?? null,
+    };
+    return { status: "ok", variant, index: idx, key };
+  }
+
+  return {
+    status: "missing",
+    variant: normalized,
+    index: -1,
+    key: candidateKey,
+  };
+}
+
+function getInventoryStock(row, pool = "catalog") {
+  if (!row) return 0;
+  if (pool === "set") {
+    if (typeof row?.stockSet === "number") return Number(row.stockSet) || 0;
+  } else {
+    if (typeof row?.stockCatalog === "number")
+      return Number(row.stockCatalog) || 0;
+  }
+  if (typeof row?.stock === "number") return Number(row.stock) || 0;
+  return 0;
+}
+
+function setInventoryStock(row, pool = "catalog", value = 0) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return row;
+  }
+  const safe = Number.isFinite(numeric)
+    ? Math.max(0, Math.floor(numeric))
+    : 0;
+  row.stockCatalog = safe;
+  row.stockSet = safe;
+  row.stock = safe;
+  return row;
+}
+
+function decodeVariantKey(key) {
+  const [color = "", size = "", attribute = ""] = String(key || "")
+    .split("||")
+    .map((part) => part || "");
+  return {
+    color: color || null,
+    size: size || null,
+    attribute: attribute || null,
+  };
+}
+
+function normalizeSimulation(value) {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim().toLowerCase();
+  if (!normalized) return null;
+  if (["success", "ok", "paid", "true", "yes"].includes(normalized))
+    return "success";
+  if (["failure", "fail", "failed", "error", "false", "no"].includes(normalized))
+    return "failure";
+  return null;
+}
+
+async function ensureProductLoaded(map, id) {
+  const key = String(id || "").trim();
+  if (!key) return null;
+  if (map.has(key)) return map.get(key);
+
+  let product = null;
+  if (mongoose.Types.ObjectId.isValid(key)) {
+    product = await Product.findById(key).populate("category");
+  }
+  if (!product) {
+    product = await Product.findOne({ slug: key }).populate("category");
+  }
+  if (product) {
+    const normalizedKey = String(product._id);
+    map.set(normalizedKey, product);
+    if (normalizedKey !== key) {
+      map.set(key, product);
+    }
+  }
+  return product;
+}
+
 
 /** GET /api/orders/mine  */
 export async function myOrders(req, res) {
@@ -612,9 +881,11 @@ export async function updateOrderStatus(req, res) {
 
     if (markPaidBool === true || status === "paid") {
       order.payment.paidAt = order.payment.paidAt || new Date();
+      order.payment.status = "success";
     }
     if (markPaidBool === false) {
       order.payment.paidAt = null;
+      order.payment.status = "pending";
     }
 
     await order.save();

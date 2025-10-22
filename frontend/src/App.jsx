@@ -1,4 +1,3 @@
-// src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LayoutSelector from "./components/layout/LayoutSelector";
 import HomePage from "./pages/HomePage";
@@ -35,9 +34,15 @@ import AdminCampaignLayout from "./pages/admin/AdminCampaignLayout";
 import AdminCampaigns from "./pages/admin/AdminCampaigns";
 import AdminReviews from "./pages/admin/AdminReviews";
 
+// 👇 Ekledik
+import ScrollToTop from "./components/ScrollToTop.jsx";
+
 export default function App() {
   return (
     <BrowserRouter>
+      {/* 👇 Global scroll handler */}
+      <ScrollToTop />
+
       <Routes>
         <Route element={<LayoutSelector />}>
           {/* Public */}
@@ -73,7 +78,7 @@ export default function App() {
             }
           />
 
-          {/* Admin (guard işini LayoutSelector yapıyor) */}
+          {/* Admin */}
           <Route
             path="/admin"
             element={<Navigate to="/admin/dashboard" replace />}
@@ -88,7 +93,10 @@ export default function App() {
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/discounts" element={<AdminDiscounts />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
-          <Route path="/admin/campaigns/layout" element={<AdminCampaignLayout />} />
+          <Route
+            path="/admin/campaigns/layout"
+            element={<AdminCampaignLayout />}
+          />
           <Route path="/admin/campaigns" element={<AdminCampaigns />} />
           <Route path="/admin/settings/hero" element={<AdminHeroManager />} />
           <Route path="/admin/settings/reviews" element={<AdminReviews />} />

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Review from "../models/Review.js";
 import Product from "../models/Product.js";
 import Set from "../models/Set.js";
+import UserDetails from "../models/UserDetails.js";
 
 const isObjectId = (v) => typeof v === "string" && /^[0-9a-fA-F]{24}$/.test(v);
 
@@ -536,6 +537,68 @@ export async function listAdminReviews(req, res) {
         pages: Math.max(1, Math.ceil(total / limit)),
       },
     });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+}
+// Home için onaylı yorumlar: rating ↓, createdAt ↓
+export async function listHomeFeaturedReviews(req, res) {
+  try {
+    const limit = Math.min(12, Math.max(1, Number(req.query.limit || 3)));
+    const items = await Review.find({ approved: true })
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(limit)
+      .populate([
+        { path: "user", select: "firstName lastName email" },
+        { path: "product", select: "name slug" },
+        { path: "set", select: "name slug" },
+      ])
+      .lean();
+
+    const userIds = Array.from(
+      new Set(
+        items
+          .map((r) => r.user?._id?.toString?.() || null)
+          .filter(Boolean)
+      )
+    );
+
+    let avatarsByUser = new Map();
+    if (userIds.length > 0) {
+      const details = await UserDetails.find({ user: { $in: userIds } })
+        .select("user avatar")
+        .lean();
+      avatarsByUser = new Map(
+        details
+          .filter((detail) => detail.avatar?.url)
+          .map((detail) => [
+            detail.user.toString(),
+            {
+              url: detail.avatar.url,
+              publicId: detail.avatar.publicId,
+              width: detail.avatar.width,
+              height: detail.avatar.height,
+              format: detail.avatar.format,
+            },
+          ])
+      );
+    }
+
+    const reviews = items.map((r) => {
+      const userId = r.user?._id?.toString?.() || null;
+      const avatar = userId ? avatarsByUser.get(userId) || null : null;
+      return {
+        // HomeProductCommentItem şekline uygun dönüştürüyoruz
+        name:
+          (r.user?.firstName || "") +
+            (r.user?.lastName ? ` ${r.user.lastName}` : "") || "Müşteri",
+        quote: r.body || r.title || "", // kısa metin
+        rating: Number(r.rating) || 0,
+        avatar,
+      };
+    });
+
+    res.json({ reviews });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

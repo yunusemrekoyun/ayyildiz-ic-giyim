@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { authApi } from "../api/auth";
@@ -14,6 +14,7 @@ import {
   normalizeTab,
   extractAvatarUrl,
 } from "../features/account/helpers.js";
+import Avatar from "../components/ui/Avatar.jsx";
 
 export default function UserAccountPage({ onLogout }) {
   const location = useLocation();
@@ -90,12 +91,6 @@ export default function UserAccountPage({ onLogout }) {
 
   const avatarSrc = profile?.avatarUrl || extractAvatarUrl(user) || null;
 
-  const initials = useMemo(() => {
-    const first = profile?.firstName || user?.firstName || user?.name || "?";
-    const last = (profile?.lastName || user?.lastName || "").slice(0, 1);
-    return `${(first || "?").slice(0, 1)}${last}`.toUpperCase();
-  }, [profile, user]);
-
   if (loading) {
     return (
       <section className="bg-surface-light/60">
@@ -139,22 +134,12 @@ export default function UserAccountPage({ onLogout }) {
           <aside className="md:col-span-3">
             <div className="rounded-2xl border border-border bg-white p-4">
               <div className="rounded-xl border border-border bg-contact-bg p-4 text-center">
-                <div className="relative mx-auto mb-2 h-16 w-16 rounded-full bg-surface grid place-items-center text-primary font-semibold overflow-hidden">
-                  {avatarSrc ? (
-                    <img
-                      src={avatarSrc}
-                      alt="Avatar"
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "";
-                        e.currentTarget.style.display = "none";
-                        e.currentTarget.parentElement.textContent = initials;
-                      }}
-                    />
-                  ) : (
-                    <span>{initials}</span>
-                  )}
-                </div>
+                <Avatar
+                  src={avatarSrc}
+                  name={sidebarUserName}
+                  alt={sidebarUserName}
+                  className="mx-auto mb-2 h-16 w-16 border border-border text-xl"
+                />
                 <div className="font-semibold text-primary">{sidebarUserName}</div>
                 <div className="text-sm text-secondary">{sidebarEmail}</div>
               </div>

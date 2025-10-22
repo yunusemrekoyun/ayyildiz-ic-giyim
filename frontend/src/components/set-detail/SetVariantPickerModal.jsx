@@ -8,6 +8,12 @@ function normalize(v) {
   return s ? s.toLowerCase() : null;
 }
 
+function sanitizeOption(value) {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed || null;
+}
+
 // inventory kaydından SET havuzu stoğunu oku (yoksa legacy stock'a düş)
 function getInventoryStockForSet(inv) {
   const n = Number(inv?.stockSet);
@@ -29,13 +35,15 @@ function buildOptions(product = {}) {
   if (product.showColors !== false) {
     const map = new Map();
     const register = (input) => {
-      const info = getColorInfo(input);
-      if (!info.value) return;
-      const key = info.value.toLowerCase();
+      const raw = sanitizeOption(input);
+      const info = getColorInfo(raw);
+      if (!raw && !info.value) return;
+      const key = (info.value || raw || "").toLowerCase();
       if (!map.has(key)) {
         map.set(key, {
-          value: info.value,
-          label: info.label,
+          key: key || String(map.size),
+          value: raw,
+          label: info.label || raw || "Default",
           swatch: info.swatch,
           isHex: info.isHex,
         });
@@ -100,6 +108,7 @@ export default function SetVariantPickerModal({
   // onConfirm(selections: Array<{ productId, color, colorHex, size, attribute, qtyInSet }>)
   onConfirm,
 }) {
+  const setQuantity = Math.max(0, Number(setQty) || 0);
   const items = useMemo(
     () => (Array.isArray(setDoc?.products) ? setDoc.products : []),
     [setDoc?.products]
@@ -152,7 +161,8 @@ export default function SetVariantPickerModal({
       };
 
       const stock = computeCurrentStock(inventory, current);
-      const required = (Number(setQty) || 1) * (Number(sel.qtyInSet) || 1);
+      const perSet = Math.max(1, Number(sel.qtyInSet) || 1);
+      const required = setQuantity * perSet;
       const ok = stock >= required;
 
       const cInfo = current.color ? getColorInfo(current.color) : null;
@@ -170,7 +180,7 @@ export default function SetVariantPickerModal({
         ok,
       };
     });
-  }, [items, selections, setQty]);
+  }, [items, selections, setQuantity]);
 
   const allOk = rows.every((r) => r.ok);
 
@@ -181,6 +191,7 @@ export default function SetVariantPickerModal({
   };
 
   const confirm = () => {
+    if (setQuantity <= 0) return;
     if (!allOk) return;
     const payload = rows.map((r, idx) => ({
       productId: selections[idx]?.productId,
@@ -258,7 +269,7 @@ export default function SetVariantPickerModal({
                           normalize(row.selection.color);
                         return (
                           <button
-                            key={opt.value}
+                            key={opt.key || opt.value || "color"}
                             onClick={() => updateSel(idx, { color: opt.value })}
                             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition ${
                               active
@@ -341,12 +352,13 @@ export default function SetVariantPickerModal({
 
         <footer className="flex items-center justify-between border-t px-5 py-3">
           <div className="text-xs text-secondary">
-            You’re adding <strong className="text-primary">{setQty}</strong> set
-            {setQty > 1 ? "s" : ""}.
+            You’re adding{" "}
+            <strong className="text-primary">{setQuantity}</strong> set
+            {setQuantity > 1 ? "s" : ""}.
           </div>
           <button
             onClick={confirm}
-            disabled={!allOk}
+            disabled={!allOk || setQuantity <= 0}
             className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
           >
             Confirm selections

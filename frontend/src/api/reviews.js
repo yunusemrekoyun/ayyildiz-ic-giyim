@@ -9,7 +9,9 @@ export const reviewApi = {
 
   async productStats(idOrSlug) {
     if (!idOrSlug) throw new Error("Product identifier is required");
-    const data = await http(`/reviews/product/${encodeURIComponent(idOrSlug)}/stats`);
+    const data = await http(
+      `/reviews/product/${encodeURIComponent(idOrSlug)}/stats`
+    );
     return data?.stats || { avgRating: 0, count: 0 };
   },
 
@@ -21,7 +23,9 @@ export const reviewApi = {
 
   async setStats(idOrSlug) {
     if (!idOrSlug) throw new Error("Set identifier is required");
-    const data = await http(`/reviews/set/${encodeURIComponent(idOrSlug)}/stats`);
+    const data = await http(
+      `/reviews/set/${encodeURIComponent(idOrSlug)}/stats`
+    );
     return data?.stats || { avgRating: 0, count: 0 };
   },
 
@@ -65,5 +69,11 @@ export const reviewApi = {
   async remove(id) {
     await http(`/reviews/${id}`, { method: "DELETE", auth: true });
     return true;
+  },
+
+  async homeFeatured(limit = 3) {
+    const qs = limit ? `?limit=${encodeURIComponent(limit)}` : "";
+    const data = await http(`/reviews/home${qs}`);
+    return Array.isArray(data?.reviews) ? data.reviews : [];
   },
 };

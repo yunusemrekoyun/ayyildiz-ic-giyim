@@ -87,7 +87,21 @@ export default function CheckoutPage() {
           }
 
           // ürün satırı
-          return { kind, id, qty };
+          const variant = {
+            color:
+              it.color ??
+              it.variant?.color ??
+              it.selectedColor ??
+              null,
+            size: it.size ?? it.variant?.size ?? null,
+            attribute:
+              it.attribute ??
+              it.variant?.attribute ??
+              it.attributeValue ??
+              null,
+          };
+
+          return { kind, id, qty, variant };
         })
         .filter(Boolean),
     [itemsRaw]
@@ -138,6 +152,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
   const [banner, setBanner] = useState(null);
+  const [simulationMode, setSimulationMode] = useState("success");
 
   // Adresleri çek
   useEffect(() => {
@@ -184,12 +199,20 @@ export default function CheckoutPage() {
         addressId,
         items: checkoutItems,
         couponCode: coupon?.code || null,
+        paymentSimulation: simulationMode,
       });
       orderPlacedRef.current = true;
       clearCart();
       clearCoupon();
       navigate(`/checkout/success?order=${order.id}`, { replace: true });
     } catch (e) {
+      let message = e?.message || "Unexpected error";
+      try {
+        const parsed = JSON.parse(message);
+        message = parsed?.message || message;
+      } catch {
+        // ignore
+      }
       // 401 ise login’e gönder
       if (String(e?.message || "").includes("401")) {
         navigate(`/account?view=login&redirect=/checkout`, { replace: true });
@@ -197,7 +220,7 @@ export default function CheckoutPage() {
       }
       setBanner({
         variant: "danger",
-        message: `Order failed: ${e?.message || "Unexpected error"}`,
+        message: `Order failed: ${message}`,
       });
     } finally {
       setPlacing(false);
@@ -327,6 +350,35 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-base font-semibold">
                 <span className="text-primary">Total</span>
                 <span className="text-primary">€{totalDue.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-xl border border-border bg-surface p-4 text-sm">
+              <p className="font-semibold text-primary">Payment Simulation</p>
+              <p className="mt-1 text-xs text-secondary">
+                Choose how the mock payment should respond while we integrate the real gateway.
+              </p>
+              <div className="mt-3 space-y-2">
+                <label className="flex items-center gap-2 text-secondary">
+                  <input
+                    type="radio"
+                    name="simulation"
+                    value="success"
+                    checked={simulationMode === "success"}
+                    onChange={() => setSimulationMode("success")}
+                  />
+                  <span>Simulate successful payment</span>
+                </label>
+                <label className="flex items-center gap-2 text-secondary">
+                  <input
+                    type="radio"
+                    name="simulation"
+                    value="failure"
+                    checked={simulationMode === "failure"}
+                    onChange={() => setSimulationMode("failure")}
+                  />
+                  <span>Simulate failed payment</span>
+                </label>
               </div>
             </div>
 

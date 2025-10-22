@@ -11,6 +11,7 @@ import { productApi } from "../api/products";
 import { setApi } from "../api/sets";
 import { heroApi } from "../api/heroes";
 import { campaignApi } from "../api/campaigns";
+import { reviewApi } from "../api/reviews";
 
 const FALLBACK_CAMPAIGNS = [
   {
@@ -85,6 +86,11 @@ export default function HomePage() {
   // Campaigns
   const [campaigns, setCampaigns] = useState([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+
+  // Reviews
+  const [homeReviews, setHomeReviews] = useState([]);
+  // eslint-disable-next-line no-unused-vars
+  const [loadingHomeReviews, setLoadingHomeReviews] = useState(true);
 
   // error
   const [error, setError] = useState(null);
@@ -168,6 +174,38 @@ export default function HomePage() {
     };
   }, []);
 
+  // Home Reviews fetch
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await reviewApi.homeFeatured(3); // 3 kart
+        if (!mounted) return;
+        setHomeReviews(list || []);
+      } catch (err) {
+        console.error(err);
+
+        // hata bandını bozmayalım; zaten başka yerlerde error gösteriyorsun
+      } finally {
+        if (mounted) setLoadingHomeReviews(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const commentsToRender = useMemo(() => {
+    // API'den geldiyse onu kullan, yoksa FALLBACK
+    const list =
+      Array.isArray(homeReviews) && homeReviews.length
+        ? homeReviews
+        : FALLBACK_COMMENTS;
+
+    // Home grid 3 kart bekliyor; fazla ise 3’e kırp
+    return list.slice(0, 3);
+  }, [homeReviews]);
+
   const newArrivalCards = useMemo(
     () => mapProductsToHomeCards(featuredProducts.slice(0, 3)),
     [featuredProducts]
@@ -225,12 +263,9 @@ export default function HomePage() {
           {error}
         </div>
       )}
-
       {/* Dinamik HERO */}
       <Hero slides={heroSlides} imageAutoMs={6000} loading={loadingHeroes} />
-
       <Categories />
-
       <section className="mx-auto my-10 max-w-[1400px] px-4 sm:px-6">
         <div className="rounded-xl bg-surface shadow-sm">
           <HomeProducts
@@ -249,7 +284,6 @@ export default function HomePage() {
           />
         </div>
       </section>
-
       <HomeSets
         variant="compact"
         title="Trousseau Packages"
@@ -259,8 +293,7 @@ export default function HomePage() {
         viewAllHref="/sets"
         loading={loadingSets}
       />
-
-      <HomeProductComments items={FALLBACK_COMMENTS} />
+      <HomeProductComments items={commentsToRender} />{" "}
       <HomeCampaigns items={campaignsToRender} loading={loadingCampaigns} />
       <HomeContact />
     </>
@@ -304,7 +337,17 @@ function mapSetsToCards(sets) {
           .filter(Boolean)
       )
     );
-    return { image, title, desc, includes, tags, to, price, finalPrice, discount };
+    return {
+      image,
+      title,
+      desc,
+      includes,
+      tags,
+      to,
+      price,
+      finalPrice,
+      discount,
+    };
   });
 }
 

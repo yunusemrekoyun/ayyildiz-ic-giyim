@@ -17,7 +17,11 @@ export default function SetSummary({
   const [openPicker, setOpenPicker] = useState(false);
 
   const hasStockInfo = stock !== null && stock !== undefined;
-  const canBuy = (hasStockInfo ? stock > 0 : true) && quantity >= 1;
+  const minQty = hasStockInfo && stock <= 0 ? 0 : 1;
+  const requiredQty = Math.max(1, minQty);
+  const canBuy = (hasStockInfo ? stock > 0 : true) && quantity >= requiredQty;
+  const safeMax =
+    Number.isFinite(maxStock) && maxStock >= 0 ? Math.floor(maxStock) : 99;
 
   const { priceText, originalText, showStrike, totalText } = useMemo(() => {
     const basePrice = Number(price ?? 0);
@@ -37,12 +41,16 @@ export default function SetSummary({
 
   const handleOpen = () => {
     if (!setDoc) return;
+    if (hasStockInfo && stock <= 0) return;
+    if (quantity < requiredQty) return;
     setOpenPicker(true);
   };
 
   const handleConfirm = (selections) => {
     // selections: [{ productId, color, colorHex, size, attribute, qtyInSet }]
     if (!setDoc) return;
+    if (hasStockInfo && stock <= 0) return;
+    if (quantity <= 0) return;
     const setId = setDoc.id || setDoc._id || setDoc.slug;
     addToCart(setDoc, {
       kind: "set",
@@ -62,8 +70,8 @@ export default function SetSummary({
             <span className="text-sm text-secondary">Quantity</span>
             <QtyStepper
               value={quantity}
-              min={1}
-              max={Math.min(maxStock || 99, 999)}
+              min={minQty}
+              max={Math.min(Math.max(minQty, safeMax), 999)}
               onChange={onChangeQuantity}
             />
           </div>

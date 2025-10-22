@@ -8,32 +8,31 @@ import {
   ChevronRight,
   ChevronDown,
   LayoutDashboard,
+  BarChart3,
   Package,
+  Tags,
+  Layers,
+  Image,
   ShoppingCart,
   Users,
-  Tags,
-  Images,
-  Settings,
-  BarChart3,
-  Bell,
-  Search,
-  Home,
-  LogOut,
   Percent,
   TicketPercent,
   Megaphone,
   MessageSquare,
+  Settings,
+  Bell,
+  Search,
+  Home,
+  LogOut,
+  Sparkles,
+  SlidersHorizontal,
 } from "lucide-react";
 import { authApi } from "../../api/auth";
 import { getUser as getUserCache } from "../../api/client";
 
-/**
- * AdminLayout
- * - Sadece admin paleti değişkenleri kullanır (bg-admin, text-admin, bg-card, bg-hover, bg-sidebar, text-sidebar, text-admin-muted, border-admin)
- */
 export default function AdminLayout({ children, title, subtitle, actions }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [me, setMe] = useState(getUserCache());
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,7 +44,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
         const res = await authApi.me();
         if (mounted && res) setMe(res);
       } catch {
-        // guard zaten LayoutSelector'da
+        /* layout guard will redirect */
       }
     })();
     return () => {
@@ -56,56 +55,64 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
   const breadcrumbs = useMemo(() => {
     const parts = location.pathname.replace(/^\/+|\/+$/g, "").split("/");
     if (!parts[0]) return [];
-    return parts.map((p, i) => ({
-      label: pretty(p),
-      href: "/" + parts.slice(0, i + 1).join("/"),
+    return parts.map((part, index) => ({
+      label: pretty(part),
+      href: "/" + parts.slice(0, index + 1).join("/"),
     }));
   }, [location.pathname]);
 
-  const menu = [
-    {
-      label: "Overview",
-      items: [
-        { to: "/admin/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-        { to: "/admin/analytics", label: "Analytics", Icon: BarChart3 },
-      ],
-    },
-    {
-      label: "Catalog",
-      items: [
-        { to: "/admin/products", label: "Products", Icon: Package },
-        { to: "/admin/categories", label: "Categories", Icon: Tags },
-        { to: "/admin/sets", label: "Sets", Icon: Images },
-        { to: "/admin/media", label: "Media", Icon: Images },
-      ],
-    },
-    {
-      label: "Sales",
-      items: [
-        { to: "/admin/orders", label: "Orders", Icon: ShoppingCart },
-        { to: "/admin/customers", label: "Customers", Icon: Users },
-      ],
-    },
-    {
-      label: "Promotions",
-      items: [
-        { to: "/admin/discounts", label: "Discounts", Icon: Percent },
-        { to: "/admin/coupons", label: "Coupons", Icon: TicketPercent },
-      ],
-    },
-    {
-      label: "Settings",
-      items: [
-        { to: "/admin/settings", label: "Settings", Icon: Settings },
-        {
-          to: "/admin/settings/reviews",
-          label: "Reviews",
-          Icon: MessageSquare,
-        },
-        { to: "/admin/campaigns", label: "Campaigns", Icon: Megaphone },
-      ],
-    },
-  ];
+  const menu = useMemo(
+    () => [
+      {
+        label: "Overview",
+        items: [
+          { to: "/admin/dashboard", label: "Dashboard", Icon: LayoutDashboard },
+          { to: "/admin/analytics", label: "Analytics", Icon: BarChart3 },
+        ],
+      },
+      {
+        label: "Catalog",
+        items: [
+          { to: "/admin/products", label: "Products", Icon: Package },
+          { to: "/admin/categories", label: "Categories", Icon: Tags },
+          { to: "/admin/sets", label: "Sets", Icon: Layers },
+          { to: "/admin/media", label: "Media Library", Icon: Image },
+        ],
+      },
+      {
+        label: "Commerce",
+        items: [
+          { to: "/admin/orders", label: "Orders", Icon: ShoppingCart },
+          { to: "/admin/customers", label: "Customers", Icon: Users },
+        ],
+      },
+      {
+        label: "Marketing",
+        items: [
+          { to: "/admin/campaigns", label: "Campaigns", Icon: Megaphone },
+          {
+            to: "/admin/campaigns/layout",
+            label: "Campaign Layout",
+            Icon: SlidersHorizontal,
+          },
+          { to: "/admin/discounts", label: "Discounts", Icon: Percent },
+          { to: "/admin/coupons", label: "Coupons", Icon: TicketPercent },
+        ],
+      },
+      {
+        label: "Experience",
+        items: [
+          { to: "/admin/settings/hero", label: "Hero Manager", Icon: Sparkles },
+          { to: "/admin/settings/reviews", label: "Reviews", Icon: MessageSquare },
+        ],
+      },
+      {
+        label: "System",
+        items: [{ to: "/admin/settings", label: "Settings", Icon: Settings }],
+      },
+    ],
+    []
+  );
 
   async function handleLogout() {
     await authApi.logout();
@@ -113,196 +120,213 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--color-bg-admin)] text-[var(--color-text-admin)]">
-      {/* SIDEBAR (Desktop) */}
+    <div className="flex min-h-screen bg-[var(--color-bg-admin)] text-[var(--color-text-admin)]">
+      {/* Desktop sidebar */}
       <aside
-        className={[
-          "relative hidden md:flex md:flex-col bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] transition-[width] duration-300",
-          sidebarCollapsed ? "md:w-20" : "md:w-72",
-          "shadow-sm h-screen",
-        ].join(" ")}
+        className={`hidden md:flex md:flex-col border-r border-[var(--color-border-admin)]/30 bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] transition-[width] duration-300 ${sidebarCollapsed ? "md:w-20" : "md:w-72"}`}
       >
-        {/* Brand / Collapse */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-[var(--color-border-admin)]/20">
-          <Link to="/admin/dashboard" className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/10">
-              <Images className="h-5 w-5 text-[var(--color-text-sidebar)]" />
-            </div>
-            {!sidebarCollapsed && (
-              <span className="text-lg font-semibold tracking-tight">
-                Admin Panel
-              </span>
-            )}
-          </Link>
-          <button
-            onClick={() => setSidebarCollapsed((s) => !s)}
-            className="hidden md:inline-flex rounded-lg p-2 hover:bg-white/10"
-            aria-label="Toggle sidebar"
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
-          </button>
-        </div>
+        <SidebarHeader
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed((prev) => !prev)}
+        />
 
-        {/* Menu (scrollable orta alan) */}
-        <nav className="flex-1 overflow-y-auto py-3">
-          {menu.map((group) => (
-            <div key={group.label} className="mt-2">
-              {!sidebarCollapsed && (
-                <div className="px-4 py-2 text-[12px] uppercase tracking-wider text-[var(--color-text-sidebar)]/70">
-                  {group.label}
-                </div>
-              )}
-              <ul className="px-2">
-                {group.items.map((it) => (
-                  <li key={it.to}>
-                    <NavItem
-                      to={it.to}
-                      label={it.label}
-                      Icon={it.Icon}
-                      collapsed={sidebarCollapsed}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
+        <nav className="flex-1 overflow-y-auto px-3 py-6 space-y-6">
+          {menu.map((section) => (
+            <SidebarSection
+              key={section.label}
+              section={section}
+              collapsed={sidebarCollapsed}
+            />
           ))}
         </nav>
 
-        {/* FOOTER: her zaman en altta görünür */}
-        <div className="mt-auto sticky bottom-0 border-t border-[var(--color-border-admin)]/20 bg-[var(--color-bg-sidebar)]/95 backdrop-blur">
-          {/* User mini card */}
-          <div className="p-3">
-            <div className="flex items-center gap-3 rounded-xl bg-white/10 p-3 hover:bg-white/15 transition-colors">
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20 text-[var(--color-text-sidebar)] font-semibold">
-                {getInitials(me)}
-              </div>
-              {!sidebarCollapsed && (
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold">
-                    {me?.firstName
-                      ? `${me.firstName} ${me.lastName || ""}`.trim()
-                      : "—"}
-                  </div>
-                  <div className="truncate text-xs text-[var(--color-text-sidebar)]/70">
-                    {me?.email || ""}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Ana sayfa butonu */}
-          <div className="px-3 pb-3">
-            <Link
-              to="/"
-              className="flex items-center gap-3 rounded-xl bg-white/10 p-3 hover:bg-white/15 transition-colors"
-              title="Ana sayfaya dön"
-            >
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/15">
-                <Home className="h-5 w-5 text-[var(--color-text-sidebar)]" />
-              </div>
-              {!sidebarCollapsed && (
-                <span className="text-sm font-semibold">Ana sayfa</span>
-              )}
-            </Link>
-          </div>
-        </div>
+        <SidebarFooter collapsed={sidebarCollapsed} me={me} />
       </aside>
 
-      {/* MOBILE DRAWER */}
       <MobileDrawer
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         menu={menu}
         me={me}
+        onLogout={handleLogout}
       />
 
-      {/* MAIN */}
-      <div className="flex min-w-0 flex-1 min-h-0 flex-col">
-        {/* Top bar */}
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="inline-flex md:hidden rounded-lg p-2 text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-              aria-label="Open menu"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <Breadcrumbs items={breadcrumbs} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopBar
+          breadcrumbs={breadcrumbs}
+          onMenuToggle={() => setSidebarOpen(true)}
+          me={me}
+          onLogout={handleLogout}
+        />
+
+        <PageHeader
+          title={title || pageTitleFromBreadcrumb(breadcrumbs) || "Overview"}
+          subtitle={subtitle}
+          actions={actions}
+        />
+
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-[1400px] px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+            {children}
           </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* search */}
-            <div className="hidden sm:flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] pl-3 pr-2 py-1.5">
-              <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
-              <input
-                placeholder="Search in admin…"
-                className="w-44 border-0 text-sm outline-none placeholder:text-[var(--color-text-admin-muted)]"
-              />
-            </div>
-            <button className="rounded-full p-2 hover:bg-[var(--color-bg-hover)]">
-              <Bell className="h-5 w-5 text-[var(--color-text-admin-muted)]" />
-            </button>
-
-            {/* user menu */}
-            <UserMenu me={me} onLogout={handleLogout} />
-          </div>
-        </header>
-
-        {/* Scrollable page area (header + content birlikte kendi içinde scroll) */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {/* Page header */}
-          <div className="border-b border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]">
-            <div className="mx-auto max-w-[1400px] px-4 py-5">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-                    {title ||
-                      pageTitleFromBreadcrumb(breadcrumbs) ||
-                      "Overview"}
-                  </h1>
-                  {subtitle && (
-                    <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
-                {actions && (
-                  <div className="flex items-center gap-2">{actions}</div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Content */}
-          <main className="min-h-0">
-            <div className="mx-auto max-w-[1400px] px-4 py-6">{children}</div>
-          </main>
-        </div>
+        </main>
       </div>
     </div>
   );
 }
 
-/* ----------------- Sub Components ----------------- */
+/* ---------------- Sidebar ---------------- */
+
+function SidebarHeader({ collapsed, onToggle }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border-admin)]/30 px-4 py-4">
+      <Link to="/admin/dashboard" className="flex items-center gap-3">
+        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/15 text-white">
+          <Sparkles className="h-5 w-5" />
+        </div>
+        {!collapsed && (
+          <div className="flex flex-col leading-tight">
+            <span className="text-base font-semibold tracking-tight">Ayyıldız</span>
+            <span className="text-xs text-white/70">Admin Console</span>
+          </div>
+        )}
+      </Link>
+      <button
+        onClick={onToggle}
+        className="hidden md:inline-flex rounded-lg p-2 text-white/80 hover:bg-white/10"
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+      </button>
+    </div>
+  );
+}
+
+function SidebarSection({ section, collapsed, onNavigate }) {
+  if (!section?.items?.length) return null;
+  return (
+    <div>
+      {!collapsed && (
+        <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-white/60">
+          {section.label}
+        </p>
+      )}
+      <ul className="space-y-1">
+        {section.items.map((item) => (
+          <li key={item.to}>
+            <NavItem
+              {...item}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+            />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function SidebarFooter({ collapsed, me }) {
+  return (
+    <div className="border-t border-[var(--color-border-admin)]/30 px-3 py-4">
+      <div className="flex items-center gap-3 rounded-2xl bg-white/10 p-3">
+        <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20 text-sm font-semibold text-white">
+          {getInitials(me)}
+        </div>
+        {!collapsed && (
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-white">
+              {me?.firstName ? `${me.firstName} ${me.lastName || ""}`.trim() : "Admin"}
+            </div>
+            <div className="truncate text-xs text-white/70">{me?.email || ""}</div>
+          </div>
+        )}
+      </div>
+      <Link
+        to="/"
+        className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
+        title="Go to storefront"
+      >
+        <Home className="h-4 w-4" />
+        {!collapsed && <span>View store</span>}
+      </Link>
+    </div>
+  );
+}
+
+/* ---------------- Main content ---------------- */
+
+function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-[var(--color-border-admin)]/40 bg-[var(--color-bg-card)]/95 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onMenuToggle}
+            className="flex rounded-lg p-2 text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:hidden"
+            aria-label="Open navigation"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <Breadcrumbs items={breadcrumbs} />
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="hidden lg:flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-1.5">
+            <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+            <input
+              placeholder="Search in admin…"
+              className="w-48 border-0 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-admin-muted)]"
+            />
+          </div>
+          <button className="rounded-full p-2 text-[var(--color-text-admin-muted)] hover:bg-[var(--color-bg-hover)]">
+            <Bell className="h-5 w-5" />
+          </button>
+          <UserMenu me={me} onLogout={onLogout} />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function PageHeader({ title, subtitle, actions }) {
+  return (
+    <div className="border-b border-[var(--color-border-admin)]/40 bg-[var(--color-bg-admin)]/60">
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
+              {subtitle}
+            </p>
+          )}
+        </div>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Navigation item ---------------- */
 
 // eslint-disable-next-line no-unused-vars
-function NavItem({ to, label, Icon, collapsed }) {
+function NavItem({ to, label, Icon, collapsed, onNavigate }) {
   return (
     <NavLink
       to={to}
+      title={label}
+      onClick={() => {
+        if (onNavigate) onNavigate();
+      }}
       className={({ isActive }) =>
         [
-          "group flex items-center gap-3 rounded-lg px-3 py-2 my-0.5",
+          "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors",
+          collapsed ? "justify-center" : "justify-start",
           isActive
-            ? "bg-[var(--color-bg-card)] text-[var(--color-bg-sidebar)]"
-            : "text-[var(--color-text-sidebar)] hover:bg-white/10",
+            ? "bg-[var(--color-bg-card)] text-[var(--color-text-admin)] shadow-sm ring-1 ring-[var(--color-border-admin)]/40"
+            : "text-[var(--color-text-sidebar)]/80 hover:bg-white/10 hover:text-[var(--color-text-sidebar)]",
         ].join(" ")
       }
     >
@@ -312,103 +336,77 @@ function NavItem({ to, label, Icon, collapsed }) {
   );
 }
 
-function MobileDrawer({ open, onClose, menu, me }) {
+/* ---------------- Mobile drawer ---------------- */
+
+function MobileDrawer({ open, onClose, menu, me, onLogout }) {
   return (
     <div
-      className={[
-        "md:hidden fixed inset-0 z-50",
-        open ? "" : "pointer-events-none",
-      ].join(" ")}
+      className={`md:hidden fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}
     >
-      {/* Backdrop */}
       <div
-        className={[
-          "absolute inset-0 bg-black/40 transition-opacity",
-          open ? "opacity-100" : "opacity-0",
-        ].join(" ")}
+        className={`absolute inset-0 bg-black/50 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
         onClick={onClose}
       />
-      {/* Panel */}
       <div
-        className={[
-          "absolute left-0 top-0 h-full w-[85%] max-w-80 bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] shadow-xl transition-transform duration-300",
-          open ? "translate-x-0" : "-translate-x-full",
-        ].join(" ")}
+        className={`absolute left-0 top-0 h-full w-[86%] max-w-80 transform bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] shadow-xl transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex items-center justify-between p-4 border-b border-[var(--color-border-admin)]/20">
-          <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/10">
-              <Images className="h-5 w-5 text-[var(--color-text-sidebar)]" />
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
+          <Link to="/admin/dashboard" className="flex items-center gap-3" onClick={onClose}>
+            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/15 text-white">
+              <Sparkles className="h-5 w-5" />
             </div>
-            <span className="text-lg font-semibold">Admin Panel</span>
-          </div>
+            <span className="text-lg font-semibold">Admin Console</span>
+          </Link>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 hover:bg-white/10"
+            className="rounded-lg p-2 text-white hover:bg-white/10"
+            aria-label="Close navigation"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
-        <div className="overflow-y-auto pb-4">
-          {menu.map((group) => (
-            <div key={group.label} className="mt-2">
-              <div className="px-4 py-2 text-[12px] uppercase tracking-wider text-[var(--color-text-sidebar)]/70">
-                {group.label}
-              </div>
-              <ul className="px-2">
-                {group.items.map((it) => (
-                  <li key={it.to}>
-                    <NavLink
-                      to={it.to}
-                      onClick={onClose}
-                      className={({ isActive }) =>
-                        [
-                          "flex items-center gap-3 rounded-lg px-3 py-2 my-0.5",
-                          isActive
-                            ? "bg-[var(--color-bg-card)] text-[var(--color-bg-sidebar)]"
-                            : "text-[var(--color-text-sidebar)] hover:bg-white/10",
-                        ].join(" ")
-                      }
-                    >
-                      <it.Icon className="h-5 w-5" />
-                      <span>{it.label}</span>
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
 
-          <div className="border-t border-[var(--color-border-admin)]/20 p-3 mt-3">
-            <div className="flex items-center gap-3 rounded-xl bg-white/10 p-3">
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20 text-[var(--color-text-sidebar)] font-semibold">
+        <div className="flex h-[calc(100%-4rem)] flex-col justify-between">
+         <div className="overflow-y-auto px-3 pb-6 pt-4 space-y-6">
+           {menu.map((section) => (
+              <SidebarSection
+                key={section.label}
+                section={section}
+                collapsed={false}
+                onNavigate={onClose}
+              />
+            ))}
+          </div>
+
+          <div className="border-t border-white/10 px-4 py-4 space-y-3">
+            <div className="flex items-center gap-3 rounded-2xl bg-white/10 p-3 text-white">
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-white/20 text-sm font-semibold">
                 {getInitials(me)}
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">
-                  {me?.firstName
-                    ? `${me.firstName} ${me.lastName || ""}`.trim()
-                    : "—"}
+                <div className="truncate text-sm font-medium">
+                  {me?.firstName ? `${me.firstName} ${me.lastName || ""}`.trim() : "Admin"}
                 </div>
-                <div className="truncate text-xs text-[var(--color-text-sidebar)]/70">
-                  {me?.email || ""}
-                </div>
+                <div className="truncate text-xs text-white/70">{me?.email || ""}</div>
               </div>
             </div>
-          </div>
-
-          {/* Go to Home (Mobile) */}
-          <div className="border-t border-[var(--color-border-admin)]/20 p-3">
+            <button
+              onClick={() => {
+                onClose();
+                onLogout();
+              }}
+              className="flex w-full items-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </button>
             <Link
               to="/"
               onClick={onClose}
-              className="flex items-center gap-3 rounded-xl bg-white/10 p-3 hover:bg-white/15 transition-colors"
-              title="Ana sayfaya dön"
+              className="flex items-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
             >
-              <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/15">
-                <Home className="h-5 w-5 text-[var(--color-text-sidebar)]" />
-              </div>
-              <span className="text-sm font-semibold">Ana sayfa</span>
+              <Home className="h-4 w-4" />
+              <span>View store</span>
             </Link>
           </div>
         </div>
@@ -417,47 +415,51 @@ function MobileDrawer({ open, onClose, menu, me }) {
   );
 }
 
+/* ---------------- User menu ---------------- */
+
 function UserMenu({ me, onLogout }) {
   const [open, setOpen] = useState(false);
+
   useEffect(() => {
-    const onDoc = () => setOpen(false);
-    if (open) document.addEventListener("click", onDoc, { once: true });
-    return () => document.removeEventListener("click", onDoc);
+    const close = (event) => {
+      if (!(event.target instanceof Node)) return;
+      setOpen(false);
+    };
+    if (open) document.addEventListener("click", close, { once: true });
+    return () => document.removeEventListener("click", close);
   }, [open]);
 
   return (
     <div className="relative">
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((o) => !o);
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((prev) => !prev);
         }}
-        className="flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-2 py-1.5 hover:bg-[var(--color-bg-hover)]"
+        className="flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-2 py-1.5 text-sm hover:bg-[var(--color-bg-hover)]"
       >
-        <div className="grid h-7 w-7 place-items-center rounded-full bg-[var(--color-bg-admin)] text-[var(--color-text-admin)] text-xs font-semibold">
+        <div className="grid h-7 w-7 place-items-center rounded-full bg-[var(--color-bg-admin)] text-xs font-semibold text-[var(--color-text-admin)]">
           {getInitials(me)}
         </div>
-        <span className="hidden sm:block text-sm text-[var(--color-text-admin)]">
-          {me?.firstName || "User"}
+        <span className="hidden sm:block text-[var(--color-text-admin)]">
+          {me?.firstName || "Admin"}
         </span>
         <ChevronDown className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-lg">
+        <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-xl">
           <div className="px-4 py-3">
             <div className="text-sm font-semibold text-[var(--color-text-admin)]">
-              {me?.firstName
-                ? `${me.firstName} ${me.lastName || ""}`.trim()
-                : "—"}
+              {me?.firstName ? `${me.firstName} ${me.lastName || ""}`.trim() : "Admin"}
             </div>
             <div className="truncate text-xs text-[var(--color-text-admin-muted)]">
-              {me?.email}
+              {me?.email || ""}
             </div>
           </div>
-          <div className="h-px bg-[var(--color-border-admin)]" />
-          <MenuItem to="/admin/settings">Profile & Settings</MenuItem>
-          <MenuItem to="/admin/dashboard">Admin Home</MenuItem>
+          <div className="h-px bg-[var(--color-border-admin)]/60" />
+          <MenuLink to="/admin/settings">Profile & Settings</MenuLink>
+          <MenuLink to="/admin/dashboard">Dashboard</MenuLink>
           <button
             onClick={onLogout}
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-[var(--color-bg-hover)]"
@@ -471,7 +473,7 @@ function UserMenu({ me, onLogout }) {
   );
 }
 
-function MenuItem({ to, children }) {
+function MenuLink({ to, children }) {
   return (
     <Link
       to={to}
@@ -482,31 +484,29 @@ function MenuItem({ to, children }) {
   );
 }
 
+/* ---------------- Breadcrumbs ---------------- */
+
 function Breadcrumbs({ items = [] }) {
   if (!items.length) return null;
   return (
     <nav className="flex items-center gap-1 text-sm text-[var(--color-text-admin-muted)]">
-      {items.map((b, i) => {
-        const last = i === items.length - 1;
+      {items.map((crumb, index) => {
+        const last = index === items.length - 1;
         return (
-          <span key={b.href} className="flex items-center">
-            {!last ? (
+          <span key={crumb.href} className="flex items-center">
+            {last ? (
+              <span className="font-medium text-[var(--color-text-admin)]">
+                {crumb.label}
+              </span>
+            ) : (
               <Link
-                to={b.href}
+                to={crumb.href}
                 className="hover:text-[var(--color-text-admin)]"
               >
-                {b.label}
+                {crumb.label}
               </Link>
-            ) : (
-              <span className="text-[var(--color-text-admin)] font-medium">
-                {b.label}
-              </span>
             )}
-            {!last && (
-              <span className="mx-2 text-[var(--color-text-admin-muted)]">
-                /
-              </span>
-            )}
+            {!last && <span className="mx-2 text-[var(--color-text-admin-muted)]">/</span>}
           </span>
         );
       })}
@@ -514,21 +514,27 @@ function Breadcrumbs({ items = [] }) {
   );
 }
 
-/* ----------------- Helpers ----------------- */
+/* ---------------- Helpers ---------------- */
 
-function pretty(seg) {
-  return seg.replace(/[-_]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+function pretty(segment) {
+  return segment
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-function getInitials(u) {
-  const a = (u?.firstName || u?.name || "").trim();
-  const b = (u?.lastName || "").trim();
-  const res =
-    (a ? a[0] : "") + (b ? b[0] : a ? a.split(" ")[1]?.[0] || "" : "");
-  return (res || "U").toUpperCase();
+function pageTitleFromBreadcrumb(items = []) {
+  if (!items.length) return "";
+  return items[items.length - 1].label;
 }
 
-function pageTitleFromBreadcrumb(bc) {
-  if (!bc?.length) return null;
-  return pretty(bc[bc.length - 1].label);
+function getInitials(user) {
+  if (!user) return "AD";
+  const name = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+  if (!name) return (user.email || "AD").slice(0, 2).toUpperCase();
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }

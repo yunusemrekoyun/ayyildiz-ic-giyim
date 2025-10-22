@@ -18,8 +18,22 @@ export default function SetDetail({ setDoc }) {
   // setDoc olmasa da güvenli hesaplama
   const maxStock = useMemo(() => {
     const s = Number(setDoc?.stock);
-    return Number.isFinite(s) && s > 0 ? s : 99;
+    if (!Number.isFinite(s)) return 99;
+    return Math.max(0, s);
   }, [setDoc?.stock]);
+
+  useEffect(() => {
+    if (!Number.isFinite(maxStock)) return;
+    if (maxStock <= 0) {
+      if (qty !== 0) setQty(0);
+      return;
+    }
+    if (qty === 0) {
+      setQty(1);
+    } else if (qty > maxStock) {
+      setQty(maxStock);
+    }
+  }, [maxStock, qty]);
 
   // Favori durumu yükle
   useEffect(() => {

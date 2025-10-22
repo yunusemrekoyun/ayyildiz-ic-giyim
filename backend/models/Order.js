@@ -15,6 +15,15 @@ const SetSelectionSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const VariantSnapshotSchema = new mongoose.Schema(
+  {
+    color: { type: String, default: null },
+    size: { type: String, default: null },
+    attribute: { type: String, default: null },
+  },
+  { _id: false }
+);
+
 const OrderItemSchema = new mongoose.Schema(
   {
     kind: { type: String, enum: ["product", "set"], required: true }, // ürün mü set mi
@@ -23,6 +32,7 @@ const OrderItemSchema = new mongoose.Schema(
     unitPrice: { type: Number, required: true }, // fiyat snapshot
     qty: { type: Number, min: 1, default: 1 },
     image: { type: String, default: "" }, // küçük görsel (opsiyonel)
+    variant: { type: VariantSnapshotSchema, default: null },
     // sadece kind === 'set' için anlamlı
     selections: { type: [SetSelectionSchema], default: [] },
   },
@@ -79,6 +89,16 @@ const OrderSchema = new mongoose.Schema(
       method: { type: String, default: "cod" }, // demo: kapıda ödeme
       txnId: { type: String, default: "" },
       paidAt: { type: Date, default: null },
+      status: {
+        type: String,
+        enum: ["pending", "success", "failed", "refunded"],
+        default: "pending",
+      },
+      simulation: {
+        type: String,
+        enum: ["success", "failure", null],
+        default: null,
+      },
     },
   },
   { timestamps: true }

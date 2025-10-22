@@ -6,16 +6,18 @@ import {
   deleteFromCloudinary,
 } from "../utils/cloudinaryUpload.js";
 import { parseBoolean } from "../utils/productHelpers.js";
-import {
-  shapeProduct,
-  computeAvailableStock,
-} from "../utils/productHelpers.js";
+import { shapeProduct } from "../utils/productHelpers.js";
 import {
   fetchActiveDiscounts,
   computeProductDiscountMap,
   mapDiscountsToSets,
   applyDiscount,
 } from "../utils/discountHelpers.js";
+import {
+  recalculateSetStock,
+  recalculateSetStockForSetIds,
+  computeSetStockSnapshot,
+} from "../utils/setStock.js";
 
 const isValidObjectId = (val) =>
   typeof val === "string" && val.match(/^[0-9a-fA-F]{24}$/);
@@ -102,7 +104,7 @@ export async function createSet(req, res) {
     const products = await resolveSetProducts(req.body.products);
     const images = await processImages(setImageFiles);
 
-    const set = await Set.create({
+    let set = await Set.create({
       name,
       description,
       price: parsedPrice,
@@ -111,12 +113,12 @@ export async function createSet(req, res) {
       products,
     });
 
-    const updated = await updateSetStock(set._id);
-    await updated.populate({
+    set = await recalculateSetStock(set);
+    await set.populate({
       path: "products.product",
       populate: { path: "category" },
     });
-    res.status(201).json({ set: await shapeSetWithDiscount(updated) });
+    res.status(201).json({ set: await shapeSetWithDiscount(set) });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -132,7 +134,12 @@ export async function listSets(req, res) {
       .populate({ path: "products.product", populate: { path: "category" } })
       .lean();
 
-    res.json({ sets: await shapeSetsWithDiscounts(sets) });
+    const hydrated = sets.map((set) => ({
+      ...set,
+      stock: computeSetStockSnapshot(set),
+    }));
+
+    res.json({ sets: await shapeSetsWithDiscounts(hydrated) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -147,12 +154,15 @@ export async function getSet(req, res) {
 
     if (!set) return res.status(404).json({ message: "Set not found" });
 
-    await set.populate({
+    const refreshed = await recalculateSetStock(set);
+    const workingSet = refreshed || set;
+
+    await workingSet.populate({
       path: "products.product",
       populate: { path: "category" },
     });
 
-    res.json({ set: await shapeSetWithDiscount(set) });
+    res.json({ set: await shapeSetWithDiscount(workingSet) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -203,12 +213,12 @@ export async function updateSet(req, res) {
     }
 
     await set.save();
-    const updated = await updateSetStock(set._id);
-    await updated.populate({
+    await recalculateSetStockForSetIds([set._id]);
+    await set.populate({
       path: "products.product",
       populate: { path: "category" },
     });
-    res.json({ set: await shapeSetWithDiscount(updated) });
+    res.json({ set: await shapeSetWithDiscount(set) });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -306,26 +316,6 @@ function shapeSet(
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
-}
-
-async function updateSetStock(setId) {
-  const populated = await Set.findById(setId).populate("products.product");
-  if (!populated) return null;
-
-  let minStock = Infinity;
-  populated.products.forEach((entry) => {
-    const product = entry.product;
-    if (!product) return;
-    const available = computeAvailableStock(product, { for: "set" });
-    if (available === Infinity) return;
-    const effective = Math.floor(available / Math.max(entry.quantity, 1));
-    minStock = Math.min(minStock, effective);
-  });
-
-  populated.stock =
-    minStock === Infinity ? Number.MAX_SAFE_INTEGER : Math.max(minStock, 0);
-  await populated.save();
-  return populated;
 }
 
 function parseIdList(value) {

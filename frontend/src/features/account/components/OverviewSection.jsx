@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
-import {
-  User as UserIcon,
-  Mail,
-  Phone,
-  Image as ImageIcon,
-  X,
-} from "lucide-react";
+import { User as UserIcon, Mail, Phone, X } from "lucide-react";
 import { extractErrorMessage } from "../helpers.js";
+import Avatar from "../../../components/ui/Avatar.jsx";
 
 function Field({ label, value, onChange, icon, help }) {
   return (
@@ -72,6 +67,13 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
     ? URL.createObjectURL(avatarFile)
     : avatarSrc;
 
+  const avatarName =
+    profile?.firstName || user?.firstName
+      ? `${profile?.firstName ?? user?.firstName ?? ""} ${
+          profile?.lastName ?? user?.lastName ?? ""
+        }`.trim()
+      : user?.name || profile?.email || user?.email || "Customer";
+
   return (
     <div className="max-w-2xl">
       <h2 className="text-xl font-semibold text-primary">Account Overview</h2>
@@ -126,17 +128,12 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
         <div className="rounded-xl border border-border bg-contact-bg p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-surface overflow-hidden grid place-items-center">
-                {currentAvatarPreview ? (
-                  <img
-                    src={currentAvatarPreview}
-                    alt="Avatar"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <ImageIcon className="h-5 w-5 text-secondary" />
-                )}
-              </div>
+              <Avatar
+                src={currentAvatarPreview}
+                name={avatarName}
+                alt={avatarName}
+                className="h-12 w-12 border border-border bg-white text-base"
+              />
               <div>
                 <div className="text-sm font-medium text-primary">
                   Profile Photo

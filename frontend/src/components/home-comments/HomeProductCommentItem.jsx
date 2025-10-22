@@ -1,21 +1,25 @@
 // src/components/home-comments/HomeProductCommentItem.jsx
+import Avatar from "../ui/Avatar.jsx";
+import { extractAvatarUrl } from "../../features/account/helpers.js";
+
 export default function HomeProductCommentItem({
   name,
   quote,
   rating = 5,
-  avatar = "/avatar-default.png",
+  avatar,
 }) {
+  const avatarSrc = extractAvatarUrl(avatar);
+
   return (
     <article className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-black/5">
       {/* Avatar */}
-      <div className="mx-auto mb-5 h-16 w-16 overflow-hidden rounded-full ring-1 ring-black/10">
-        <img
-          src={avatar}
-          alt={name}
-          className="h-full w-full object-cover"
-          draggable="false"
-        />
-      </div>
+      <Avatar
+        src={avatarSrc}
+        name={name}
+        alt={name}
+        className="mx-auto mb-5 h-16 w-16 ring-1 ring-black/10"
+        textClassName="text-lg"
+      />
 
       {/* Stars */}
       <div className="mb-4 flex items-center justify-center gap-1 text-accent">

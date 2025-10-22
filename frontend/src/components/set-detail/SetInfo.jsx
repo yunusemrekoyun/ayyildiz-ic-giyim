@@ -45,7 +45,11 @@ export default function SetInfo({
               : "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
           ].join(" ")}
         >
-          {stock > 0 ? `In stock: ${stock}` : "Out of stock"}
+          {stock > 0
+            ? `In stock: ${
+                stock >= Number.MAX_SAFE_INTEGER / 2 ? "∞" : stock
+              }`
+            : "Out of stock"}
         </div>
       </div>
 
