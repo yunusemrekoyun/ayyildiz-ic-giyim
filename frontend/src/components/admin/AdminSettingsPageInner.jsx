@@ -11,6 +11,11 @@ import {
   Video,
   Palette,
   Megaphone,
+  FileText,
+  Mail,
+  HelpCircle,
+  Truck, // 🔹 eklendi
+  ShieldCheck,
 } from "lucide-react";
 
 export default function AdminSettingsPageInner() {
@@ -57,11 +62,11 @@ export default function AdminSettingsPageInner() {
     };
   }, []);
 
-
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <div className="xl:col-span-8">
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
+          {/* ----- Header ----- */}
           <div className="flex flex-col gap-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
               <Wand2 className="h-4 w-4" />
@@ -71,11 +76,14 @@ export default function AdminSettingsPageInner() {
               Site Settings & Content Blocks
             </h2>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Manage hero banners, theme and other global content.
+              Manage hero banners, about & contact pages, campaigns, and global
+              content.
             </p>
           </div>
 
+          {/* ----- Main Cards Grid ----- */}
           <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* --- HERO --- */}
             <Link
               to="/admin/settings/hero"
               className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
@@ -148,6 +156,7 @@ export default function AdminSettingsPageInner() {
               </div>
             </Link>
 
+            {/* --- CAMPAIGNS --- */}
             <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] transition-colors">
               <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
                 {loadingCampaigns ? (
@@ -216,9 +225,194 @@ export default function AdminSettingsPageInner() {
               </div>
             </div>
 
+            {/* --- ABOUT PAGE SETTINGS --- */}
+            <Link
+              to="/admin/settings/about"
+              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
+            >
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
+                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
+                    <Wand2 className="h-5 w-5 text-white/90" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">About Page Content</div>
+                    <div className="text-xs text-[var(--color-text-admin-muted)]">
+                      Manage story, values, stats and hero visuals
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
+                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+                </div>
+              </div>
+            </Link>
+
+            {/* --- CONTACT PAGE SETTINGS --- */}
+            <Link
+              to="/admin/settings/contact"
+              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
+            >
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
+                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
+                  <Mail className="h-6 w-6" />
+                </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
+                    <Mail className="h-5 w-5 text-white/90" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Contact Page Content</div>
+                    <div className="text-xs text-[var(--color-text-admin-muted)]">
+                      Manage contact info, working hours and form behavior
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
+                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+                </div>
+              </div>
+            </Link>
+
+            {/* --- FAQ PAGE SETTINGS --- */}
+            <Link
+              to="/admin/settings/faq"
+              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
+            >
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
+                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
+                  <HelpCircle className="h-6 w-6" />
+                </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
+                    <HelpCircle className="h-5 w-5 text-white/90" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">FAQ Page Content</div>
+                    <div className="text-xs text-[var(--color-text-admin-muted)]">
+                      Manage FAQ sections, questions and answers
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
+                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+                </div>
+              </div>
+            </Link>
+
+            {/* --- SHIPPING & RETURNS PAGE SETTINGS --- */}
+            <Link
+              to="/admin/settings/shipping-returns"
+              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
+            >
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
+                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
+                  <Truck className="h-6 w-6" />
+                </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
+                    <Truck className="h-5 w-5 text-white/90" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">
+                      Shipping & Returns Content
+                    </div>
+                    <div className="text-xs text-[var(--color-text-admin-muted)]">
+                      Manage shipping destinations, rates, returns & sidebar
+                      info
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
+                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+                </div>
+              </div>
+            </Link>
+            {/* --- PRIVACY POLICY PAGE SETTINGS --- */}
+            <Link
+              to="/admin/settings/privacy"
+              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
+            >
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
+                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
+                    <ShieldCheck className="h-5 w-5 text-white/90" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Privacy Policy Content</div>
+                    <div className="text-xs text-[var(--color-text-admin-muted)]">
+                      Manage sections, anchors and footer notice
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
+                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+                </div>
+              </div>
+            </Link>
+
+            {/* --- TERMS OF SERVICE PAGE SETTINGS --- */}
+            <Link
+              to="/admin/settings/terms"
+              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
+            >
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
+                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
+                    <FileText className="h-5 w-5 text-white/90" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">
+                      Terms of Service Content
+                    </div>
+                    <div className="text-xs text-[var(--color-text-admin-muted)]">
+                      Manage sections, clauses and footer note
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
+                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+                </div>
+              </div>
+            </Link>
+            {/* --- Shipping & Review small cards (legacy settings) --- */}
             <ShippingSettingsCard />
             <ReviewSettingsCard />
 
+            {/* --- THEME COLORS (placeholder) --- */}
             <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]">
               <div className="flex items-center gap-3 p-4">
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
@@ -239,6 +433,7 @@ export default function AdminSettingsPageInner() {
         </div>
       </div>
 
+      {/* ----- Tips Sidebar ----- */}
       <aside className="xl:col-span-4">
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
           <h3 className="text-lg font-semibold">Tips</h3>
@@ -247,6 +442,7 @@ export default function AdminSettingsPageInner() {
             <li>Button text is optional; keep hero clean.</li>
             <li>Target can be full shop or specific categories.</li>
             <li>Use sort order to define slide sequence.</li>
+            <li>Manage About, Contact, FAQ and Shipping pages for clarity.</li>
           </ul>
         </div>
       </aside>

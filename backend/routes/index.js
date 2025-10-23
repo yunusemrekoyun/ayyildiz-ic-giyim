@@ -13,6 +13,12 @@ import discountRoutes from "./discounts.js";
 import couponRoutes from "./coupons.js";
 import campaignRoutes from "./campaigns.js";
 import reviewRoutes from "./reviews.js";
+import aboutRoutes from "./about.js";
+import contactRoutes from "./contact.js";
+import faqRoutes from "./faq.js";
+import shippingReturnsRoute from "./shippingReturns.js";
+import privacyRoutes from "./privacy.js";
+import termsRoutes from "./terms.js";
 
 const router = Router();
 
@@ -32,5 +38,11 @@ router.use("/discounts", discountRoutes);
 router.use("/coupons", couponRoutes);
 router.use("/campaigns", campaignRoutes);
 router.use("/reviews", reviewRoutes);
+router.use("/about", aboutRoutes);
+router.use("/contact", contactRoutes);
+router.use("/faq", faqRoutes);
+router.use("/shipping-returns", shippingReturnsRoute);
+router.use("/privacy", privacyRoutes);
+router.use("/terms", termsRoutes);
 
 export default router;

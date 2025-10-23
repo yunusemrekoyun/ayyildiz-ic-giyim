@@ -33,6 +33,12 @@ import AdminCoupons from "./pages/admin/AdminCoupons";
 import AdminCampaignLayout from "./pages/admin/AdminCampaignLayout";
 import AdminCampaigns from "./pages/admin/AdminCampaigns";
 import AdminReviews from "./pages/admin/AdminReviews";
+import AboutSettingsPage from "./pages/admin/AboutSettingsPage.jsx";
+import AdminContactSettingsPage from "./pages/admin/AdminContactSettingsPage.jsx";
+import AdminFaqSettingsPage from "./pages/admin/AdminFaqSettingsPage.jsx";
+import ShippingReturnsSettings from "./pages/admin/ShippingReturnsSettings.jsx";
+import PrivacyPolicySettings from "./pages/admin/PrivacyPolicySettings.jsx";
+import TermsSettings from "./pages/admin/TermsSettings.jsx";
 
 // 👇 Ekledik
 import ScrollToTop from "./components/ScrollToTop.jsx";
@@ -93,6 +99,24 @@ export default function App() {
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/discounts" element={<AdminDiscounts />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
+          <Route path="/admin/settings/about" element={<AboutSettingsPage />} />
+          <Route path="/admin/settings/terms" element={<TermsSettings />} />
+          <Route
+            path="/admin/settings/privacy"
+            element={<PrivacyPolicySettings />}
+          />
+          <Route
+            path="/admin/settings/shipping-returns"
+            element={<ShippingReturnsSettings />}
+          />
+          <Route
+            path="/admin/settings/faq"
+            element={<AdminFaqSettingsPage />}
+          />
+          <Route
+            path="/admin/settings/contact"
+            element={<AdminContactSettingsPage />}
+          />
           <Route
             path="/admin/campaigns/layout"
             element={<AdminCampaignLayout />}

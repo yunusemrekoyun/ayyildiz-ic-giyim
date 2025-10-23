@@ -1,19 +1,182 @@
-import { useState } from "react";
-import { Mail, Phone, MapPin, Clock, Send } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Mail, Phone, MapPin, Clock, Send, Loader2, AlertCircle } from "lucide-react";
 import BreadCrumb from "../components/shop/BreadCrumb";
+import { contactPageApi, contactMessageApi } from "../api/contact";
+
+const makeBlock = (title = "", lines = []) => ({
+  title,
+  lines,
+});
+
+const clone = (value) =>
+  typeof structuredClone === "function"
+    ? structuredClone(value)
+    : JSON.parse(JSON.stringify(value));
+
+const defaultConfig = {
+  heroTitle: "We're here to help",
+  heroSubtitle:
+    "Our customer care team is available Monday to Friday, 09:00–18:00 CET. Send us a note and we'll respond within one business day.",
+  heroImage: null,
+  addressBlock: makeBlock("Visit our European studio", [
+    "Kurfürstendamm 45, 10719 Berlin",
+    "Showroom & click-and-collect (appointment recommended)",
+  ]),
+  hoursBlock: makeBlock("Opening hours (CET)", [
+    "Mon – Fri: 09:00 – 18:00",
+    "Sat: 10:00 – 16:00 (showroom only)",
+    "Sun & public holidays: closed",
+  ]),
+  emailBlock: makeBlock("Customer service", [
+    "support@evimstil.com",
+    "Average response time: < 24 h",
+  ]),
+  phoneBlock: makeBlock("Phone", [
+    "+49 (0) 30 234 567 89",
+    "WhatsApp & Signal available on the same number",
+  ]),
+  formEnabled: true,
+  successMessage:
+    "Thank you for your message. We have received your enquiry and will reply via e-mail shortly. If you need immediate assistance, call us on the number below.",
+};
+
+const asString = (value, fallback = "") =>
+  value === undefined || value === null ? fallback : String(value);
+
+const mergeBlock = (block, fallback) => {
+  if (!block || typeof block !== "object") return makeBlock(fallback.title, [...fallback.lines]);
+  return makeBlock(
+    asString(block.title, fallback.title),
+    Array.isArray(block.lines)
+      ? block.lines.map((line) => asString(line))
+      : [...fallback.lines]
+  );
+};
+
+const mergeConfig = (raw) => {
+  if (!raw) return clone(defaultConfig);
+  const merged = clone(defaultConfig);
+  merged.heroTitle = asString(raw.heroTitle, merged.heroTitle);
+  merged.heroSubtitle = asString(raw.heroSubtitle, merged.heroSubtitle);
+  merged.formEnabled =
+    raw.formEnabled === undefined ? merged.formEnabled : Boolean(raw.formEnabled);
+  merged.successMessage = asString(raw.successMessage, merged.successMessage);
+  merged.addressBlock = mergeBlock(raw.addressBlock, defaultConfig.addressBlock);
+  merged.hoursBlock = mergeBlock(raw.hoursBlock, defaultConfig.hoursBlock);
+  merged.emailBlock = mergeBlock(raw.emailBlock, defaultConfig.emailBlock);
+  merged.phoneBlock = mergeBlock(raw.phoneBlock, defaultConfig.phoneBlock);
+  merged.heroImage =
+    raw.heroImage && raw.heroImage.url
+      ? {
+          url: raw.heroImage.url,
+          publicId: raw.heroImage.publicId || "",
+          width: raw.heroImage.width,
+          height: raw.heroImage.height,
+          format: raw.heroImage.format,
+        }
+      : null;
+  return merged;
+};
+
+const initialFormState = {
+  name: "",
+  email: "",
+  phone: "",
+  subject: "",
+  message: "",
+  hp: "",
+};
+
+const getErrorMessage = (err) => {
+  if (!err) return "Unexpected error";
+  if (typeof err === "string") return err;
+  if (err.message) {
+    try {
+      const parsed = JSON.parse(err.message);
+      if (parsed?.message) return parsed.message;
+    } catch {
+      /* noop */
+    }
+    return err.message;
+  }
+  return String(err);
+};
 
 export default function ContactPage() {
+  const [config, setConfig] = useState(() => mergeConfig(null));
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [formData, setFormData] = useState(initialFormState);
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    setSubmitted(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const response = await contactPageApi.get();
+        if (!active) return;
+        setConfig(mergeConfig(response));
+        setLoadError(null);
+      } catch (err) {
+        if (!active) return;
+        setLoadError(getErrorMessage(err));
+        setConfig(mergeConfig(null));
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (submitted) setSubmitted(false);
+    if (submitError) setSubmitError(null);
   };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!config.formEnabled || submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await contactMessageApi.submit({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        subject: formData.subject,
+        message: formData.message,
+        hp: formData.hp,
+      });
+      setSubmitted(true);
+      setFormData(initialFormState);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      setSubmitError(getErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const blockItems = useMemo(
+    () => [
+      { icon: MapPin, ...config.addressBlock },
+      { icon: Clock, ...config.hoursBlock },
+      { icon: Mail, ...config.emailBlock },
+      { icon: Phone, ...config.phoneBlock },
+    ],
+    [config]
+  );
 
   return (
     <main className="bg-surface-light/60">
-      <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
+      <section className="mx-auto max-w-[1400px] px-4 pt-6 sm:px-6">
         <BreadCrumb
           items={[
             { label: "Home", to: "/" },
@@ -22,52 +185,100 @@ export default function ContactPage() {
         />
       </section>
 
-      <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-12">
+      <section className="mx-auto max-w-[1400px] px-4 pb-12 sm:px-6">
         <div className="overflow-hidden rounded-2xl border border-border bg-white/90 shadow-sm">
-          <div className="grid grid-cols-1 gap-0 lg:grid-cols-12">
-            <div className="lg:col-span-7 p-8 sm:p-10">
-              <h1 className="font-serif text-4xl font-extrabold tracking-tight text-primary">
-                We&apos;re here to help
+          {config.heroImage?.url ? (
+            <div className="relative h-60 w-full sm:h-72">
+              <img
+                src={config.heroImage.url}
+                alt={config.heroTitle}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 px-6 pb-6 text-white sm:px-10">
+                <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+                  {config.heroTitle}
+                </h1>
+                <p className="mt-2 max-w-3xl text-sm text-white/80 sm:text-base">
+                  {config.heroSubtitle}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="px-6 pb-6 pt-10 sm:px-10 sm:pt-12">
+              <h1 className="font-serif text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
+                {config.heroTitle}
               </h1>
-              <p className="mt-3 text-secondary">
-                Our customer care team is available Monday to Friday, 09:00–18:00 CET.
-                Send us a note and we&apos;ll respond within one business day.
+              <p className="mt-3 max-w-3xl text-secondary">
+                {config.heroSubtitle}
               </p>
+            </div>
+          )}
 
-              {submitted ? (
-                <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-700">
-                  Thank you for your message. We have received your enquiry and will reply
-                  via e-mail shortly. If you need immediate assistance, call us on the number below.
+          <div className="grid grid-cols-1 gap-0 lg:grid-cols-12">
+            <div className="lg:col-span-7 border-t border-border/70 p-6 sm:p-10 lg:border-t-0">
+              {loadError ? (
+                <div className="mb-6 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  <span>{loadError}</span>
                 </div>
               ) : null}
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+              {submitted ? (
+                <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-700">
+                  {config.successMessage}
+                </div>
+              ) : null}
+
+              {!config.formEnabled ? (
+                <div className="mb-6 rounded-xl border border-border bg-surface-light/70 p-5 text-sm text-secondary">
+                  Our contact form is temporarily unavailable. Please reach us via the email or phone numbers listed on this page.
+                </div>
+              ) : null}
+
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <TextField
                     label="Full name"
                     id="contact-name"
+                    name="name"
                     required
                     placeholder="Jane Doe"
+                    value={formData.name}
+                    onChange={handleChange}
+                    disabled={!config.formEnabled || submitting || loading}
                   />
                   <TextField
                     label="Email"
                     id="contact-email"
+                    name="email"
                     type="email"
                     required
                     placeholder="you@example.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    disabled={!config.formEnabled || submitting || loading}
                   />
                 </div>
                 <TextField
                   label="Phone (optional)"
                   id="contact-phone"
+                  name="phone"
                   type="tel"
                   placeholder="+49 170 123 4567"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  disabled={!config.formEnabled || submitting || loading}
                 />
                 <TextField
                   label="Subject"
                   id="contact-subject"
+                  name="subject"
                   required
                   placeholder="How can we support you?"
+                  value={formData.subject}
+                  onChange={handleChange}
+                  disabled={!config.formEnabled || submitting || loading}
                 />
                 <div>
                   <label
@@ -78,25 +289,56 @@ export default function ContactPage() {
                   </label>
                   <textarea
                     id="contact-message"
+                    name="message"
                     required
                     rows={5}
                     placeholder="Tell us a little more about your question, order or project."
-                    className="mt-2 w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+                    value={formData.message}
+                    onChange={handleChange}
+                    disabled={!config.formEnabled || submitting || loading}
+                    className="mt-2 w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 disabled:opacity-60"
                   />
                 </div>
 
+                <input
+                  type="text"
+                  name="hp"
+                  value={formData.hp}
+                  onChange={handleChange}
+                  className="hidden"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+
+                {submitError ? (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                    {submitError}
+                  </div>
+                ) : null}
+
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover"
+                  disabled={!config.formEnabled || submitting || loading}
+                  className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Send className="h-4 w-4" />
-                  Send message
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Send message
+                    </>
+                  )}
                 </button>
               </form>
 
               <p className="mt-6 text-xs text-secondary">
                 By submitting this form you acknowledge that we will process your data to
-                answer your enquiry in line with our{" "}
+                answer your enquiry in line with our {" "}
                 <a href="/privacy" className="text-accent underline">
                   Privacy Policy
                 </a>
@@ -104,41 +346,16 @@ export default function ContactPage() {
               </p>
             </div>
 
-            <aside className="lg:col-span-5 border-t border-border/70 bg-contact-bg/70 lg:border-l lg:border-t-0">
-              <div className="space-y-8 p-8 sm:p-10">
-                <ContactBlock
-                  icon={MapPin}
-                  title="Visit our European studio"
-                  items={[
-                    "Kurfürstendamm 45, 10719 Berlin",
-                    "Showroom & click-and-collect (appointment recommended)",
-                  ]}
-                />
-                <ContactBlock
-                  icon={Clock}
-                  title="Opening hours (CET)"
-                  items={[
-                    "Mon – Fri: 09:00 – 18:00",
-                    "Sat: 10:00 – 16:00 (showroom only)",
-                    "Sun & public holidays: closed",
-                  ]}
-                />
-                <ContactBlock
-                  icon={Mail}
-                  title="Customer service"
-                  items={[
-                    "support@evimstil.com",
-                    "Average response time: < 24 h",
-                  ]}
-                />
-                <ContactBlock
-                  icon={Phone}
-                  title="Phone"
-                  items={[
-                    "+49 (0) 30 234 567 89",
-                    "WhatsApp & Signal available on the same number",
-                  ]}
-                />
+            <aside className="lg:col-span-5 border-t border-border/70 bg-contact-bg/70 p-6 sm:p-10 lg:border-l lg:border-t-0">
+              <div className="space-y-6">
+                {blockItems.map((block, index) => (
+                  <ContactBlock
+                    key={`${block.title || "block"}-${index}`}
+                    icon={block.icon}
+                    title={block.title}
+                    items={block.lines}
+                  />
+                ))}
               </div>
             </aside>
           </div>
@@ -148,37 +365,53 @@ export default function ContactPage() {
   );
 }
 
-function TextField({ label, id, type = "text", required = false, placeholder }) {
+function TextField({
+  label,
+  id,
+  name,
+  type = "text",
+  required = false,
+  placeholder,
+  value,
+  onChange,
+  disabled,
+}) {
+  const inputId = id || name;
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-semibold text-primary">
+      <label htmlFor={inputId} className="block text-sm font-semibold text-primary">
         {label}
       </label>
       <input
-        id={id}
-        name={id}
+        id={inputId}
+        name={name}
         type={type}
         required={required}
         placeholder={placeholder}
-        className="mt-2 w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className="mt-2 w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 disabled:opacity-60"
       />
     </div>
   );
 }
 
-function ContactBlock(props) {
-  const { icon: Icon, title, items } = props;
+function ContactBlock({ icon: IconComponent, title, items }) {
+  const safeItems = Array.isArray(items) && items.length ? items : ["—"];
   return (
     <div className="rounded-2xl border border-border/70 bg-white p-6 shadow-sm">
       <div className="flex items-center gap-3 text-primary">
         <span className="grid h-11 w-11 place-items-center rounded-full bg-accent/10 text-accent">
-          <Icon className="h-5 w-5" />
+          {IconComponent ? <IconComponent className="h-5 w-5" /> : null}
         </span>
-        <h3 className="font-serif text-lg font-semibold">{title}</h3>
+        <h3 className="font-serif text-lg font-semibold">
+          {title || "Contact"}
+        </h3>
       </div>
       <ul className="mt-4 space-y-1 text-sm text-secondary">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
+        {safeItems.map((item, index) => (
+          <li key={`${title}-${index}`}>{item}</li>
         ))}
       </ul>
     </div>

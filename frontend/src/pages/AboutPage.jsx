@@ -1,155 +1,199 @@
+import { useEffect, useState } from "react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { Link } from "react-router-dom";
+import { aboutApi } from "../api/about";
+import { Loader2 } from "lucide-react";
 
 export default function AboutPage() {
+  const [about, setAbout] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await aboutApi.get();
+        if (mounted) setAbout(res.about);
+      } catch (err) {
+        console.error("About fetch error:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => (mounted = false);
+  }, []);
+
+  if (loading)
+    return (
+      <main className="flex h-[70vh] items-center justify-center text-secondary">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </main>
+    );
+
+  if (!about)
+    return (
+      <main className="flex h-[70vh] items-center justify-center text-secondary">
+        <p>No about data found.</p>
+      </main>
+    );
+
+  const {
+    heroTitle,
+    heroSubtitle,
+    heroImage,
+    leftImage,
+    dotBlocks = [],
+    stats = [],
+    materialsTitle,
+    materialsText,
+    materialsBullets = [],
+    materialsImage,
+    ctaTitle,
+    ctaSubtitle,
+    ctas = [],
+  } = about;
+
   return (
     <main className="bg-surface-light/60">
-      {/* Top breadcrumb + hero */}
+      {/* Breadcrumb */}
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
         <BreadCrumb items={[{ label: "Home", to: "/" }, { label: "About" }]} />
       </section>
 
+      {/* Hero */}
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-10">
         <div className="rounded-2xl border border-border bg-white/80 p-8 sm:p-12 text-center">
           <h1 className="font-serif text-4xl sm:text-5xl font-extrabold tracking-tight text-primary">
-            About Evim &amp; Stil
+            {heroTitle}
           </h1>
           <p className="mx-auto mt-3 max-w-3xl text-secondary">
-            Discover the story behind our passion for bringing elegant lingerie
-            and home textiles to the heart of the community—crafted with care,
-            rooted in quality, and designed to feel like home.
+            {heroSubtitle}
           </p>
 
-          <div className="mt-8 overflow-hidden rounded-xl ring-1 ring-border">
-            <img
-              src="/about-hero.jpg"
-              alt="Boutique interior"
-              className="h-[340px] w-full object-cover"
-              draggable="false"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Story + Vision (two columns with vertical markers) */}
-      <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-14">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
-          {/* Left image card */}
-          <div className="md:col-span-5">
-            <div className="overflow-hidden rounded-2xl border border-border bg-white">
+          {heroImage?.url && (
+            <div className="mt-8 overflow-hidden rounded-xl ring-1 ring-border">
               <img
-                src="/about-store.jpg"
-                alt="Calm corner"
-                className="h-full w-full object-cover md:h-[560px]"
+                src={heroImage.url}
+                alt="About hero"
+                className="h-[340px] w-full object-cover"
                 draggable="false"
               />
             </div>
-          </div>
+          )}
+        </div>
+      </section>
 
-          {/* Right timeline feel */}
+      {/* Story + Vision + Values */}
+      <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-14">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
+          {leftImage?.url && (
+            <div className="md:col-span-5">
+              <div className="overflow-hidden rounded-2xl border border-border bg-white">
+                <img
+                  src={leftImage.url}
+                  alt="Store"
+                  className="h-full w-full object-cover md:h-[560px]"
+                  draggable="false"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="md:col-span-7">
             <div className="rounded-2xl border border-border bg-contact-bg p-6 sm:p-8">
-              <DotBlock
-                title="Our Story"
-                text="Evim & Stil was founded with a simple idea: elevate everyday life with beautifully-made essentials. From a tiny studio to a multi-location boutique, our journey has always been guided by craftsmanship, comfort and kindness."
-              />
-              <Separator />
-              <DotBlock
-                title="Our Vision"
-                text="To be the most trusted destination for premium lingerie and home textiles—blending European finesse with Turkish craftsmanship, and shaping serene, elegant spaces for modern living."
-              />
-              <Separator />
-              <DotBlock
-                title="Our Values"
-                text="Quality without compromise, timeless design over fast trends, and an experience that feels personal. We work with responsible mills and long-term partners to ensure durability, touch, and fit you can rely on."
-              />
+              {dotBlocks.map((block, i) => (
+                <div key={i}>
+                  <DotBlock title={block.title} text={block.text} />
+                  {i < dotBlocks.length - 1 && <Separator />}
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats / badges */}
-      <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-12">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Stat label="Years of Craft" value="14+" />
-          <Stat label="Happy Customers" value="120K+" />
-          <Stat label="Stores & Studios" value="6" />
-          <Stat label="Eco Fabrics" value="80%" />
-        </div>
-      </section>
+      {/* Stats */}
+      {stats.length > 0 && (
+        <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-12">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {stats.map((s, i) => (
+              <Stat key={i} value={s.value} label={s.label} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Materials + Responsibility */}
+      {/* Materials */}
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-14">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
           <div className="md:col-span-7">
             <div className="rounded-2xl border border-border bg-white p-6 sm:p-8">
               <h2 className="font-serif text-2xl font-extrabold text-primary">
-                Materials &amp; Responsibility
+                {materialsTitle}
               </h2>
-              <p className="mt-2 text-secondary">
-                We select breathable cottons, silky satins and durable blends
-                from audited suppliers. Over 80% of our fabric range is
-                OEKO-TEX® or equivalent certified. Packaging is plastic-light,
-                and most of our suppliers are within regional logistics
-                corridors to reduce transport.
-              </p>
+              <p className="mt-2 text-secondary">{materialsText}</p>
 
-              <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
-                <li className="rounded-lg border border-border bg-contact-bg p-3">
-                  • OEKO-TEX® certified dye houses
-                </li>
-                <li className="rounded-lg border border-border bg-contact-bg p-3">
-                  • Responsible water & energy use
-                </li>
-                <li className="rounded-lg border border-border bg-contact-bg p-3">
-                  • Long-lasting stitch & finish checks
-                </li>
-                <li className="rounded-lg border border-border bg-contact-bg p-3">
-                  • Reusable & recyclable packaging
-                </li>
-              </ul>
+              {materialsBullets.length > 0 && (
+                <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+                  {materialsBullets.map((b, i) => (
+                    <li
+                      key={i}
+                      className="rounded-lg border border-border bg-contact-bg p-3"
+                    >
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
-          <div className="md:col-span-5">
-            <div className="overflow-hidden rounded-2xl border border-border">
-              <img
-                src="/about-fabric.jpg"
-                alt="Fabric detail"
-                className="h-full w-full object-cover md:h-[360px]"
-                draggable="false"
-              />
+          {materialsImage?.url && (
+            <div className="md:col-span-5">
+              <div className="overflow-hidden rounded-2xl border border-border">
+                <img
+                  src={materialsImage.url}
+                  alt="Fabric"
+                  className="h-full w-full object-cover md:h-[360px]"
+                  draggable="false"
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
-      {/* Team/CTA ribbon */}
-      <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-16">
-        <div className="rounded-2xl border border-border bg-surface-light p-6 sm:p-8 text-center">
-          <h3 className="font-serif text-2xl font-extrabold text-primary">
-            Visit Our Boutique in Berlin
-          </h3>
-          <p className="mx-auto mt-2 max-w-2xl text-secondary">
-            Experience the textures in person and let our stylists help you
-            build the perfect trousseau—bridal sets, bedding packages and more.
-          </p>
-          <div className="mt-5 flex items-center justify-center gap-3">
-            <Link
-              to="/sets"
-              className="inline-flex items-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
-            >
-              Explore Packages
-            </Link>
-            <Link
-              to="/contact"
-              className="inline-flex items-center rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-surface-hover"
-            >
-              Contact Us
-            </Link>
+      {/* CTA */}
+      {(ctaTitle || ctaSubtitle) && (
+        <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-16">
+          <div className="rounded-2xl border border-border bg-surface-light p-6 sm:p-8 text-center">
+            <h3 className="font-serif text-2xl font-extrabold text-primary">
+              {ctaTitle}
+            </h3>
+            <p className="mx-auto mt-2 max-w-2xl text-secondary">
+              {ctaSubtitle}
+            </p>
+
+            {ctas.length > 0 && (
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                {ctas.map((btn, i) => (
+                  <Link
+                    key={i}
+                    to={btn.to}
+                    className={`inline-flex items-center rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+                      btn.variant === "secondary"
+                        ? "border border-border text-primary hover:bg-surface-hover"
+                        : "bg-accent text-white hover:bg-accent-hover"
+                    }`}
+                  >
+                    {btn.text}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </main>
   );
 }
