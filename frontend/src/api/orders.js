@@ -11,6 +11,22 @@ export const orderApi = {
     });
     return data.order;
   },
+  async createPayPal(payload) {
+    const data = await http("/orders/paypal/create", {
+      method: "POST",
+      auth: true,
+      body: payload,
+    });
+    return data;
+  },
+  async capturePayPal(payload) {
+    const data = await http("/orders/paypal/capture", {
+      method: "POST",
+      auth: true,
+      body: payload,
+    });
+    return data;
+  },
   async mine() {
     const data = await http("/orders/mine", { auth: true });
     return data.orders || [];

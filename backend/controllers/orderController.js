@@ -5,6 +5,7 @@ import Product from "../models/Product.js";
 import Set from "../models/Set.js";
 import ShippingConfig from "../models/ShippingConfig.js";
 import Coupon from "../models/Coupon.js";
+import PayPalCheckout from "../models/PayPalCheckout.js";
 import {
   fetchActiveDiscounts,
   computeProductDiscountMap,
@@ -15,6 +16,18 @@ import {
   recalculateSetStockForSetIds,
   recalculateSetStockForProductIds,
 } from "../utils/setStock.js";
+import {
+  paypalCreateOrder,
+  paypalCaptureOrder,
+  paypalRefundCapture,
+  PayPalError,
+} from "../services/paypalClient.js";
+
+const PAYPAL_CURRENCY = (process.env.PAYPAL_CURRENCY || "EUR").toUpperCase();
+const PAYPAL_ORDER_TTL_MINUTES = Math.max(
+  5,
+  Number(process.env.PAYPAL_ORDER_TTL_MINUTES || 30)
+);
 
 function generateOrderNumber() {
   const now = new Date();
@@ -113,6 +126,602 @@ function shapeOrder(doc) {
   };
 }
 
+async function resolveAddressSnapshot({
+  userId,
+  addressId,
+  fallbackSnapshot = null,
+}) {
+  if (addressId && mongoose.Types.ObjectId.isValid(addressId)) {
+    const details = await UserDetails.findOne({ user: userId });
+    const addr = details?.addresses?.id(addressId);
+    if (addr) {
+      return {
+        fullName: addr.fullName,
+        phone: addr.phone,
+        country: addr.country,
+        city: addr.city,
+        district: addr.district,
+        postalCode: addr.postalCode,
+        addressLine: addr.addressLine,
+      };
+    }
+  }
+  if (fallbackSnapshot) {
+    return {
+      fullName: fallbackSnapshot.fullName || "",
+      phone: fallbackSnapshot.phone || "",
+      country: fallbackSnapshot.country || "",
+      city: fallbackSnapshot.city || "",
+      district: fallbackSnapshot.district || "",
+      postalCode: fallbackSnapshot.postalCode || "",
+      addressLine: fallbackSnapshot.addressLine || "",
+    };
+  }
+  fail(404, "Address not found");
+}
+
+function sanitizeCheckoutItemsInput(rawItems = []) {
+  if (!Array.isArray(rawItems)) return [];
+  const list = [];
+  for (const raw of rawItems) {
+    if (!raw) continue;
+    const inferredKind =
+      raw.kind ||
+      (raw.setId ? "set" : raw.productId || raw.ref ? "product" : "product");
+    const kind = String(inferredKind).toLowerCase() === "set" ? "set" : "product";
+    const idCandidate =
+      raw.id ||
+      raw.ref ||
+      raw._id ||
+      (kind === "product" ? raw.productId : raw.setId);
+    const id = idCandidate ? String(idCandidate).trim() : "";
+    if (!id) continue;
+    const qtyRaw =
+      raw.qty ??
+      raw.quantity ??
+      raw.count ??
+      raw.amount ??
+      raw.q ??
+      1;
+    const qty = Math.max(1, Number(qtyRaw) || 1);
+
+    if (kind === "set") {
+      const selectionsSource = Array.isArray(raw.selections)
+        ? raw.selections
+        : Array.isArray(raw.items)
+        ? raw.items
+        : [];
+      const selections = selectionsSource
+        .map((sel) => {
+          const productId =
+            sel?.productId ||
+            sel?.id ||
+            sel?._id ||
+            sel?.ref ||
+            sel?.product?._id ||
+            sel?.productId?._id;
+          if (!productId) return null;
+          return {
+            productId: String(productId),
+            color: sanitizeVariantValue(sel?.color ?? sel?.colour ?? null),
+            size: sanitizeVariantValue(sel?.size ?? null),
+            attribute: sanitizeVariantValue(
+              sel?.attribute ?? sel?.attributeValue ?? null
+            ),
+            qtyInSet: Math.max(
+              1,
+              Number(sel?.qtyInSet ?? sel?.qty ?? sel?.quantity ?? 1) || 1
+            ),
+          };
+        })
+        .filter(Boolean);
+
+      list.push({
+        kind,
+        id,
+        qty,
+        selections,
+      });
+      continue;
+    }
+
+    const variant = raw.variant && typeof raw.variant === "object" ? raw.variant : {};
+    const sanitizedVariant = {
+      color: sanitizeVariantValue(
+        variant.color ??
+          variant.colour ??
+          raw.color ??
+          raw.colour ??
+          variant.selectedColor ??
+          null
+      ),
+      size: sanitizeVariantValue(variant.size ?? raw.size ?? null),
+      attribute: sanitizeVariantValue(
+        variant.attribute ??
+          variant.attributeValue ??
+          raw.attribute ??
+          raw.attributeValue ??
+          null
+      ),
+    };
+
+    list.push({
+      kind,
+      id,
+      qty,
+      variant: sanitizedVariant,
+      color: sanitizedVariant.color,
+      size: sanitizedVariant.size,
+      attribute: sanitizedVariant.attribute,
+    });
+  }
+  return list;
+}
+
+function summarizeOrderItems(orderItems = []) {
+  return orderItems.map((item) => ({
+    kind: item.kind,
+    ref: item.ref?.toString?.() || String(item.ref),
+    name: item.name,
+    unitPrice: item.unitPrice,
+    qty: item.qty,
+  }));
+}
+
+async function buildOrderPreparation({
+  userId,
+  addressId,
+  addressSnapshot = null,
+  items = [],
+  couponCode = null,
+}) {
+  if (!Array.isArray(items) || items.length === 0) {
+    fail(400, "Cart is empty");
+  }
+  if (!addressSnapshot && !mongoose.Types.ObjectId.isValid(addressId)) {
+    fail(400, "Invalid address id");
+  }
+
+  const normalizedItems = sanitizeCheckoutItemsInput(items);
+  if (!normalizedItems.length) {
+    fail(400, "Cart is empty");
+  }
+
+  const addressSnap = await resolveAddressSnapshot({
+    userId,
+    addressId,
+    fallbackSnapshot: addressSnapshot,
+  });
+
+  const productLineIds = normalizedItems
+    .filter(
+      (x) => x.kind === "product" && mongoose.Types.ObjectId.isValid(x.id)
+    )
+    .map((x) => x.id);
+
+  const setIds = normalizedItems
+    .filter(
+      (x) => x.kind === "set" && mongoose.Types.ObjectId.isValid(x.id)
+    )
+    .map((x) => x.id);
+
+  const selectionProductIds = [];
+  for (const item of normalizedItems) {
+    if (item.kind !== "set") continue;
+    if (!Array.isArray(item.selections) || item.selections.length === 0) {
+      fail(400, "Set selections are required");
+    }
+    for (const sel of item.selections) {
+      if (!mongoose.Types.ObjectId.isValid(sel.productId)) {
+        fail(400, "Invalid selection productId");
+      }
+      selectionProductIds.push(sel.productId);
+    }
+  }
+
+  const allProductIds = Array.from(
+    new Set([...productLineIds, ...selectionProductIds])
+  );
+
+  const [products, sets] = await Promise.all([
+    allProductIds.length
+      ? Product.find({ _id: { $in: allProductIds } }).populate("category")
+      : [],
+    setIds.length
+      ? Set.find({ _id: { $in: setIds } }).populate("products.product")
+      : [],
+  ]);
+
+  const pMap = new Map(products.map((p) => [String(p._id), p]));
+  const sMap = new Map(sets.map((s) => [String(s._id), s]));
+
+  const activeDiscounts = await fetchActiveDiscounts();
+  const productDiscountMap =
+    activeDiscounts.length && products.length
+      ? computeProductDiscountMap(activeDiscounts, products)
+      : new Map();
+  const setDiscountMap =
+    activeDiscounts.length && sets.length
+      ? mapDiscountsToSets(
+          activeDiscounts,
+          sets.map((set) => set._id)
+        )
+      : new Map();
+
+  const orderItems = [];
+  const catalogNeedMap = new Map();
+  const setNeedMap = new Map();
+
+  for (const raw of normalizedItems) {
+    const qty = Math.max(1, Number(raw.qty || 1));
+    if (raw.kind === "product") {
+      const p = await ensureProductLoaded(pMap, raw.id);
+      if (!p)
+        fail(404, "Product not found: " + raw.id, { productId: raw.id });
+
+      const discount = productDiscountMap.get(String(p._id)) || null;
+      const { finalPrice } = applyDiscount(Number(p.price || 0), discount);
+      const safePrice = roundCurrency(finalPrice);
+
+      const variantInfo = resolveCatalogVariant(p, raw);
+      if (variantInfo.status === "missing") {
+        fail(400, "Variant selection required for product", {
+          productId: String(p._id),
+        });
+      }
+      if (variantInfo.status === "invalid") {
+        fail(400, "Variant not available for product", {
+          productId: String(p._id),
+          variant: variantInfo.variant,
+        });
+      }
+
+      if (
+        typeof variantInfo.index === "number" &&
+        variantInfo.index >= 0 &&
+        variantInfo.key
+      ) {
+        const pid = String(p._id);
+        if (!catalogNeedMap.has(pid)) catalogNeedMap.set(pid, new Map());
+        const bucket = catalogNeedMap.get(pid);
+        const entry = bucket.get(variantInfo.key) || {
+          qty: 0,
+          index: variantInfo.index,
+          variant: variantInfo.variant,
+        };
+        entry.qty += qty;
+        bucket.set(variantInfo.key, entry);
+      }
+
+      orderItems.push({
+        kind: "product",
+        ref: p._id,
+        name: p.name,
+        unitPrice: safePrice,
+        qty,
+        image: p.images?.[0]?.url || "",
+        selections: [],
+        variant: variantInfo.variant,
+      });
+    } else if (raw.kind === "set") {
+      const s = sMap.get(String(raw.id));
+      if (!s) fail(404, "Set not found: " + raw.id, { setId: raw.id });
+
+      const rawSelections = Array.isArray(raw.selections)
+        ? raw.selections
+        : [];
+      if (rawSelections.length === 0) {
+        fail(400, "Set selections are required");
+      }
+
+      const discount = setDiscountMap.get(String(s._id)) || null;
+      const { finalPrice } = applyDiscount(Number(s.price || 0), discount);
+      const safePrice = roundCurrency(finalPrice);
+
+      const normalizedSelections = rawSelections.map((sel) => ({
+        productId: String(sel.productId),
+        color: sel.color ?? null,
+        size: sel.size ?? null,
+        attribute: sel.attribute ?? null,
+        qtyInSet: Math.max(1, Number(sel.qtyInSet || 1)),
+      }));
+
+      const multiplier = qty;
+      for (const sel of normalizedSelections) {
+        const pid = sel.productId;
+        if (!setNeedMap.has(pid)) setNeedMap.set(pid, new Map());
+        const vkey = makeVariantKey(sel);
+        const current = setNeedMap.get(pid).get(vkey) || 0;
+        setNeedMap.get(pid).set(vkey, current + sel.qtyInSet * multiplier);
+      }
+
+      orderItems.push({
+        kind: "set",
+        ref: s._id,
+        name: s.name,
+        unitPrice: safePrice,
+        qty,
+        image: s.images?.[0]?.url || "",
+        selections: normalizedSelections,
+      });
+    } else {
+      fail(400, "Invalid item kind");
+    }
+  }
+
+  for (const [pid, variants] of setNeedMap.entries()) {
+    const prod = await ensureProductLoaded(pMap, pid);
+    if (!prod) {
+      fail(400, "Selection product missing: " + pid, { productId: pid });
+    }
+    const inv = Array.isArray(prod.inventory) ? prod.inventory : [];
+    for (const [vkey, needed] of variants.entries()) {
+      const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
+      const row = idx >= 0 ? inv[idx] : null;
+      const available = getInventoryStock(row, "set");
+      if (available < needed) {
+        fail(400, "Insufficient stock for selection", {
+          productId: pid,
+          variant: decodeVariantKey(vkey),
+          needed,
+          available,
+        });
+      }
+    }
+  }
+
+  for (const [pid, variants] of catalogNeedMap.entries()) {
+    const prod = await ensureProductLoaded(pMap, pid);
+    if (!prod) {
+      fail(400, "Product missing for catalog stock: " + pid, {
+        productId: pid,
+      });
+    }
+    const inv = Array.isArray(prod.inventory) ? prod.inventory : [];
+    for (const [vkey, entry] of variants.entries()) {
+      if (entry.index < 0) continue;
+      const row =
+        inv[entry.index] ||
+        inv.find((candidate) => variantKeyOf(candidate) === vkey);
+      if (!row) {
+        fail(400, "Variant not found for product", {
+          productId: pid,
+          variant: decodeVariantKey(vkey),
+        });
+      }
+      const available = getInventoryStock(row, "catalog");
+      if (available < entry.qty) {
+        fail(400, "Insufficient stock for product", {
+          productId: pid,
+          variant: decodeVariantKey(vkey),
+          needed: entry.qty,
+          available,
+        });
+      }
+    }
+  }
+
+  const subtotal = roundCurrency(
+    orderItems.reduce((sum, item) => sum + item.unitPrice * item.qty, 0)
+  );
+
+  const shippingConfig = await ShippingConfig.getSingleton();
+  const threshold = Number(shippingConfig?.freeThreshold || 0);
+  const feeRaw = Number(shippingConfig?.fee || 0);
+  const shipping = subtotal >= threshold ? 0 : Math.max(0, feeRaw);
+  const shippingName = shippingConfig?.name || "Standard Shipping";
+
+  let couponSummary = null;
+  let couponDiscountAmount = 0;
+  const normalizedCoupon = couponCode ? normalizeCode(couponCode) : null;
+  if (normalizedCoupon) {
+    const now = new Date();
+    const coupon = await Coupon.findOne({
+      code: normalizedCoupon,
+      active: true,
+      $and: [
+        { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] },
+        { $or: [{ endsAt: null }, { endsAt: { $gte: now } }] },
+      ],
+    }).lean();
+
+    if (!coupon) {
+      fail(400, "Coupon not found or inactive", { code: normalizedCoupon });
+    }
+
+    if (subtotal < (coupon.minSubtotal || 0)) {
+      fail(400, "Coupon requires minimum subtotal of " + coupon.minSubtotal, {
+        reason: "minSubtotal",
+        minSubtotal: coupon.minSubtotal,
+      });
+    }
+
+    couponDiscountAmount = roundCurrency(
+      (subtotal * Number(coupon.percentage || 0)) / 100
+    );
+    couponSummary = {
+      code: coupon.code,
+      percentage: coupon.percentage,
+      minSubtotal: coupon.minSubtotal || 0,
+      discountAmount: couponDiscountAmount,
+    };
+  }
+
+  const discountedSubtotal = Math.max(0, subtotal - couponDiscountAmount);
+  const total = roundCurrency(discountedSubtotal + shipping);
+
+  const summary = {
+    items: summarizeOrderItems(orderItems),
+    subtotal,
+    shipping,
+    shippingName,
+    discountAmount: couponDiscountAmount,
+    total,
+    coupon: couponSummary,
+    currency: PAYPAL_CURRENCY,
+  };
+
+  return {
+    summary,
+    details: {
+      userId,
+      addressSnap,
+      orderItems,
+      subtotal,
+      shipping,
+      shippingName,
+      total,
+      couponSummary,
+      catalogNeedMap,
+      setNeedMap,
+      productMap: pMap,
+    },
+    normalizedItems,
+  };
+}
+
+async function finalizeOrder(prepared, options = {}) {
+  const {
+    userId,
+    addressSnap,
+    orderItems,
+    subtotal,
+    shipping,
+    shippingName,
+    total,
+    couponSummary,
+    catalogNeedMap,
+    setNeedMap,
+    productMap,
+  } = prepared;
+
+  if (!orderItems || orderItems.length === 0) {
+    fail(400, "Cart is empty");
+  }
+
+  const orderNumber = options.orderNumber || (await createOrderNumber());
+
+  const dirtyProductIds = [];
+
+  for (const [pid, variants] of catalogNeedMap.entries()) {
+    if (!variants.size) continue;
+    const product = productMap.get(pid);
+    if (!product) continue;
+    const inv = Array.isArray(product.inventory) ? product.inventory : [];
+    let changed = false;
+    for (const [vkey, entry] of variants.entries()) {
+      if (entry.index < 0) continue;
+      if (!inv[entry.index]) continue;
+      const row = inv[entry.index];
+      const available = getInventoryStock(row, "catalog");
+      const next = Math.max(0, available - entry.qty);
+      inv[entry.index] = setInventoryStock(row, "catalog", next);
+      changed = true;
+    }
+    if (changed) {
+      product.markModified("inventory");
+      if (!dirtyProductIds.includes(pid)) dirtyProductIds.push(pid);
+    }
+  }
+
+  for (const [pid, variants] of setNeedMap.entries()) {
+    if (!variants.size) continue;
+    const product = productMap.get(pid);
+    if (!product) continue;
+    const inv = Array.isArray(product.inventory) ? product.inventory : [];
+    let changed = false;
+    for (const [vkey, needed] of variants.entries()) {
+      const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
+      if (idx < 0) continue;
+      const row = inv[idx];
+      const available = getInventoryStock(row, "set");
+      const next = Math.max(0, available - needed);
+      inv[idx] = setInventoryStock(row, "set", next);
+      changed = true;
+    }
+    if (changed) {
+      product.markModified("inventory");
+      if (!dirtyProductIds.includes(pid)) dirtyProductIds.push(pid);
+    }
+  }
+
+  if (dirtyProductIds.length) {
+    const uniqueProducts = dirtyProductIds
+      .map((pid) => productMap.get(pid))
+      .filter(Boolean);
+    await Promise.all(uniqueProducts.map((product) => product.save()));
+    await recalculateSetStockForProductIds(dirtyProductIds);
+  }
+
+  const impactedSetIds = new Set(
+    orderItems.filter((it) => it.kind === "set").map((it) => String(it.ref))
+  );
+  if (impactedSetIds.size) {
+    await recalculateSetStockForSetIds(Array.from(impactedSetIds));
+  }
+
+  let payment;
+  let status = options.statusOverride || "pending";
+
+  if (options.paymentOverride) {
+    payment = {
+      method: options.paymentOverride.method || "paypal",
+      txnId: options.paymentOverride.txnId || "",
+      processorOrderId: options.paymentOverride.processorOrderId || "",
+      paidAt: options.paymentOverride.paidAt || null,
+      status: options.paymentOverride.status || "pending",
+      simulation:
+        options.paymentOverride.simulation !== undefined
+          ? options.paymentOverride.simulation
+          : null,
+      currency:
+        options.paymentOverride.currency ||
+        options.currency ||
+        PAYPAL_CURRENCY,
+      amount: Number(options.paymentOverride.amount || total || 0),
+      payer: options.paymentOverride.payer || null,
+    };
+  } else {
+    const simulation = options.simulation || null;
+    const method = options.paymentMethod || "cod";
+    if (simulation === "success") {
+      payment = {
+        method,
+        status: "success",
+        simulation: "success",
+        paidAt: new Date(),
+        currency: options.currency || PAYPAL_CURRENCY,
+        amount: total,
+      };
+      status = "paid";
+    } else {
+      payment = {
+        method,
+        status: "pending",
+        simulation,
+        currency: options.currency || PAYPAL_CURRENCY,
+        amount: total,
+      };
+    }
+  }
+
+  const order = await Order.create({
+    orderNumber,
+    user: userId,
+    items: orderItems,
+    address: addressSnap,
+    subtotal,
+    shipping,
+    shippingName,
+    total,
+    status,
+    payment,
+    coupon: couponSummary,
+  });
+
+  return order;
+}
+
 /**
  * POST /api/orders
  * Body: {
@@ -139,395 +748,391 @@ export async function createOrder(req, res) {
       paymentSimulation = null,
     } = req.body || {};
 
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: "Cart is empty" });
-    }
-    if (!mongoose.Types.ObjectId.isValid(addressId)) {
-      return res.status(400).json({ message: "Invalid address id" });
-    }
-
-    const details = await UserDetails.findOne({ user: userId });
-    const addr = details?.addresses?.id(addressId);
-    if (!addr) return res.status(404).json({ message: "Address not found" });
-
-    const addressSnap = {
-      fullName: addr.fullName,
-      phone: addr.phone,
-      country: addr.country,
-      city: addr.city,
-      district: addr.district,
-      postalCode: addr.postalCode,
-      addressLine: addr.addressLine,
-    };
-
-    const productLineIds = items
-      .filter(
-        (x) =>
-          String(x.kind) === 'product' && mongoose.Types.ObjectId.isValid(x.id)
-      )
-      .map((x) => x.id);
-
-    const setIds = items
-      .filter(
-        (x) => String(x.kind) === 'set' && mongoose.Types.ObjectId.isValid(x.id)
-      )
-      .map((x) => x.id);
-
-    const selectionProductIds = [];
-    for (const it of items) {
-      if (String(it.kind) === 'set') {
-        if (!Array.isArray(it.selections) || it.selections.length === 0) {
-          fail(400, 'Set selections are required');
-        }
-        for (const s of it.selections) {
-          if (!mongoose.Types.ObjectId.isValid(s.productId)) {
-            fail(400, 'Invalid selection productId');
-          }
-          selectionProductIds.push(s.productId);
-        }
-      }
-    }
-
-    const allProductIds = Array.from(
-      new Set([...productLineIds, ...selectionProductIds])
-    );
-
-    const [products, sets] = await Promise.all([
-      allProductIds.length
-        ? Product.find({ _id: { $in: allProductIds } }).populate('category')
-        : [],
-      setIds.length
-        ? Set.find({ _id: { $in: setIds } }).populate('products.product')
-        : [],
-    ]);
-
-    const pMap = new Map(products.map((p) => [String(p._id), p]));
-    const sMap = new Map(sets.map((s) => [String(s._id), s]));
-
-    const activeDiscounts = await fetchActiveDiscounts();
-    const productDiscountMap =
-      activeDiscounts.length && products.length
-        ? computeProductDiscountMap(activeDiscounts, products)
-        : new Map();
-    const setDiscountMap =
-      activeDiscounts.length && sets.length
-        ? mapDiscountsToSets(
-            activeDiscounts,
-            sets.map((set) => set._id)
-          )
-        : new Map();
-
-    const orderItems = [];
-    const catalogNeedMap = new Map();
-    const setNeedMap = new Map();
-
-    for (const raw of items) {
-      const qty = Math.max(1, Number(raw.qty || 1));
-      const rawKind = String(raw.kind || "product");
-
-      if (rawKind === "product") {
-        const p = await ensureProductLoaded(pMap, raw.id);
-        if (!p)
-          fail(404, "Product not found: " + raw.id, { productId: raw.id });
-
-        const discount = productDiscountMap.get(String(p._id)) || null;
-        const { finalPrice } = applyDiscount(Number(p.price || 0), discount);
-        const safePrice = roundCurrency(finalPrice);
-
-        const variantInfo = resolveCatalogVariant(p, raw);
-        if (variantInfo.status === 'missing') {
-          fail(400, 'Variant selection required for product', {
-            productId: String(p._id),
-          });
-        }
-        if (variantInfo.status === 'invalid') {
-          fail(400, 'Variant not available for product', {
-            productId: String(p._id),
-            variant: variantInfo.variant,
-          });
-        }
-
-        if (
-          typeof variantInfo.index === 'number' &&
-          variantInfo.index >= 0 &&
-          variantInfo.key
-        ) {
-          const pid = String(p._id);
-          if (!catalogNeedMap.has(pid)) catalogNeedMap.set(pid, new Map());
-          const bucket = catalogNeedMap.get(pid);
-          const entry = bucket.get(variantInfo.key) || {
-            qty: 0,
-            index: variantInfo.index,
-            variant: variantInfo.variant,
-          };
-          entry.qty += qty;
-          bucket.set(variantInfo.key, entry);
-        }
-
-        orderItems.push({
-          kind: 'product',
-          ref: p._id,
-          name: p.name,
-          unitPrice: safePrice,
-          qty,
-          image: p.images?.[0]?.url || '',
-          selections: [],
-          variant: variantInfo.variant,
-        });
-      } else if (rawKind === "set") {
-        const s = sMap.get(String(raw.id));
-        if (!s) fail(404, "Set not found: " + raw.id, { setId: raw.id });
-
-        const rawSelections = Array.isArray(raw.selections)
-          ? raw.selections
-          : [];
-        if (rawSelections.length === 0) {
-          fail(400, "Set selections are required");
-        }
-
-        const discount = setDiscountMap.get(String(s._id)) || null;
-        const { finalPrice } = applyDiscount(Number(s.price || 0), discount);
-        const safePrice = roundCurrency(finalPrice);
-
-        const normalizedSelections = rawSelections.map((sel) => ({
-          productId: String(sel.productId),
-          color: sel.color ?? null,
-          size: sel.size ?? null,
-          attribute: sel.attribute ?? null,
-          qtyInSet: Math.max(1, Number(sel.qtyInSet || 1)),
-        }));
-
-        const multiplier = qty;
-        for (const sel of normalizedSelections) {
-          const pid = sel.productId;
-          if (!setNeedMap.has(pid)) setNeedMap.set(pid, new Map());
-          const vkey = makeVariantKey(sel);
-          const current = setNeedMap.get(pid).get(vkey) || 0;
-          setNeedMap
-            .get(pid)
-            .set(vkey, current + sel.qtyInSet * multiplier);
-        }
-
-        orderItems.push({
-          kind: 'set',
-          ref: s._id,
-          name: s.name,
-          unitPrice: safePrice,
-          qty,
-          image: s.images?.[0]?.url || '',
-          selections: normalizedSelections,
-        });
-      } else {
-        fail(400, 'Invalid item kind');
-      }
-    }
-
-    for (const [pid, variants] of setNeedMap.entries()) {
-      const prod = await ensureProductLoaded(pMap, pid);
-      if (!prod) {
-        fail(400, "Selection product missing: " + pid, { productId: pid });
-      }
-      const inv = Array.isArray(prod.inventory) ? prod.inventory : [];
-      for (const [vkey, needed] of variants.entries()) {
-        const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
-        const row = idx >= 0 ? inv[idx] : null;
-        const available = getInventoryStock(row, "set");
-        if (available < needed) {
-          fail(400, "Insufficient stock for selection", {
-            productId: pid,
-            variant: decodeVariantKey(vkey),
-            needed,
-            available,
-          });
-        }
-      }
-    }
-
-    for (const [pid, variants] of catalogNeedMap.entries()) {
-      const prod = await ensureProductLoaded(pMap, pid);
-      if (!prod) {
-        fail(400, "Product missing for catalog stock: " + pid, {
-          productId: pid,
-        });
-      }
-      const inv = Array.isArray(prod.inventory) ? prod.inventory : [];
-      for (const [vkey, entry] of variants.entries()) {
-        if (entry.index < 0) continue;
-        const row =
-          inv[entry.index] ||
-          inv.find((candidate) => variantKeyOf(candidate) === vkey);
-        if (!row) {
-          fail(400, "Variant not found for product", {
-            productId: pid,
-            variant: decodeVariantKey(vkey),
-          });
-        }
-        const available = getInventoryStock(row, "catalog");
-        if (available < entry.qty) {
-          fail(400, "Insufficient stock for product", {
-            productId: pid,
-            variant: decodeVariantKey(vkey),
-            needed: entry.qty,
-            available,
-          });
-        }
-      }
-    }
-
-    const subtotal = roundCurrency(
-      orderItems.reduce((sum, item) => sum + item.unitPrice * item.qty, 0)
-    );
-
-    const shippingConfig = await ShippingConfig.getSingleton();
-    const threshold = Number(shippingConfig.freeThreshold || 0);
-    const feeRaw = Number(shippingConfig.fee || 0);
-    const shipping = subtotal >= threshold ? 0 : Math.max(0, feeRaw);
-    const shippingName = shippingConfig.name || 'Standard Shipping';
-
-    let couponSummary = null;
-    let couponDiscountAmount = 0;
-    if (couponCode) {
-      const normalized = normalizeCode(couponCode);
-      if (normalized) {
-        const now = new Date();
-        const coupon = await Coupon.findOne({
-          code: normalized,
-          active: true,
-          $and: [
-            { $or: [{ startsAt: null }, { startsAt: { $lte: now } }] },
-            { $or: [{ endsAt: null }, { endsAt: { $gte: now } }] },
-          ],
-        }).lean();
-
-        if (!coupon) {
-          fail(400, 'Coupon not found or inactive', { code: normalized });
-        }
-
-        if (subtotal < (coupon.minSubtotal || 0)) {
-          fail(
-            400,
-            `Coupon requires minimum subtotal of ${coupon.minSubtotal}`,
-            {
-              reason: 'minSubtotal',
-              minSubtotal: coupon.minSubtotal,
-            }
-          );
-        }
-
-        couponDiscountAmount = roundCurrency(
-          (subtotal * Number(coupon.percentage || 0)) / 100
-        );
-        couponSummary = {
-          code: coupon.code,
-          percentage: coupon.percentage,
-          minSubtotal: coupon.minSubtotal || 0,
-          discountAmount: couponDiscountAmount,
-        };
-      }
-    }
-
-    const discountedSubtotal = Math.max(0, subtotal - couponDiscountAmount);
-    const total = roundCurrency(discountedSubtotal + shipping);
+    const { details } = await buildOrderPreparation({
+      userId,
+      addressId,
+      items,
+      couponCode,
+    });
 
     const simulation = normalizeSimulation(paymentSimulation);
-    if (simulation === 'failure') {
-      fail(402, 'Payment simulation failed');
+    if (simulation === "failure") {
+      return res.status(402).json({ message: "Payment simulation failed" });
     }
 
-    const orderNumber = await createOrderNumber();
-
-    const dirtyProductIds = [];
-    for (const [pid, variants] of catalogNeedMap.entries()) {
-      if (!variants.size) continue;
-      const product = await ensureProductLoaded(pMap, pid);
-      if (!product) continue;
-      const inv = Array.isArray(product.inventory) ? product.inventory : [];
-      let changed = false;
-      for (const [vkey, entry] of variants.entries()) {
-        if (entry.index < 0) continue;
-        if (!inv[entry.index]) continue;
-        const row = inv[entry.index];
-        const available = getInventoryStock(row, "catalog");
-        const next = Math.max(0, available - entry.qty);
-        inv[entry.index] = setInventoryStock(row, "catalog", next);
-        changed = true;
-      }
-      if (changed) {
-        product.markModified('inventory');
-        if (!dirtyProductIds.includes(pid)) dirtyProductIds.push(pid);
-      }
-    }
-
-    for (const [pid, variants] of setNeedMap.entries()) {
-      if (!variants.size) continue;
-      const product = await ensureProductLoaded(pMap, pid);
-      if (!product) continue;
-      const inv = Array.isArray(product.inventory) ? product.inventory : [];
-      let changed = false;
-      for (const [vkey, needed] of variants.entries()) {
-        const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
-        if (idx < 0) continue;
-        const row = inv[idx];
-        const available = getInventoryStock(row, "set");
-        const next = Math.max(0, available - needed);
-        inv[idx] = setInventoryStock(row, "set", next);
-        changed = true;
-      }
-      if (changed) {
-        product.markModified('inventory');
-        if (!dirtyProductIds.includes(pid)) dirtyProductIds.push(pid);
-      }
-    }
-
-    if (dirtyProductIds.length) {
-      await Promise.all(dirtyProductIds.map((pid) => pMap.get(pid)?.save()));
-      await recalculateSetStockForProductIds(dirtyProductIds);
-    }
-
-    const impactedSetIds = new Set(
-      orderItems.filter((it) => it.kind === 'set').map((it) => String(it.ref))
-    );
-    if (impactedSetIds.size) {
-      await recalculateSetStockForSetIds(Array.from(impactedSetIds));
-    }
-
-    const paymentPayload =
-      simulation === "success"
-        ? {
-            method: "simulated",
-            status: "success",
-            simulation: "success",
-            paidAt: new Date(),
-          }
-        : {
-            method: "cod",
-            status: "pending",
-            simulation,
-          };
-
-    const order = await Order.create({
-      orderNumber,
-      user: userId,
-      items: orderItems,
-      address: addressSnap,
-      subtotal,
-      shipping,
-      shippingName,
-      total,
-      status: simulation === 'success' ? 'paid' : 'pending',
-      payment: paymentPayload,
-      coupon: couponSummary,
+    const order = await finalizeOrder(details, {
+      userId,
+      paymentMethod: simulation === "success" ? "simulated" : "cod",
+      simulation,
+      currency: PAYPAL_CURRENCY,
     });
 
     res.status(201).json({ order: shapeOrder(order) });
   } catch (err) {
     if (err.status) {
-      const payload = { message: err.message || 'Request failed' };
+      const payload = { message: err.message || "Request failed" };
       if (err.extra) payload.details = err.extra;
       return res.status(err.status).json(payload);
     }
-    res.status(500).json({ message: err.message || 'Unable to create order' });
+    res.status(500).json({ message: err.message || "Unable to create order" });
   }
+}
+
+export async function createPayPalCheckout(req, res) {
+  try {
+    const userId = req.userId;
+    const { addressId, items = [], couponCode = null } = req.body || {};
+
+    const preparation = await buildOrderPreparation({
+      userId,
+      addressId,
+      items,
+      couponCode,
+    });
+
+    const { summary, details, normalizedItems } = preparation;
+    const purchaseUnits = buildPayPalPurchaseUnits(summary, details);
+    const paypalOrder = await paypalCreateOrder({
+      purchaseUnits,
+    });
+
+    const approveLink = Array.isArray(paypalOrder?.links)
+      ? paypalOrder.links.find((link) => link.rel === "approve")?.href || null
+      : null;
+
+    const draft = await PayPalCheckout.create({
+      user: userId,
+      paypalOrderId: paypalOrder.id,
+      payload: {
+        addressId: addressId ? String(addressId) : "",
+        items: normalizedItems,
+        couponCode: couponCode ? normalizeCode(couponCode) : null,
+      },
+      addressSnapshot: details.addressSnap,
+      summary: {
+        subtotal: summary.subtotal,
+        shipping: summary.shipping,
+        discountAmount: summary.discountAmount,
+        shippingName: summary.shippingName,
+        total: summary.total,
+        currency: summary.currency,
+      },
+      approveUrl: approveLink,
+      expiresAt: new Date(
+        Date.now() + PAYPAL_ORDER_TTL_MINUTES * 60 * 1000
+      ),
+    });
+
+    res.json({
+      draftId: draft._id.toString(),
+      paypalOrderId: paypalOrder.id,
+      approveUrl: approveLink,
+      summary,
+    });
+  } catch (err) {
+    if (err instanceof PayPalError || err.status) {
+      const status = err.status || 500;
+      const payload = {
+        message: err.message || "Unable to create PayPal order",
+      };
+      if (err.data || err.extra) {
+        payload.details = err.data || err.extra;
+      }
+      return res.status(status).json(payload);
+    }
+    res.status(500).json({
+      message: err.message || "Unable to initiate PayPal checkout",
+    });
+  }
+}
+
+export async function capturePayPalCheckout(req, res) {
+  try {
+    const userId = req.userId;
+    const { paypalOrderId, draftId } = req.body || {};
+
+    if (!paypalOrderId) {
+      return res.status(400).json({ message: "PayPal order id is required" });
+    }
+    if (!draftId || !mongoose.Types.ObjectId.isValid(draftId)) {
+      return res
+        .status(400)
+        .json({ message: "Invalid PayPal checkout draft id" });
+    }
+
+    const draft = await PayPalCheckout.findOne({ _id: draftId, user: userId });
+    if (!draft) {
+      return res
+        .status(404)
+        .json({ message: "PayPal checkout session not found" });
+    }
+
+    if (draft.status === "completed" && draft.completedOrder) {
+      const existing = await Order.findById(draft.completedOrder);
+      if (existing) {
+        return res.json({ order: shapeOrder(existing) });
+      }
+    }
+
+    if (draft.paypalOrderId !== paypalOrderId) {
+      return res.status(400).json({ message: "PayPal order mismatch" });
+    }
+
+    if (draft.expiresAt && draft.expiresAt.getTime() < Date.now()) {
+      draft.status = "expired";
+      await draft.save();
+      return res
+        .status(410)
+        .json({ message: "PayPal checkout session expired" });
+    }
+
+    const payload = draft.payload || {};
+    const preparation = await buildOrderPreparation({
+      userId,
+      addressId: payload.addressId,
+      addressSnapshot: draft.addressSnapshot,
+      items: payload.items || [],
+      couponCode: payload.couponCode,
+    });
+
+    const { summary, details } = preparation;
+
+    if (
+      draft.summary?.total !== undefined &&
+      draft.summary?.total !== null &&
+      Math.abs(Number(summary.total || 0) - Number(draft.summary.total || 0)) >
+        0.01
+    ) {
+      return res.status(409).json({
+        message:
+          "Order total has changed. Please restart the checkout process.",
+      });
+    }
+
+    const captureResponse = await paypalCaptureOrder(paypalOrderId);
+    const unit = captureResponse?.purchase_units?.[0] || {};
+    const capture =
+      unit?.payments?.captures?.[0] ||
+      unit?.payments?.authorizations?.[0] ||
+      null;
+
+    if (!capture) {
+      throw new PayPalError(
+        500,
+        captureResponse,
+        "PayPal capture response is missing capture details"
+      );
+    }
+
+    const captureStatus = capture.status || "PENDING";
+    const captureAmount = Number(capture.amount?.value || 0);
+    const captureCurrency = (
+      capture.amount?.currency_code ||
+      summary.currency ||
+      PAYPAL_CURRENCY
+    ).toUpperCase();
+
+    if (Math.abs(captureAmount - Number(summary.total || 0)) > 0.01) {
+      throw new PayPalError(
+        409,
+        captureResponse,
+        "PayPal captured amount does not match order total"
+      );
+    }
+
+    const paidAt = capture.update_time
+      ? new Date(capture.update_time)
+      : new Date();
+
+    let orderDoc;
+    try {
+      orderDoc = await finalizeOrder(details, {
+        userId,
+        paymentOverride: {
+          method: "paypal",
+          status: captureStatus === "COMPLETED" ? "success" : "pending",
+          txnId: capture.id || "",
+          processorOrderId: paypalOrderId,
+          paidAt,
+          currency: captureCurrency,
+          amount: captureAmount,
+          simulation: null,
+          payer: extractPayPalPayer(captureResponse?.payer),
+        },
+        statusOverride: captureStatus === "COMPLETED" ? "paid" : "pending",
+        currency: captureCurrency,
+      });
+    } catch (commitError) {
+      if (capture.id) {
+        try {
+          await paypalRefundCapture(
+            capture.id,
+            capture.amount?.value,
+            captureCurrency
+          );
+        } catch (refundErr) {
+          console.error("Failed to auto-refund PayPal capture", refundErr);
+        }
+      }
+      throw commitError;
+    }
+
+    draft.status = "completed";
+    draft.completedOrder = orderDoc._id;
+    draft.completedAt = new Date();
+    await draft.save();
+
+    res.json({ order: shapeOrder(orderDoc) });
+  } catch (err) {
+    if (err instanceof PayPalError || err.status) {
+      const status = err.status || 500;
+      const payload = {
+        message: err.message || "Unable to capture PayPal payment",
+      };
+      if (err.data || err.extra) {
+        payload.details = err.data || err.extra;
+      }
+      return res.status(status).json(payload);
+    }
+    res.status(500).json({
+      message: err.message || "Unable to finalize PayPal checkout",
+    });
+  }
+}
+
+function buildPayPalPurchaseUnits(summary, details) {
+  const currency = (summary?.currency || PAYPAL_CURRENCY).toUpperCase();
+  const orderItems = details?.orderItems || [];
+  const items = mapOrderItemsToPaypalLineItems(orderItems, currency);
+
+  const breakdown = {
+    item_total: {
+      currency_code: currency,
+      value: formatAmount(summary?.subtotal || 0),
+    },
+    shipping: {
+      currency_code: currency,
+      value: formatAmount(summary?.shipping || 0),
+    },
+  };
+
+  if (summary?.discountAmount > 0) {
+    breakdown.discount = {
+      currency_code: currency,
+      value: formatAmount(summary.discountAmount),
+    };
+  }
+
+  return [
+    {
+      reference_id: `PU-${Date.now()}`,
+      amount: {
+        currency_code: currency,
+        value: formatAmount(summary?.total || 0),
+        breakdown,
+      },
+      description: summary?.shippingName || "Order",
+      items,
+      shipping: {
+        name: {
+          full_name: (details?.addressSnap?.fullName || "Customer").slice(
+            0,
+            127
+          ),
+        },
+        address: mapAddressToPaypal(details?.addressSnap),
+      },
+    },
+  ];
+}
+
+function formatAmount(value) {
+  return roundCurrency(value || 0).toFixed(2);
+}
+
+function mapOrderItemsToPaypalLineItems(orderItems, currency) {
+  if (!Array.isArray(orderItems) || orderItems.length === 0) {
+    return [
+      {
+        name: "Order subtotal",
+        quantity: "1",
+        unit_amount: {
+          currency_code: currency,
+          value: formatAmount(0),
+        },
+        category: "PHYSICAL_GOODS",
+      },
+    ];
+  }
+
+  return orderItems.map((item, index) => ({
+    name: String(item.name || `Item ${index + 1}`).slice(0, 127),
+    quantity: String(Math.max(1, Number(item.qty || 1))),
+    unit_amount: {
+      currency_code: currency,
+      value: formatAmount(item.unitPrice || 0),
+    },
+    category: "PHYSICAL_GOODS",
+    sku: item.ref ? String(item.ref).slice(0, 127) : undefined,
+  }));
+}
+
+function mapAddressToPaypal(addressSnap = {}) {
+  const line = String(addressSnap?.addressLine || "").trim();
+  const line1 = line.slice(0, 100) || "Address";
+  const line2 = line.length > 100 ? line.slice(100, 200) : "";
+  const city =
+    String(addressSnap?.city || "Berlin").slice(0, 120) || "Berlin";
+  const district = addressSnap?.district
+    ? String(addressSnap.district).slice(0, 120)
+    : null;
+  const postal = String(addressSnap?.postalCode || "").trim() || "00000";
+  const countryCode = extractCountryCode(addressSnap?.country);
+
+  const formatted = {
+    address_line_1: line1,
+    admin_area_2: city,
+    postal_code: postal,
+    country_code: countryCode,
+  };
+  if (line2) formatted.address_line_2 = line2;
+  if (district) formatted.admin_area_1 = district;
+  return formatted;
+}
+
+function extractCountryCode(value) {
+  if (!value) return "DE";
+  const trimmed = String(value).trim();
+  if (!trimmed) return "DE";
+  if (trimmed.length === 2) return trimmed.toUpperCase();
+  const normalized = trimmed.toLowerCase();
+  if (normalized.includes("germany") || normalized.includes("deutschland")) {
+    return "DE";
+  }
+  if (normalized.includes("austria") || normalized.includes("österreich")) {
+    return "AT";
+  }
+  if (normalized.includes("switzerland") || normalized.includes("schweiz")) {
+    return "CH";
+  }
+  if (normalized.includes("turkey") || normalized.includes("türkiye")) {
+    return "TR";
+  }
+  return trimmed.slice(0, 2).toUpperCase();
+}
+
+function extractPayPalPayer(payer) {
+  if (!payer) return null;
+  const nameParts = [];
+  if (payer.name?.given_name) nameParts.push(payer.name.given_name);
+  if (payer.name?.surname) nameParts.push(payer.name.surname);
+  const fullName = nameParts.join(" ").trim();
+  return {
+    email: payer.email_address || null,
+    name: fullName || null,
+    paypalId: payer.payer_id || null,
+    countryCode: payer.address?.country_code || null,
+  };
 }
 
 function normalizeCode(code) {

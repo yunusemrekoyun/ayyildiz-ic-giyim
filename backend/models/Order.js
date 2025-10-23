@@ -52,6 +52,39 @@ const AddressSnapshotSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const PayerSchema = new mongoose.Schema(
+  {
+    email: { type: String, default: null },
+    name: { type: String, default: null },
+    paypalId: { type: String, default: null },
+    countryCode: { type: String, default: null },
+  },
+  { _id: false }
+);
+
+const PaymentSchema = new mongoose.Schema(
+  {
+    method: { type: String, default: "cod" }, // ödeme şekli
+    txnId: { type: String, default: "" },
+    processorOrderId: { type: String, default: "" },
+    paidAt: { type: Date, default: null },
+    status: {
+      type: String,
+      enum: ["pending", "success", "failed", "refunded"],
+      default: "pending",
+    },
+    simulation: {
+      type: String,
+      enum: ["success", "failure", null],
+      default: null,
+    },
+    currency: { type: String, default: null },
+    amount: { type: Number, default: 0 },
+    payer: { type: PayerSchema, default: null },
+  },
+  { _id: false }
+);
+
 const OrderSchema = new mongoose.Schema(
   {
     orderNumber: { type: String, unique: true, index: true },
@@ -85,21 +118,7 @@ const OrderSchema = new mongoose.Schema(
       index: true,
     },
 
-    payment: {
-      method: { type: String, default: "cod" }, // demo: kapıda ödeme
-      txnId: { type: String, default: "" },
-      paidAt: { type: Date, default: null },
-      status: {
-        type: String,
-        enum: ["pending", "success", "failed", "refunded"],
-        default: "pending",
-      },
-      simulation: {
-        type: String,
-        enum: ["success", "failure", null],
-        default: null,
-      },
-    },
+    payment: { type: PaymentSchema, default: () => ({}) },
   },
   { timestamps: true }
 );

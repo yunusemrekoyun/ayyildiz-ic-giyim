@@ -7,6 +7,7 @@ import LoadingOverlay from "../components/ui/LoadingOverlay.jsx";
 import { useCart } from "../hooks/useCart";
 import { userDetailsApi } from "../api/userDetails";
 import { orderApi } from "../api/orders";
+import { loadPayPalSdk } from "../utils/paypal.js";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -145,6 +146,9 @@ export default function CheckoutPage() {
 
   // Sipariş başarı takip
   const orderPlacedRef = useRef(false);
+  const paypalButtonsRef = useRef(null);
+  const paypalContainerRef = useRef(null);
+  const paypalDraftRef = useRef(null);
 
   // Adresler
   const [addresses, setAddresses] = useState([]);
@@ -153,6 +157,15 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const [banner, setBanner] = useState(null);
   const [simulationMode, setSimulationMode] = useState("success");
+  const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
+  const paypalCurrency = import.meta.env.VITE_PAYPAL_CURRENCY || "EUR";
+  const paypalEnabled = Boolean(paypalClientId);
+  const [paymentMethod, setPaymentMethod] = useState(
+    paypalEnabled ? "paypal" : "cod"
+  );
+  const [paypalError, setPayPalError] = useState(null);
+  const [paypalLoading, setPayPalLoading] = useState(false);
+  const [paypalSummary, setPayPalSummary] = useState(null);
 
   // Adresleri çek
   useEffect(() => {
@@ -180,6 +193,174 @@ export default function CheckoutPage() {
     }
   }, [lines.length, loading, navigate]);
 
+  useEffect(() => {
+    if (paymentMethod !== "paypal") {
+      setPayPalError(null);
+      setPayPalSummary(null);
+      paypalDraftRef.current = null;
+      if (paypalButtonsRef.current) {
+        paypalButtonsRef.current.close();
+        paypalButtonsRef.current = null;
+      }
+      return;
+    }
+
+    if (!paypalEnabled) {
+      setPayPalError("PayPal client ID is not configured on the frontend.");
+      return;
+    }
+
+    if (!hasAddress || !hasItems) {
+      setPayPalError(null);
+      setPayPalSummary(null);
+      paypalDraftRef.current = null;
+      if (paypalButtonsRef.current) {
+        paypalButtonsRef.current.close();
+        paypalButtonsRef.current = null;
+      }
+      return;
+    }
+
+    let cancelled = false;
+    setPayPalError(null);
+
+    (async () => {
+      try {
+        const paypal = await loadPayPalSdk({
+          clientId: paypalClientId,
+          currency: paypalCurrency,
+        });
+        if (cancelled) return;
+
+        if (paypalButtonsRef.current) {
+          paypalButtonsRef.current.close();
+          paypalButtonsRef.current = null;
+        }
+
+        const buttons = paypal.Buttons({
+          style: {
+            layout: "vertical",
+            color: "gold",
+            shape: "rect",
+            label: "pay",
+          },
+          onInit: (_, actions) => {
+            if (!canUsePayPal) {
+              actions.disable();
+            } else {
+              actions.enable();
+            }
+          },
+          createOrder: async () => {
+            setPayPalLoading(true);
+            setPayPalSummary(null);
+            try {
+              const response = await orderApi.createPayPal({
+                addressId,
+                items: checkoutItems,
+                couponCode: coupon?.code || null,
+              });
+              if (!response?.paypalOrderId || !response?.draftId) {
+                throw new Error("Invalid PayPal order response");
+              }
+              paypalDraftRef.current = { id: response.draftId };
+              setPayPalSummary(response.summary || null);
+              return response.paypalOrderId;
+            } catch (error) {
+              const message = getErrorMessage(
+                error,
+                "Unable to create PayPal order"
+              );
+              setPayPalError(message);
+              throw new Error(message);
+            } finally {
+              setPayPalLoading(false);
+            }
+          },
+          onApprove: async (data) => {
+            try {
+              setPlacing(true);
+              const draftId = paypalDraftRef.current?.id;
+              if (!draftId) {
+                throw new Error("PayPal checkout session could not be found");
+              }
+              const result = await orderApi.capturePayPal({
+                paypalOrderId: data.orderID,
+                draftId,
+              });
+              const orderData = result?.order;
+              if (!orderData?.id) {
+                throw new Error("Order confirmation was not returned");
+              }
+              orderPlacedRef.current = true;
+              setPayPalError(null);
+              setPayPalSummary(null);
+              paypalDraftRef.current = null;
+              clearCart();
+              clearCoupon();
+              navigate(`/checkout/success?order=${orderData.id}`, {
+                replace: true,
+              });
+            } catch (error) {
+              const message = getErrorMessage(
+                error,
+                "PayPal payment could not be completed"
+              );
+              setBanner({
+                variant: "danger",
+                message: `PayPal payment failed: ${message}`,
+              });
+            } finally {
+              setPlacing(false);
+            }
+          },
+          onCancel: () => {
+            setPayPalError("PayPal payment was cancelled.");
+          },
+          onError: (error) => {
+            const message = getErrorMessage(
+              error,
+              "Unexpected PayPal integration error"
+            );
+            setPayPalError(message);
+          },
+        });
+        paypalButtonsRef.current = buttons;
+        if (paypalContainerRef.current) {
+          await buttons.render(paypalContainerRef.current);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPayPalError(
+            error?.message || "Unable to load PayPal payment buttons"
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (paypalButtonsRef.current) {
+        paypalButtonsRef.current.close();
+        paypalButtonsRef.current = null;
+      }
+    };
+  }, [
+    paymentMethod,
+    paypalEnabled,
+    paypalClientId,
+    paypalCurrency,
+    hasAddress,
+    hasItems,
+    addressId,
+    checkoutItems,
+    coupon?.code,
+    canUsePayPal,
+    clearCart,
+    clearCoupon,
+    navigate,
+  ]);
+
   if (loading) {
     return (
       <section className="bg-surface-light/60">
@@ -190,7 +371,25 @@ export default function CheckoutPage() {
     );
   }
 
-  const canPlace = !!addressId && checkoutItems.length > 0 && !placing;
+  const hasItems = checkoutItems.length > 0;
+  const hasAddress = Boolean(addressId);
+  const canPlaceOrder =
+    paymentMethod === "cod" && hasAddress && hasItems && !placing;
+  const canUsePayPal =
+    paymentMethod === "paypal" && paypalEnabled && hasAddress && hasItems;
+
+  const getErrorMessage = (error, fallback = "Unexpected error") => {
+    let message = error?.message || fallback;
+    if (typeof message === "string") {
+      try {
+        const parsed = JSON.parse(message);
+        message = parsed?.message || message;
+      } catch {
+        // ignore
+      }
+    }
+    return message;
+  };
 
   const placeOrder = async () => {
     try {
@@ -199,20 +398,15 @@ export default function CheckoutPage() {
         addressId,
         items: checkoutItems,
         couponCode: coupon?.code || null,
-        paymentSimulation: simulationMode,
+        paymentSimulation:
+          paymentMethod === "cod" ? simulationMode || null : null,
       });
       orderPlacedRef.current = true;
       clearCart();
       clearCoupon();
       navigate(`/checkout/success?order=${order.id}`, { replace: true });
     } catch (e) {
-      let message = e?.message || "Unexpected error";
-      try {
-        const parsed = JSON.parse(message);
-        message = parsed?.message || message;
-      } catch {
-        // ignore
-      }
+      const message = getErrorMessage(e);
       // 401 ise login’e gönder
       if (String(e?.message || "").includes("401")) {
         navigate(`/account?view=login&redirect=/checkout`, { replace: true });
@@ -353,44 +547,148 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="mt-6 rounded-xl border border-border bg-surface p-4 text-sm">
-              <p className="font-semibold text-primary">Payment Simulation</p>
-              <p className="mt-1 text-xs text-secondary">
-                Choose how the mock payment should respond while we integrate the real gateway.
-              </p>
-              <div className="mt-3 space-y-2">
-                <label className="flex items-center gap-2 text-secondary">
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold text-primary">
+                Payment Method
+              </h3>
+              <div className="mt-3 space-y-2 text-sm text-secondary">
+                <label className="flex items-center gap-2">
                   <input
                     type="radio"
-                    name="simulation"
-                    value="success"
-                    checked={simulationMode === "success"}
-                    onChange={() => setSimulationMode("success")}
+                    name="payment-method"
+                    value="paypal"
+                    checked={paymentMethod === "paypal"}
+                    onChange={() => setPaymentMethod("paypal")}
+                    disabled={!paypalEnabled}
                   />
-                  <span>Simulate successful payment</span>
+                  <span className="flex-1">
+                    PayPal (Germany)
+                    {!paypalEnabled && (
+                      <span className="ml-2 text-xs text-rose-600">
+                        Set VITE_PAYPAL_CLIENT_ID to enable.
+                      </span>
+                    )}
+                  </span>
                 </label>
-                <label className="flex items-center gap-2 text-secondary">
+                <label className="flex items-center gap-2">
                   <input
                     type="radio"
-                    name="simulation"
-                    value="failure"
-                    checked={simulationMode === "failure"}
-                    onChange={() => setSimulationMode("failure")}
+                    name="payment-method"
+                    value="cod"
+                    checked={paymentMethod === "cod"}
+                    onChange={() => setPaymentMethod("cod")}
                   />
-                  <span>Simulate failed payment</span>
+                  <span className="flex-1">Cash on Delivery</span>
                 </label>
               </div>
-            </div>
 
-            <div className="relative">
-              <LoadingOverlay show={placing} />
-              <button
-                disabled={!canPlace || placing}
-                className="mt-5 w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
-                onClick={placeOrder}
-              >
-                {placing ? "Placing..." : "Place Order"}
-              </button>
+              {paymentMethod === "paypal" && (
+                <div className="mt-4">
+                  <div className="relative rounded-xl border border-border bg-surface p-4">
+                    <LoadingOverlay show={paypalLoading || placing} />
+                    {paypalError && (
+                      <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-600">
+                        {paypalError}
+                      </div>
+                    )}
+                    {paypalSummary && (
+                      <div className="mb-3 space-y-1 text-xs text-secondary">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>
+                            €
+                            {Number(
+                              paypalSummary.subtotal ?? subtotal
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Shipping</span>
+                          <span>
+                            €
+                            {Number(
+                              paypalSummary.shipping ?? shippingFee
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                        {paypalSummary.discountAmount > 0 && (
+                          <div className="flex justify-between text-emerald-600">
+                            <span>Discount</span>
+                            <span>
+                              − €
+                              {Number(
+                                paypalSummary.discountAmount
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="mt-2 flex justify-between font-semibold text-primary">
+                          <span>PayPal Total</span>
+                          <span>
+                            €
+                            {Number(
+                              paypalSummary.total ?? totalDue
+                            ).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={paypalContainerRef} />
+                    {!paypalError && (
+                      <p className="mt-3 text-xs text-secondary">
+                        You will complete your payment securely on PayPal.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {paymentMethod === "cod" && (
+                <>
+                  <div className="mt-6 rounded-xl border border-border bg-surface p-4 text-sm">
+                    <p className="font-semibold text-primary">
+                      Payment Simulation
+                    </p>
+                    <p className="mt-1 text-xs text-secondary">
+                      Choose how the mock payment should respond while testing
+                      offline payments.
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      <label className="flex items-center gap-2 text-secondary">
+                        <input
+                          type="radio"
+                          name="simulation"
+                          value="success"
+                          checked={simulationMode === "success"}
+                          onChange={() => setSimulationMode("success")}
+                        />
+                        <span>Simulate successful payment</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-secondary">
+                        <input
+                          type="radio"
+                          name="simulation"
+                          value="failure"
+                          checked={simulationMode === "failure"}
+                          onChange={() => setSimulationMode("failure")}
+                        />
+                        <span>Simulate failed payment</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <LoadingOverlay show={placing} />
+                    <button
+                      disabled={!canPlaceOrder || placing}
+                      className="mt-5 w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
+                      onClick={placeOrder}
+                    >
+                      {placing ? "Placing..." : "Place Order"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
