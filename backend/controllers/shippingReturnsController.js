@@ -1,9 +1,6 @@
-// backend/controllers/shippingReturnsController.js
 import ShippingReturns from "../models/ShippingReturns.js";
 
-/**
- * --- Yardımcılar ---
- */
+/* ----------------- Yardımcılar ----------------- */
 const ensureArray = (v) => {
   if (!v) return [];
   if (Array.isArray(v)) return v.map((i) => String(i ?? ""));
@@ -12,7 +9,10 @@ const ensureArray = (v) => {
       const parsed = JSON.parse(v);
       if (Array.isArray(parsed)) return parsed.map((i) => String(i ?? ""));
     } catch {}
-    return v.split("\n").map((s) => String(s));
+    return v
+      .split("\n")
+      .map((s) => String(s))
+      .filter(Boolean);
   }
   return [];
 };
@@ -31,31 +31,34 @@ const sanitizeSection = (s = {}) => {
   return { title, paragraphs, list: normalizedList };
 };
 
+/* ----------------- shapeToPage ----------------- */
 /**
  * DB'deki eski/yeni şemaları tek bir "frontend-friendly" objeye çevirir.
- * FRONTEND BEKLENTİSİ:
- * {
- *   heroTitle, heroSubtitle,
- *   sections: [{ title, paragraphs[], list: { heading, items[] } }],
- *   sidebar: { quickFacts[], helpBoxHtml },
- *   seo: { title, description, keywords[] },
- *   isActive
- * }
  */
 const shapeToPage = (doc) => {
   if (!doc) return null;
   const d = typeof doc.toObject === "function" ? doc.toObject() : doc;
 
-  // Eski alanlardan (heroIntro/quickFacts/sidebarContact) yeni yapıya mapping
   const heroSubtitle = (d.heroSubtitle ?? d.heroIntro ?? "").toString();
-  const quickFacts =
-    d.sidebar?.quickFacts ??
-    d.quickFacts ?? // legacy
-    [];
+
+  // ✅ Quick facts (güvenli fallback)
+  let quickFacts = [];
+  if (Array.isArray(d.sidebar?.quickFacts) && d.sidebar.quickFacts.length > 0) {
+    quickFacts = d.sidebar.quickFacts;
+  } else if (Array.isArray(d.quickFacts) && d.quickFacts.length > 0) {
+    quickFacts = d.quickFacts;
+  } else if (
+    Array.isArray(d.sidebarContact?.quickFacts) &&
+    d.sidebarContact.quickFacts.length > 0
+  ) {
+    quickFacts = d.sidebarContact.quickFacts;
+  }
+
+  // ✅ Help box (HTML)
   const helpBoxHtml =
-    d.sidebar?.helpBoxHtml ??
-    d.sidebarContact?.note ?? // legacy -> note'u HTML kutusu gibi göster
-    "";
+    d.sidebar?.helpBoxHtml && d.sidebar.helpBoxHtml.trim().length
+      ? d.sidebar.helpBoxHtml
+      : d.sidebarContact?.note ?? "";
 
   return {
     id: d._id?.toString?.() || d.id,
@@ -63,7 +66,7 @@ const shapeToPage = (doc) => {
     heroSubtitle,
     sections: Array.isArray(d.sections) ? d.sections : [],
     sidebar: {
-      quickFacts: Array.isArray(quickFacts) ? quickFacts : [],
+      quickFacts,
       helpBoxHtml: helpBoxHtml.toString(),
     },
     isActive: d.isActive !== false,
@@ -77,10 +80,7 @@ const shapeToPage = (doc) => {
   };
 };
 
-/**
- * --- PUBLIC — GET /api/shipping-returns ---
- * FRONTEND get() => data.page bekliyor
- */
+/* ----------------- PUBLIC ----------------- */
 export async function getPublicShippingReturns(req, res) {
   try {
     const doc =
@@ -89,7 +89,6 @@ export async function getPublicShippingReturns(req, res) {
       }).lean()) || null;
 
     if (!doc || doc.isActive === false) {
-      // kayıt yoksa "aktif varsay" + boş güvenli default
       return res.json({
         page: {
           heroTitle: "Shipping & Returns",
@@ -108,10 +107,7 @@ export async function getPublicShippingReturns(req, res) {
   }
 }
 
-/**
- * --- ADMIN — GET /api/shipping-returns/manage ---
- * FRONTEND manage() => data.page bekliyor
- */
+/* ----------------- ADMIN (GET) ----------------- */
 export async function getManageShippingReturns(req, res) {
   try {
     const doc =
@@ -138,24 +134,18 @@ export async function getManageShippingReturns(req, res) {
   }
 }
 
-/**
- * --- ADMIN — PUT /api/shipping-returns ---
- * FRONTEND upsert() => data.page bekliyor
- * Payload frontend şemasında gelecek (heroSubtitle + sidebar.quickFacts/helpBoxHtml)
- * fakat DB'de legacy alanlar varsa yine de doğru yazalım (yeni şemaya set edelim).
- */
+/* ----------------- ADMIN (PUT / UPSERT) ----------------- */
 export async function upsertShippingReturns(req, res) {
   try {
     const payload = req.body || {};
 
-    // Frontend şemasını normalize et
     const heroTitle = String(payload.heroTitle ?? "Shipping & Returns").trim();
     const heroSubtitle = String(payload.heroSubtitle ?? "").trim();
 
     const rawSections = Array.isArray(payload.sections) ? payload.sections : [];
     const sections = rawSections.map(sanitizeSection);
 
-    // sidebar (yeni)
+    // Yeni model yapısı (frontend’den gelen)
     const sidebar = {
       quickFacts: ensureArray(payload?.sidebar?.quickFacts).map((i) =>
         String(i).trim()
@@ -174,13 +164,28 @@ export async function upsertShippingReturns(req, res) {
       keywords: ensureArray(payload?.seo?.keywords).map((k) => k.trim()),
     };
 
-    // DB'ye YENİ şema ile yazıyoruz (legacy alanları artık doldurmuyoruz)
+    /* ---------------------------------------------
+       Mevcut şemada "sidebar" yok. 
+       Bu yüzden hem yeni alanı hem de legacy alanları yazıyoruz.
+    --------------------------------------------- */
+    const existing = await ShippingReturns.findOne({
+      singleton: "shipping_returns",
+    }).lean();
+
+    const mergedSidebarContact = {
+      ...(existing?.sidebarContact || {}),
+      note: sidebar.helpBoxHtml, // yeni metinle güncelle
+    };
+
     const update = {
       singleton: "shipping_returns",
       heroTitle,
       heroSubtitle,
       sections,
-      sidebar,
+      sidebar, // ileride kullanılmak üzere tut
+      // legacy alanlar (şemanla uyumlu)
+      quickFacts: sidebar.quickFacts,
+      sidebarContact: mergedSidebarContact,
       isActive,
       seo,
     };

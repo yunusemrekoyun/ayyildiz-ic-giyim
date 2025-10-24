@@ -1,5 +1,5 @@
 // src/components/layout/AdminLayout.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Menu,
@@ -17,15 +17,15 @@ import {
   Users,
   Percent,
   TicketPercent,
-  Megaphone,
-  MessageSquare,
+  // Megaphone,
+  // MessageSquare,
   Settings,
   Bell,
   Search,
   Home,
   LogOut,
   Sparkles,
-  SlidersHorizontal,
+  // SlidersHorizontal,
 } from "lucide-react";
 import { authApi } from "../../api/auth";
 import { getUser as getUserCache } from "../../api/client";
@@ -77,6 +77,8 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
           { to: "/admin/categories", label: "Categories", Icon: Tags },
           { to: "/admin/sets", label: "Sets", Icon: Layers },
           { to: "/admin/media", label: "Media Library", Icon: Image },
+          { to: "/admin/discounts", label: "Discounts", Icon: Percent },
+          { to: "/admin/coupons", label: "Coupons", Icon: TicketPercent },
         ],
       },
       {
@@ -84,26 +86,6 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
         items: [
           { to: "/admin/orders", label: "Orders", Icon: ShoppingCart },
           { to: "/admin/customers", label: "Customers", Icon: Users },
-        ],
-      },
-      {
-        label: "Marketing",
-        items: [
-          { to: "/admin/campaigns", label: "Campaigns", Icon: Megaphone },
-          {
-            to: "/admin/campaigns/layout",
-            label: "Campaign Layout",
-            Icon: SlidersHorizontal,
-          },
-          { to: "/admin/discounts", label: "Discounts", Icon: Percent },
-          { to: "/admin/coupons", label: "Coupons", Icon: TicketPercent },
-        ],
-      },
-      {
-        label: "Experience",
-        items: [
-          { to: "/admin/settings/hero", label: "Hero Manager", Icon: Sparkles },
-          { to: "/admin/settings/reviews", label: "Reviews", Icon: MessageSquare },
         ],
       },
       {
@@ -123,14 +105,18 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
     <div className="flex min-h-screen bg-[var(--color-bg-admin)] text-[var(--color-text-admin)]">
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex md:flex-col border-r border-[var(--color-border-admin)]/30 bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] transition-[width] duration-300 ${sidebarCollapsed ? "md:w-20" : "md:w-72"}`}
+        className={`hidden md:flex md:flex-col border-r border-[var(--color-border-admin)]/30 bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] transition-[width] duration-300
+        ${
+          sidebarCollapsed ? "md:w-20" : "md:w-72"
+        } md:sticky md:top-0 md:h-screen`}
       >
         <SidebarHeader
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((prev) => !prev)}
         />
 
-        <nav className="flex-1 overflow-y-auto px-3 py-6 space-y-6">
+        {/* nav kendi içinde scrollable */}
+        <nav className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden px-3 py-6 space-y-6">
           {menu.map((section) => (
             <SidebarSection
               key={section.label}
@@ -165,7 +151,8 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
           actions={actions}
         />
 
-        <main className="flex-1 overflow-y-auto">
+        {/* body scroll'u: tüm sayfa scroll, kolonu iç scroll yapmıyoruz */}
+        <main className="flex-1">
           <div className="mx-auto w-full max-w-[1400px] px-4 pb-8 pt-6 sm:px-6 lg:px-8">
             {children}
           </div>
@@ -186,7 +173,9 @@ function SidebarHeader({ collapsed, onToggle }) {
         </div>
         {!collapsed && (
           <div className="flex flex-col leading-tight">
-            <span className="text-base font-semibold tracking-tight">Ayyıldız</span>
+            <span className="text-base font-semibold tracking-tight">
+              Ayyıldız
+            </span>
             <span className="text-xs text-white/70">Admin Console</span>
           </div>
         )}
@@ -196,7 +185,11 @@ function SidebarHeader({ collapsed, onToggle }) {
         className="hidden md:inline-flex rounded-lg p-2 text-white/80 hover:bg-white/10"
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        {collapsed ? (
+          <ChevronRight className="h-5 w-5" />
+        ) : (
+          <ChevronLeft className="h-5 w-5" />
+        )}
       </button>
     </div>
   );
@@ -214,11 +207,7 @@ function SidebarSection({ section, collapsed, onNavigate }) {
       <ul className="space-y-1">
         {section.items.map((item) => (
           <li key={item.to}>
-            <NavItem
-              {...item}
-              collapsed={collapsed}
-              onNavigate={onNavigate}
-            />
+            <NavItem {...item} collapsed={collapsed} onNavigate={onNavigate} />
           </li>
         ))}
       </ul>
@@ -236,9 +225,13 @@ function SidebarFooter({ collapsed, me }) {
         {!collapsed && (
           <div className="min-w-0">
             <div className="truncate text-sm font-medium text-white">
-              {me?.firstName ? `${me.firstName} ${me.lastName || ""}`.trim() : "Admin"}
+              {me?.firstName
+                ? `${me.firstName} ${me.lastName || ""}`.trim()
+                : "Admin"}
             </div>
-            <div className="truncate text-xs text-white/70">{me?.email || ""}</div>
+            <div className="truncate text-xs text-white/70">
+              {me?.email || ""}
+            </div>
           </div>
         )}
       </div>
@@ -303,7 +296,9 @@ function PageHeader({ title, subtitle, actions }) {
             </p>
           )}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {actions && (
+          <div className="flex flex-wrap items-center gap-2">{actions}</div>
+        )}
       </div>
     </div>
   );
@@ -313,8 +308,25 @@ function PageHeader({ title, subtitle, actions }) {
 
 // eslint-disable-next-line no-unused-vars
 function NavItem({ to, label, Icon, collapsed, onNavigate }) {
+  const location = useLocation();
+  const linkRef = useRef(null);
+
+  // Aktif change olduğunda menü öğesini görünür alana getir
+  useEffect(() => {
+    const isActive =
+      location.pathname === to || location.pathname.startsWith(to + "/");
+    if (isActive && linkRef.current) {
+      try {
+        linkRef.current.scrollIntoView({ block: "nearest", inline: "nearest" });
+      } catch {
+        // ignore
+      }
+    }
+  }, [location.pathname, to]);
+
   return (
     <NavLink
+      ref={linkRef}
       to={to}
       title={label}
       onClick={() => {
@@ -341,17 +353,27 @@ function NavItem({ to, label, Icon, collapsed, onNavigate }) {
 function MobileDrawer({ open, onClose, menu, me, onLogout }) {
   return (
     <div
-      className={`md:hidden fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}
+      className={`md:hidden fixed inset-0 z-50 ${
+        open ? "" : "pointer-events-none"
+      }`}
     >
       <div
-        className={`absolute inset-0 bg-black/50 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-black/50 transition-opacity ${
+          open ? "opacity-100" : "opacity-0"
+        }`}
         onClick={onClose}
       />
       <div
-        className={`absolute left-0 top-0 h-full w-[86%] max-w-80 transform bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] shadow-xl transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`absolute left-0 top-0 h-full w-[86%] max-w-80 transform bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] shadow-xl transition-transform duration-300 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
-          <Link to="/admin/dashboard" className="flex items-center gap-3" onClick={onClose}>
+          <Link
+            to="/admin/dashboard"
+            className="flex items-center gap-3"
+            onClick={onClose}
+          >
             <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/15 text-white">
               <Sparkles className="h-5 w-5" />
             </div>
@@ -367,8 +389,8 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
         </div>
 
         <div className="flex h-[calc(100%-4rem)] flex-col justify-between">
-         <div className="overflow-y-auto px-3 pb-6 pt-4 space-y-6">
-           {menu.map((section) => (
+          <div className="overflow-y-auto px-3 pb-6 pt-4 space-y-6">
+            {menu.map((section) => (
               <SidebarSection
                 key={section.label}
                 section={section}
@@ -385,9 +407,13 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
               </div>
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">
-                  {me?.firstName ? `${me.firstName} ${me.lastName || ""}`.trim() : "Admin"}
+                  {me?.firstName
+                    ? `${me.firstName} ${me.lastName || ""}`.trim()
+                    : "Admin"}
                 </div>
-                <div className="truncate text-xs text-white/70">{me?.email || ""}</div>
+                <div className="truncate text-xs text-white/70">
+                  {me?.email || ""}
+                </div>
               </div>
             </div>
             <button
@@ -451,7 +477,9 @@ function UserMenu({ me, onLogout }) {
         <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-xl">
           <div className="px-4 py-3">
             <div className="text-sm font-semibold text-[var(--color-text-admin)]">
-              {me?.firstName ? `${me.firstName} ${me.lastName || ""}`.trim() : "Admin"}
+              {me?.firstName
+                ? `${me.firstName} ${me.lastName || ""}`.trim()
+                : "Admin"}
             </div>
             <div className="truncate text-xs text-[var(--color-text-admin-muted)]">
               {me?.email || ""}
@@ -506,7 +534,11 @@ function Breadcrumbs({ items = [] }) {
                 {crumb.label}
               </Link>
             )}
-            {!last && <span className="mx-2 text-[var(--color-text-admin-muted)]">/</span>}
+            {!last && (
+              <span className="mx-2 text-[var(--color-text-admin-muted)]">
+                /
+              </span>
+            )}
           </span>
         );
       })}

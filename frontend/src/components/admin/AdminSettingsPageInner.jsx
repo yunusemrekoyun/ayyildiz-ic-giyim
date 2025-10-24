@@ -1,9 +1,10 @@
+// src/components/admin/AdminSettingsPageInner.jsx
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { heroApi } from "../../api/heroes";
 import { campaignApi } from "../../api/campaigns";
 import ShippingSettingsCard from "./settings/ShippingSettingsCard.jsx";
 import ReviewSettingsCard from "./settings/ReviewSettingsCard.jsx";
-import { Link } from "react-router-dom";
 import {
   Wand2,
   ArrowRight,
@@ -14,13 +15,120 @@ import {
   FileText,
   Mail,
   HelpCircle,
-  Truck, // 🔹 eklendi
+  Truck,
   ShieldCheck,
+  LayoutDashboard,
 } from "lucide-react";
 
+function SectionBlock({ title, subtitle, children }) {
+  return (
+    <section className="mt-8">
+      <div className="mb-4">
+        <h3 className="text-base font-semibold">{title}</h3>
+        {subtitle && (
+          <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
+            {subtitle}
+          </p>
+        )}
+      </div>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+function SettingsCard({
+  to,
+  icon: Icon,
+  mediaIcon: MediaIcon,
+  mediaImage,
+  mediaAlt = "",
+  title,
+  description,
+  footer,
+  media,
+  loading = false,
+}) {
+  const Wrapper = to ? Link : "div";
+  const wrapperProps = to ? { to } : {};
+
+  const cover = loading ? (
+    <div className="h-full w-full animate-pulse bg-[var(--color-bg-hover)]" />
+  ) : media ? (
+    media
+  ) : mediaImage ? (
+    <img
+      src={mediaImage}
+      alt={mediaAlt || title}
+      className="h-full w-full object-cover"
+    />
+  ) : MediaIcon ? (
+    <div className="relative h-full w-full bg-gradient-to-br from-[var(--color-surface-light)] via-[var(--color-surface)] to-[var(--color-surface-hover)]">
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="grid h-24 w-24 place-items-center rounded-2xl bg-[var(--color-accent)]/15 ring-1 ring-[var(--color-accent)]/30 backdrop-blur-md">
+          <MediaIcon className="h-12 w-12 text-[var(--color-accent)]" />
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
+      <LayoutDashboard className="h-6 w-6" />
+    </div>
+  );
+
+  return (
+    <Wrapper
+      {...wrapperProps}
+      className={[
+        "group relative overflow-hidden rounded-2xl border",
+        "border-[var(--color-border-admin)]",
+        to
+          ? "bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
+          : "bg-[var(--color-bg-admin)]",
+      ].join(" ")}
+    >
+      <div className="relative aspect-[16/9] w-full overflow-hidden">
+        {cover}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-black/5 to-transparent" />
+      </div>
+
+      {/* Body */}
+      <div className="flex items-center justify-between gap-3 p-4">
+        <div className="flex items-center gap-3">
+          <div className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--color-accent)]/15 ring-1 ring-[var(--color-accent)]/30">
+            {Icon ? (
+              <Icon className="h-6 w-6 text-[var(--color-accent)]" />
+            ) : (
+              <Wand2 className="h-6 w-6 text-[var(--color-accent)]" />
+            )}
+          </div>
+          <div>
+            <div className="font-semibold text-[var(--color-text-admin)]">
+              {title}
+            </div>
+            {description && (
+              <div className="text-xs text-[var(--color-text-admin-muted)]">
+                {description}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {to && (
+          <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
+            <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+          </div>
+        )}
+      </div>
+
+      {footer && <div className="px-4 pb-4">{footer}</div>}
+    </Wrapper>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 export default function AdminSettingsPageInner() {
   const [heroes, setHeroes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingHeroes, setLoadingHeroes] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
 
@@ -52,7 +160,7 @@ export default function AdminSettingsPageInner() {
         setCampaigns(campaignList);
       } finally {
         if (mounted) {
-          setLoading(false);
+          setLoadingHeroes(false);
           setLoadingCampaigns(false);
         }
       }
@@ -66,7 +174,7 @@ export default function AdminSettingsPageInner() {
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <div className="xl:col-span-8">
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          {/* ----- Header ----- */}
+          {/* Header */}
           <div className="flex flex-col gap-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
               <Wand2 className="h-4 w-4" />
@@ -76,364 +184,139 @@ export default function AdminSettingsPageInner() {
               Site Settings & Content Blocks
             </h2>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Manage hero banners, about & contact pages, campaigns, and global
-              content.
+              Manage hero banners, page contents, campaigns, policies and quick
+              settings.
             </p>
           </div>
 
-          {/* ----- Main Cards Grid ----- */}
-          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* --- HERO --- */}
-            <Link
+          {/* --- Categories --- */}
+          <SectionBlock
+            title="Home & Marketing"
+            subtitle="Hero ve kampanya içeriklerini yönetin."
+          >
+            <SettingsCard
               to="/admin/settings/hero"
-              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
-            >
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
-                {loading ? (
-                  <div className="h-full w-full animate-pulse bg-[var(--color-bg-hover)]" />
-                ) : topHero ? (
-                  topHero.image ? (
-                    <img
-                      src={topHero.image.url}
-                      alt={topHero.title}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                    />
-                  ) : topHero.video ? (
-                    <video
-                      className="h-full w-full object-cover"
-                      src={topHero.video.url}
-                      muted
-                      playsInline
-                      autoPlay
-                      loop
-                    />
-                  ) : (
-                    <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                      No media
-                    </div>
-                  )
-                ) : (
-                  <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                    No heroes yet
-                  </div>
-                )}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
-                {topHero && (
-                  <div className="absolute bottom-0 left-0 p-4 text-white">
-                    <div className="text-lg font-semibold line-clamp-1">
-                      {topHero.title}
-                    </div>
-                    <div className="text-xs opacity-90 line-clamp-2">
-                      {topHero.subtitle}
-                    </div>
-                  </div>
-                )}
-              </div>
+              icon={topHero?.video ? Video : ImageIcon}
+              mediaImage={
+                !loadingHeroes && topHero?.image?.url
+                  ? topHero.image.url
+                  : undefined
+              }
+              mediaIcon={
+                !loadingHeroes && !topHero?.image?.url
+                  ? topHero?.video
+                    ? Video
+                    : ImageIcon
+                  : undefined
+              }
+              mediaAlt={topHero?.title || "Home Hero"}
+              title="Home Hero"
+              description={
+                heroes.length
+                  ? `${heroes.length} slide • top: ${topHero?.title || "—"}`
+                  : "Create your first hero"
+              }
+              loading={loadingHeroes}
+            />
 
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
-                    {topHero?.video ? (
-                      <Video className="h-5 w-5 text-white/90" />
-                    ) : (
-                      <ImageIcon className="h-5 w-5 text-white/90" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-semibold">Home Hero</div>
-                    <div className="text-xs text-[var(--color-text-admin-muted)]">
-                      {heroes.length
-                        ? `${heroes.length} slide • top: ${
-                            topHero?.title || "—"
-                          }`
-                        : "Create your first hero"}
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
-                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
-                </div>
-              </div>
-            </Link>
+            <SettingsCard
+              to="/admin/campaigns"
+              icon={Megaphone}
+              mediaImage={
+                !loadingCampaigns && topCampaign?.image?.url
+                  ? topCampaign.image.url
+                  : undefined
+              }
+              mediaIcon={
+                !loadingCampaigns && !topCampaign?.image?.url
+                  ? Megaphone
+                  : undefined
+              }
+              mediaAlt={topCampaign?.name || "Home Campaigns"}
+              title="Home Campaigns"
+              description={
+                campaigns.length
+                  ? `${campaigns.length} total • top: ${
+                      topCampaign?.name || "—"
+                    }`
+                  : "Create your first campaign"
+              }
+              loading={loadingCampaigns}
+            />
+          </SectionBlock>
 
-            {/* --- CAMPAIGNS --- */}
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] transition-colors">
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
-                {loadingCampaigns ? (
-                  <div className="h-full w-full animate-pulse bg-[var(--color-bg-hover)]" />
-                ) : topCampaign ? (
-                  topCampaign.image ? (
-                    <img
-                      src={topCampaign.image.url}
-                      alt={topCampaign.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                      No image
-                    </div>
-                  )
-                ) : (
-                  <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                    No campaigns yet
-                  </div>
-                )}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
-                {topCampaign && (
-                  <div className="absolute bottom-0 left-0 p-4 text-white">
-                    <div className="text-lg font-semibold line-clamp-1">
-                      {topCampaign.name}
-                    </div>
-                    <div className="text-xs opacity-90 line-clamp-2">
-                      {topCampaign.description || ""}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
-                    <Megaphone className="h-5 w-5 text-white/90" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Home Campaigns</div>
-                    <div className="text-xs text-[var(--color-text-admin-muted)]">
-                      {campaigns.length
-                        ? `${campaigns.length} total • top: ${
-                            topCampaign?.name || "—"
-                          }`
-                        : "Create your first campaign"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Link
-                    to="/admin/campaigns"
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-                  >
-                    Manage
-                  </Link>
-                  <Link
-                    to="/admin/campaigns/layout"
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-xs font-semibold text-[var(--color-bg-admin)] hover:opacity-90"
-                  >
-                    Layout
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* --- ABOUT PAGE SETTINGS --- */}
-            <Link
+          <SectionBlock
+            title="Pages"
+            subtitle="Statik sayfa içeriklerini düzenleyin."
+          >
+            <SettingsCard
               to="/admin/settings/about"
-              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
-            >
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
-                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                  <FileText className="h-6 w-6" />
-                </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
-              </div>
-
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
-                    <Wand2 className="h-5 w-5 text-white/90" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">About Page Content</div>
-                    <div className="text-xs text-[var(--color-text-admin-muted)]">
-                      Manage story, values, stats and hero visuals
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
-                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
-                </div>
-              </div>
-            </Link>
-
-            {/* --- CONTACT PAGE SETTINGS --- */}
-            <Link
+              icon={FileText}
+              mediaIcon={FileText}
+              title="About Page Content"
+            />
+            <SettingsCard
               to="/admin/settings/contact"
-              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
-            >
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
-                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                  <Mail className="h-6 w-6" />
-                </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
-              </div>
-
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
-                    <Mail className="h-5 w-5 text-white/90" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Contact Page Content</div>
-                    <div className="text-xs text-[var(--color-text-admin-muted)]">
-                      Manage contact info, working hours and form behavior
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
-                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
-                </div>
-              </div>
-            </Link>
-
-            {/* --- FAQ PAGE SETTINGS --- */}
-            <Link
+              icon={Mail}
+              mediaIcon={Mail}
+              title="Contact Page Content"
+            />
+            <SettingsCard
               to="/admin/settings/faq"
-              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
-            >
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
-                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                  <HelpCircle className="h-6 w-6" />
-                </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
-              </div>
-
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
-                    <HelpCircle className="h-5 w-5 text-white/90" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">FAQ Page Content</div>
-                    <div className="text-xs text-[var(--color-text-admin-muted)]">
-                      Manage FAQ sections, questions and answers
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
-                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
-                </div>
-              </div>
-            </Link>
-
-            {/* --- SHIPPING & RETURNS PAGE SETTINGS --- */}
-            <Link
+              icon={HelpCircle}
+              mediaIcon={HelpCircle}
+              title="FAQ Page Content"
+            />
+            <SettingsCard
               to="/admin/settings/shipping-returns"
-              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
-            >
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
-                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                  <Truck className="h-6 w-6" />
-                </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
-              </div>
+              icon={Truck}
+              mediaIcon={Truck}
+              title="Shipping & Returns"
+            />
+          </SectionBlock>
 
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
-                    <Truck className="h-5 w-5 text-white/90" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">
-                      Shipping & Returns Content
-                    </div>
-                    <div className="text-xs text-[var(--color-text-admin-muted)]">
-                      Manage shipping destinations, rates, returns & sidebar
-                      info
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
-                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
-                </div>
-              </div>
-            </Link>
-            {/* --- PRIVACY POLICY PAGE SETTINGS --- */}
-            <Link
+          <SectionBlock title="Policies" subtitle="Yasal metinleri yönetin.">
+            <SettingsCard
               to="/admin/settings/privacy"
-              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
-            >
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
-                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                  <ShieldCheck className="h-6 w-6" />
-                </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
-              </div>
-
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
-                    <ShieldCheck className="h-5 w-5 text-white/90" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Privacy Policy Content</div>
-                    <div className="text-xs text-[var(--color-text-admin-muted)]">
-                      Manage sections, anchors and footer notice
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
-                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
-                </div>
-              </div>
-            </Link>
-
-            {/* --- TERMS OF SERVICE PAGE SETTINGS --- */}
-            <Link
+              icon={ShieldCheck}
+              mediaIcon={ShieldCheck}
+              title="Privacy Policy"
+            />
+            <SettingsCard
               to="/admin/settings/terms"
-              className="group relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] hover:bg-[var(--color-bg-card)] transition-colors"
-            >
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--color-bg-card)]">
-                <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                  <FileText className="h-6 w-6" />
-                </div>
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent" />
-              </div>
+              icon={FileText}
+              mediaIcon={FileText}
+              title="Terms of Service"
+            />
+          </SectionBlock>
 
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
-                    <FileText className="h-5 w-5 text-white/90" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">
-                      Terms of Service Content
-                    </div>
-                    <div className="text-xs text-[var(--color-text-admin-muted)]">
-                      Manage sections, clauses and footer note
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-full border border-[var(--color-border-admin)] p-2 group-hover:bg-[var(--color-bg-hover)]">
-                  <ArrowRight className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
-                </div>
-              </div>
-            </Link>
-            {/* --- Shipping & Review small cards (legacy settings) --- */}
-            <ShippingSettingsCard />
-            <ReviewSettingsCard />
-
-            {/* --- THEME COLORS (placeholder) --- */}
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]">
-              <div className="flex items-center gap-3 p-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">
-                  <Palette className="h-5 w-5 text-white/90" />
-                </div>
-                <div>
-                  <div className="font-semibold">Theme & Colors</div>
-                  <div className="text-xs text-[var(--color-text-admin-muted)]">
-                    (soon) Adjust palette tokens
-                  </div>
-                </div>
-              </div>
-              <div className="px-4 pb-4">
-                <div className="h-32 rounded-xl border border-dashed border-[var(--color-border-admin)]/50 bg-[var(--color-bg-card)]/40" />
+          <SectionBlock
+            title="Quick & Legacy Settings"
+            subtitle="Geçiş dönemine ait küçük ayarlar."
+          >
+            <div className="col-span-1 md:col-span-2">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <ShippingSettingsCard />
+                <ReviewSettingsCard />
               </div>
             </div>
-          </div>
+          </SectionBlock>
+
+          <SectionBlock
+            title="Appearance"
+            subtitle="Tema ve renkler (yakında)."
+          >
+            <SettingsCard
+              icon={Palette}
+              mediaIcon={Palette}
+              title="Theme & Colors"
+              description="(soon) Adjust palette tokens"
+            />
+          </SectionBlock>
         </div>
       </div>
 
-      {/* ----- Tips Sidebar ----- */}
+      {/* Tips Sidebar */}
       <aside className="xl:col-span-4">
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
           <h3 className="text-lg font-semibold">Tips</h3>

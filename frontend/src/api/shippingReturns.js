@@ -3,7 +3,7 @@ import { http } from "./client";
 
 export const shippingReturnsApi = {
   async get() {
-    const data = await http("/shipping-returns");
+    const data = await http(`/shipping-returns?_=${Date.now()}`);
     return (
       data?.page || {
         heroTitle: "",

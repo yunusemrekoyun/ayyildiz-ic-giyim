@@ -37,6 +37,7 @@ export default function ShippingReturnsSettings() {
   const [banner, setBanner] = useState(null);
 
   const [form, setForm] = useState(EMPTY_MODEL);
+
   function deepMergeKeepDraft(prev, srv) {
     // Basit alanlar
     const out = {
@@ -467,7 +468,30 @@ function SectionsEditor({ sections = [], onChange }) {
 
 function SidebarEditor({ sidebar, onChange }) {
   const side = sidebar || { quickFacts: [], helpBoxHtml: "" };
-
+  function convertTextToHtml(raw = "") {
+    if (!raw) return "";
+    // 1) HTML injection koruması
+    const escaped = raw
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    // 2) Satır sonlarını <br> yap
+    const withBreaks = escaped.replace(/\n/g, "<br>");
+    // 3) Basit e-posta tespiti
+    const withMailLinks = withBreaks.replace(
+      /\b([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})\b/gi,
+      `<a href="mailto:$1" class="text-accent underline">$1</a>`
+    );
+    // 4) URL tespiti (https:// veya www.)
+    const withLinks = withMailLinks.replace(
+      /\b(https?:\/\/[^\s<]+|www\.[^\s<]+)\b/g,
+      (match) => {
+        const href = match.startsWith("http") ? match : `https://${match}`;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-accent underline">${match}</a>`;
+      }
+    );
+    return withLinks;
+  }
   function updateQuickFacts(values) {
     onChange({ ...side, quickFacts: values });
   }
@@ -491,12 +515,27 @@ function SidebarEditor({ sidebar, onChange }) {
         <div className="md:col-span-5">
           <Label>Help box (HTML allowed)</Label>
           <textarea
-            value={side.helpBoxHtml || ""}
-            onChange={(e) => onChange({ ...side, helpBoxHtml: e.target.value })}
+            value={side.helpBoxHtmlRaw || ""} // ham metni ayrı saklayalım
+            onChange={(e) => {
+              const raw = e.target.value;
+              const html = convertTextToHtml(raw);
+              onChange({
+                ...side,
+                helpBoxHtml: html, // backend'e gidecek HTML versiyon
+                helpBoxHtmlRaw: raw, // formda gösterilecek ham metin
+              });
+            }}
             rows={10}
             className="mt-2 w-full rounded-2xl border border-[var(--color-border-admin)] bg-white px-4 py-3 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] focus:ring-2 focus:ring-[var(--color-text-admin)]/10"
             placeholder='Need assistance? Reach us at <a href="mailto:returns@..." class="text-accent underline">returns@...</a>'
           />
+          {/* Preview (optional) */}
+          {side.helpBoxHtml && (
+            <div
+              className="mt-3 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]/40 p-3 text-sm"
+              dangerouslySetInnerHTML={{ __html: side.helpBoxHtml }}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -755,6 +794,11 @@ function normalizeIncoming(data) {
       ? safe.sidebar.quickFacts
       : [],
     helpBoxHtml: String(safe.sidebar?.helpBoxHtml || ""),
+    helpBoxHtmlRaw: safe.sidebar?.helpBoxHtml
+      ? safe.sidebar.helpBoxHtml
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<[^>]*>/g, "") // HTML'i sade metne çevir
+      : "",
   };
   safe.seo = {
     title: String(safe.seo?.title || ""),
