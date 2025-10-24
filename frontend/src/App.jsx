@@ -1,3 +1,4 @@
+// src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LayoutSelector from "./components/layout/LayoutSelector";
 import HomePage from "./pages/HomePage";
@@ -41,13 +42,18 @@ import PrivacyPolicySettings from "./pages/admin/PrivacyPolicySettings.jsx";
 import TermsSettings from "./pages/admin/TermsSettings.jsx";
 import ThemeSettingsPage from "./pages/ThemeSettingsPage.jsx";
 
-// 👇 Ekledik
+// 👇 Global scroll handler
 import ScrollToTop from "./components/ScrollToTop.jsx";
 
+// 👇 Tema: DB'deki aktif temayı yükleyip :root'a uygular
+import { useThemeInit } from "./utils/theme";
+
 export default function App() {
+  // Uygulama açılır açılmaz aktif temayı uygula (storefront + admin)
+  useThemeInit();
+
   return (
     <BrowserRouter>
-      {/* 👇 Global scroll handler */}
       <ScrollToTop />
 
       <Routes>

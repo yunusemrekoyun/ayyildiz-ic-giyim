@@ -1,5 +1,36 @@
 // src/utils/theme.js
 
+import { useEffect } from "react";
+import { themeApi } from "../api/theme";
+
+export function useThemeInit() {
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await themeApi.get(); // GET /api/theme
+        if (!data) return;
+
+        const storeVars = data?.store || {};
+        const adminVars = data?.admin || {};
+        applyThemeVars({ store: storeVars, admin: adminVars });
+
+        // Performans için localStorage'a da kaydet
+        localStorage.setItem(
+          "activeTheme",
+          JSON.stringify({ storeVars, adminVars })
+        );
+      } catch (err) {
+        console.error("useThemeInit error:", err);
+        // eğer offline/500 olursa son localStorage temayı uygula
+        const saved = localStorage.getItem("activeTheme");
+        if (saved) {
+          const { storeVars, adminVars } = JSON.parse(saved);
+          applyThemeVars({ store: storeVars, admin: adminVars });
+        }
+      }
+    })();
+  }, []);
+}
 // DOM'a CSS değişkenlerini uygular
 export function applyThemeVars({ store = {}, admin = {} } = {}) {
   const root = document.documentElement;

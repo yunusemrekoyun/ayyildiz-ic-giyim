@@ -1,7 +1,7 @@
 // src/pages/admin/ThemeSettingsPage.jsx
 import { useEffect, useState } from "react";
 import { themeApi } from "../api/theme";
-import { applyThemeVars, presetToVars } from "../utils/theme";
+import { applyThemeVars } from "../utils/theme";
 import {
   CheckCircle2,
   Loader2,
@@ -19,7 +19,7 @@ const THEME_PRESETS = [
     key: "rose",
     name: "Rose (Current)",
     store: {
-      "--color-primary": "#5C2A35",
+      "--color-primary": "#5C2A35", // derin bordo
       "--color-secondary": "#8A4D5B",
       "--color-accent": "#D87C82",
       "--color-accent-hover": "#C4646D",
@@ -41,6 +41,7 @@ const THEME_PRESETS = [
     },
     swatch: ["#5C2A35", "#D87C82", "#F0D9D9", "#9D174D"],
   },
+
   {
     key: "forest",
     name: "Forest",
@@ -67,6 +68,7 @@ const THEME_PRESETS = [
     },
     swatch: ["#064E3B", "#10B981", "#ECFDF5", "#065F46"],
   },
+
   {
     key: "ocean",
     name: "Ocean",
@@ -93,6 +95,7 @@ const THEME_PRESETS = [
     },
     swatch: ["#0C4A6E", "#38BDF8", "#F0F9FF", "#0EA5E9"],
   },
+
   {
     key: "grape",
     name: "Grape",
@@ -119,6 +122,62 @@ const THEME_PRESETS = [
     },
     swatch: ["#4C1D95", "#A78BFA", "#F5F3FF", "#6D28D9"],
   },
+
+  // 🌅 Sunset — sıcak tonlar
+  {
+    key: "sunset",
+    name: "Sunset",
+    store: {
+      "--color-primary": "#7C2D12",
+      "--color-secondary": "#B45309",
+      "--color-accent": "#F97316",
+      "--color-accent-hover": "#EA580C",
+      "--color-surface": "#FFF7ED",
+      "--color-surface-light": "#FFF1E6",
+      "--color-surface-hover": "#FFFFFF",
+      "--color-border": "#FED7AA",
+      "--color-contact-bg": "#FFF4E5",
+    },
+    admin: {
+      "--color-bg-admin": "#FFF7ED",
+      "--color-text-admin": "#451A03",
+      "--color-bg-card": "#FFFFFF",
+      "--color-bg-hover": "#FFEDD5",
+      "--color-bg-sidebar": "#C2410C",
+      "--color-text-sidebar": "#FFF7ED",
+      "--color-text-admin-muted": "#78350F",
+      "--color-border-admin": "#FDBA74",
+    },
+    swatch: ["#C2410C", "#F97316", "#FFF7ED", "#FDBA74"],
+  },
+
+  // ❄️ Nordic — soğuk mavi tonlar, profesyonel görünüm
+  {
+    key: "nordic",
+    name: "Nordic",
+    store: {
+      "--color-primary": "#1E293B",
+      "--color-secondary": "#334155",
+      "--color-accent": "#0EA5E9",
+      "--color-accent-hover": "#0284C7",
+      "--color-surface": "#F1F5F9",
+      "--color-surface-light": "#F8FAFC",
+      "--color-surface-hover": "#FFFFFF",
+      "--color-border": "#E2E8F0",
+      "--color-contact-bg": "#FFFFFF",
+    },
+    admin: {
+      "--color-bg-admin": "#F8FAFC",
+      "--color-text-admin": "#0F172A",
+      "--color-bg-card": "#FFFFFF",
+      "--color-bg-hover": "#E0F2FE",
+      "--color-bg-sidebar": "#1E3A8A",
+      "--color-text-sidebar": "#F8FAFC",
+      "--color-text-admin-muted": "#475569",
+      "--color-border-admin": "#CBD5E1",
+    },
+    swatch: ["#1E3A8A", "#0EA5E9", "#F1F5F9", "#CBD5E1"],
+  },
 ];
 
 function PresetCard({ preset, active, onSelect }) {
@@ -143,7 +202,7 @@ function PresetCard({ preset, active, onSelect }) {
         )}
       </div>
       <div className="mt-3 flex gap-2">
-        {preset.swatch.map((c) => (
+        {preset.swatch?.map((c) => (
           <span
             key={c}
             className="h-7 w-7 rounded-md border border-[var(--color-border-admin)]"
@@ -158,39 +217,20 @@ function PresetCard({ preset, active, onSelect }) {
 export default function ThemeSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeKey, setActiveKey] = useState("rose"); // fallback
+  const [activeKey, setActiveKey] = useState("rosewood");
   const [previewKey, setPreviewKey] = useState(null);
 
-  //   const activePreset = useMemo(
-  //     () =>
-  //       THEME_PRESETS.find((p) => p.key === (previewKey || activeKey)) ||
-  //       THEME_PRESETS[0],
-  //     [activeKey, previewKey]
-  //   );
-
-  // İlk yüklemede backend'deki aktif temayı çek
+  // İlk yüklemede backend'deki aktif temayı çek ve DOM'a uygula
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const server = await themeApi.get();
+        const server = await themeApi.get(); // { activeKey, store, admin }
         if (!mounted) return;
 
-        const key = server?.activeKey || "rose";
-        setActiveKey(key);
-
-        // DOM'a uygula (sayfaya yansısın)
-        const storeVars =
-          server?.storeVars?.reduce(
-            (acc, v) => ({ ...acc, [v.key]: v.value }),
-            {}
-          ) || {};
-        const adminVars =
-          server?.adminVars?.reduce(
-            (acc, v) => ({ ...acc, [v.key]: v.value }),
-            {}
-          ) || {};
-        applyThemeVars({ store: storeVars, admin: adminVars });
+        setActiveKey(server.activeKey || "rosewood");
+        // DOM'a uygula
+        applyThemeVars({ store: server.store, admin: server.admin });
       } finally {
         if (mounted) setLoading(false);
       }
@@ -205,34 +245,34 @@ export default function ThemeSettingsPage() {
     if (!previewKey) return;
     const preset = THEME_PRESETS.find((p) => p.key === previewKey);
     if (!preset) return;
-    applyThemeVars(presetToVars(preset));
+    applyThemeVars({ store: preset.store, admin: preset.admin });
   }, [previewKey]);
 
   async function handleSave() {
-    const preset = THEME_PRESETS.find(
-      (p) => p.key === (previewKey || activeKey)
-    );
+    const preset =
+      THEME_PRESETS.find((p) => p.key === (previewKey || activeKey)) ||
+      THEME_PRESETS[0];
     if (!preset) return;
 
     setSaving(true);
     try {
-      // backend'e storeVars/adminVars formatında gönder
-      const body = {
+      const saved = await themeApi.saveActive({
         activeKey: preset.key,
-        storeVars: Object.entries(preset.store).map(([key, value]) => ({
-          key,
-          value,
-        })),
-        adminVars: Object.entries(preset.admin).map(([key, value]) => ({
-          key,
-          value,
-        })),
-      };
-      const saved = await themeApi.saveActive(body);
+        store: preset.store,
+        admin: preset.admin,
+      });
 
-      // aktif anahtarı güncelle
-      setActiveKey(saved?.activeKey || preset.key);
+      // DB'nin döndürdüğü kesin değerleri DOM'a uygula
+      applyThemeVars({ store: saved.store, admin: saved.admin });
+
+      setActiveKey(saved.activeKey || preset.key);
       setPreviewKey(null);
+
+      // (İsteğe bağlı) localStorage ile ilk boyamayı hızlandır
+      localStorage.setItem(
+        "__theme_vars__",
+        JSON.stringify({ store: saved.store, admin: saved.admin })
+      );
     } finally {
       setSaving(false);
     }
@@ -260,8 +300,8 @@ export default function ThemeSettingsPage() {
             </div>
             <h2 className="text-2xl font-semibold">Theme & Colors</h2>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Pick a palette to instantly restyle storefront and admin surface.
-              Your choice persists globally.
+              Pick a palette to restyle storefront and admin. Your choice
+              persists globally.
             </p>
           </div>
 
@@ -294,52 +334,22 @@ export default function ThemeSettingsPage() {
             {previewKey && (
               <button
                 onClick={() => {
-                  // önizlemeyi iptal et, aktif temayı geri bas
                   setPreviewKey(null);
-                  const preset = THEME_PRESETS.find((p) => p.key === activeKey);
-                  if (preset) applyThemeVars(presetToVars(preset));
+                  // Aktif temaya geri dön
+                  const preset =
+                    THEME_PRESETS.find((p) => p.key === activeKey) ||
+                    THEME_PRESETS[0];
+                  if (preset)
+                    applyThemeVars({
+                      store: preset.store,
+                      admin: preset.admin,
+                    });
                 }}
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
               >
                 Cancel Preview
               </button>
             )}
-          </div>
-
-          {/* Live preview card */}
-          <div className="mt-8 rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] p-5">
-            <div className="text-sm text-[var(--color-text-admin-muted)]">
-              Live preview
-            </div>
-            <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-3">
-                <div className="text-xs text-[var(--color-text-admin-muted)]">
-                  Primary
-                </div>
-                <div
-                  className="mt-2 h-10 rounded-lg"
-                  style={{ background: "var(--color-primary)" }}
-                />
-              </div>
-              <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-3">
-                <div className="text-xs text-[var(--color-text-admin-muted)]">
-                  Accent
-                </div>
-                <div
-                  className="mt-2 h-10 rounded-lg"
-                  style={{ background: "var(--color-accent)" }}
-                />
-              </div>
-              <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-3">
-                <div className="text-xs text-[var(--color-text-admin-muted)]">
-                  Sidebar
-                </div>
-                <div
-                  className="mt-2 h-10 rounded-lg"
-                  style={{ background: "var(--color-bg-sidebar)" }}
-                />
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -349,9 +359,9 @@ export default function ThemeSettingsPage() {
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
           <h3 className="text-lg font-semibold">Tips</h3>
           <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-admin-muted)]">
-            <li>Preview lets you try palettes without saving.</li>
-            <li>Saving makes your choice persistent for everyone.</li>
-            <li>You can extend presets in code later.</li>
+            <li>Preview is temporary; save to persist.</li>
+            <li>Saved theme applies to storefront & admin.</li>
+            <li>Extend palettes in code anytime.</li>
           </ul>
         </div>
       </aside>
