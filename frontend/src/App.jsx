@@ -39,6 +39,7 @@ import AdminFaqSettingsPage from "./pages/admin/AdminFaqSettingsPage.jsx";
 import ShippingReturnsSettings from "./pages/admin/ShippingReturnsSettings.jsx";
 import PrivacyPolicySettings from "./pages/admin/PrivacyPolicySettings.jsx";
 import TermsSettings from "./pages/admin/TermsSettings.jsx";
+import ThemeSettingsPage from "./pages/ThemeSettingsPage.jsx";
 
 // 👇 Ekledik
 import ScrollToTop from "./components/ScrollToTop.jsx";
@@ -101,6 +102,7 @@ export default function App() {
           <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/settings/about" element={<AboutSettingsPage />} />
           <Route path="/admin/settings/terms" element={<TermsSettings />} />
+          <Route path="/admin/settings/theme" element={<ThemeSettingsPage />} />
           <Route
             path="/admin/settings/privacy"
             element={<PrivacyPolicySettings />}

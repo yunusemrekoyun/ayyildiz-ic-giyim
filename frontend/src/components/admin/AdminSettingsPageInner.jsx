@@ -307,6 +307,7 @@ export default function AdminSettingsPageInner() {
             subtitle="Tema ve renkler (yakında)."
           >
             <SettingsCard
+              to="/admin/settings/theme"
               icon={Palette}
               mediaIcon={Palette}
               title="Theme & Colors"
