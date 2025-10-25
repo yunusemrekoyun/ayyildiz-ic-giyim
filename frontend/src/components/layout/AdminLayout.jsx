@@ -90,7 +90,14 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
       },
       {
         label: "System",
-        items: [{ to: "/admin/settings", label: "Settings", Icon: Settings }],
+        items: [
+          { to: "/admin/settings", label: "Settings", Icon: Settings },
+          {
+            to: "/admin/color-palette",
+            label: "Color Palette",
+            Icon: Sparkles,
+          },
+        ],
       },
     ],
     []
@@ -182,7 +189,7 @@ function SidebarHeader({ collapsed, onToggle }) {
       </Link>
       <button
         onClick={onToggle}
-        className="hidden md:inline-flex rounded-lg p-2 text-white/80 hover:bg-white/10"
+        className="hidden md:inline-flex rounded-lg p-2 text-white/80 -translate-x-5"
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {collapsed ? (

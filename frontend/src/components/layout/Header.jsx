@@ -63,7 +63,7 @@ export default function Header() {
                 <img
                   src="/logo.png"
                   alt="Ayyıldız İç Giyim"
-                  className="h-12 w-12 sm:h-14 sm:w-14 object-contain transition-transform group-hover:scale-[1.04]"
+                  className="h-25 w-25 sm:h-20 sm:w-25 object-contain transition-transform "
                   draggable="false"
                 />
                 <span className="font-serif font-extrabold tracking-tight text-primary text-2xl sm:text-3xl">
