@@ -18,8 +18,9 @@ export const productApi = {
     const data = await http(`/products${qs}`, { auth: true });
     return data;
   },
-  async get(idOrSlug) {
-    const data = await http(`/products/${idOrSlug}`, { auth: true });
+  async get(idOrSlug, params = {}) {
+    const qs = toQueryString(params);
+    const data = await http(`/products/${idOrSlug}${qs}`, { auth: true });
     return data.product;
   },
   async create(payload) {
@@ -49,6 +50,8 @@ export const productApi = {
       form.append("customAttribute", JSON.stringify(payload.customAttribute));
     if (Array.isArray(payload.inventory) && payload.inventory.length > 0)
       form.append("inventory", JSON.stringify(payload.inventory));
+    if (payload.localized)
+      form.append("localized", JSON.stringify(payload.localized));
     (payload.images || []).forEach((file) => form.append("images", file));
 
     const data = await http("/products", {
@@ -97,6 +100,8 @@ export const productApi = {
     // ✅ STOK BOŞ GİTMESİN
     if (Array.isArray(payload.inventory) && payload.inventory.length > 0)
       form.append("inventory", JSON.stringify(payload.inventory));
+    if (payload.localized)
+      form.append("localized", JSON.stringify(payload.localized));
 
     const data = await http(`/products/${idOrSlug}`, {
       method: "PUT",

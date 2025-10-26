@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { LogOut } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { authApi } from "../api/auth";
 import { userDetailsApi } from "../api/userDetails";
 import { getUser, setUser } from "../api/client";
@@ -18,6 +19,7 @@ import Avatar from "../components/ui/Avatar.jsx";
 
 export default function UserAccountPage({ onLogout }) {
   const location = useLocation();
+  const { t } = useTranslation();
   const searchParams = new URLSearchParams(location.search);
   const urlTab =
     normalizeTab(searchParams.get("tab")) ||
@@ -157,7 +159,7 @@ export default function UserAccountPage({ onLogout }) {
                       ].join(" ")}
                       onClick={() => setActive(tab)}
                     >
-                      {tab}
+                      {t(`account.tabs.${tab}`)}
                     </button>
                   </li>
                 ))}
@@ -169,7 +171,7 @@ export default function UserAccountPage({ onLogout }) {
                 disabled={busy}
               >
                 <LogOut className="h-4 w-4" />
-                Logout
+                {t("account.sidebar.logout")}
               </button>
             </div>
           </aside>
@@ -178,7 +180,7 @@ export default function UserAccountPage({ onLogout }) {
             <div className="relative rounded-2xl border border-border bg-white p-6">
               <BusyBar show={busy} />
               <div className={busy ? "pointer-events-none opacity-60" : ""}>
-                {active === "Overview" && (
+                {active === "overview" && (
                   <OverviewSection
                     user={user}
                     profile={profile}
@@ -215,9 +217,9 @@ export default function UserAccountPage({ onLogout }) {
                   />
                 )}
 
-                {active === "Orders" && <OrdersSection />}
+                {active === "orders" && <OrdersSection />}
 
-                {active === "Addresses" && (
+                {active === "addresses" && (
                   <AddressesSection
                     addresses={addresses}
                     onCreate={async (payload) => {
@@ -244,7 +246,7 @@ export default function UserAccountPage({ onLogout }) {
                   />
                 )}
 
-                {active === "Wishlist" && (
+                {active === "wishlist" && (
                   <WishlistSection
                     favorites={favorites}
                     onToggle={async (type, id) => {

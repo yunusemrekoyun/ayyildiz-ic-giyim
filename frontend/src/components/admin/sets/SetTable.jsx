@@ -1,13 +1,8 @@
 // frontend/src/components/admin/sets/SetTable.jsx
 import { useMemo, useState } from "react";
 import { Edit3, Trash2, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { getColorInfo } from "../../../utils/colors.js";
-
-const currency = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "EUR",
-  minimumFractionDigits: 2,
-});
 
 const INFTY = Number.MAX_SAFE_INTEGER;
 const displaySetStock = (stock) => (stock >= INFTY ? "∞" : String(stock ?? 0));
@@ -18,8 +13,18 @@ export default function SetTable({
   onEdit,
   onDelete,
 }) {
+  const { t, i18n } = useTranslation();
   const [inspectOpen, setInspectOpen] = useState(false);
   const [inspectSet, setInspectSet] = useState(null);
+  const currency = useMemo(
+    () =>
+      new Intl.NumberFormat(i18n.language || navigator.language || "tr-TR", {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: 2,
+      }),
+    [i18n.language]
+  );
 
   if (loading) {
     return (
@@ -38,7 +43,7 @@ export default function SetTable({
     return (
       <div className="grid place-items-center rounded-2xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-6 py-12 text-center">
         <p className="max-w-md text-sm text-[var(--color-text-admin-muted)]">
-          No sets created yet. Use “New set” to compose a curated bundle.
+          {t("admin.sets.empty")}
         </p>
       </div>
     );
@@ -50,11 +55,21 @@ export default function SetTable({
         <table className="min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
           <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Set</th>
-              <th className="px-4 py-3 text-left font-medium">Price</th>
-              <th className="px-4 py-3 text-left font-medium">Stock</th>
-              <th className="px-4 py-3 text-left font-medium">Visibility</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 text-left font-medium">
+                {t("admin.sets.table.set")}
+              </th>
+              <th className="px-4 py-3 text-left font-medium">
+                {t("admin.sets.table.price")}
+              </th>
+              <th className="px-4 py-3 text-left font-medium">
+                {t("admin.sets.table.stock")}
+              </th>
+              <th className="px-4 py-3 text-left font-medium">
+                {t("admin.sets.table.visibility")}
+              </th>
+              <th className="px-4 py-3 text-right font-medium">
+                {t("admin.sets.table.actions")}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--color-border-admin)]/60 text-[var(--color-text-admin)]">
@@ -73,14 +88,16 @@ export default function SetTable({
                         {set.name?.[0] ?? "S"}
                       </div>
                     )}
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold">{set.name}</div>
-                      <div className="text-xs text-[var(--color-text-admin-muted)]">
-                        {set.products?.length || 0} items
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold">{set.name}</div>
+                        <div className="text-xs text-[var(--color-text-admin-muted)]">
+                          {t("admin.sets.table.items", {
+                            count: set.products?.length || 0,
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </td>
+                  </td>
                 <td className="px-4 py-3">{currency.format(set.price || 0)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -92,10 +109,10 @@ export default function SetTable({
                         setInspectOpen(true);
                       }}
                       className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-                      title="Inspect variant stocks"
+                      title={t("admin.sets.button.inspect")}
                     >
                       <Search className="h-4 w-4" />
-                      Inspect
+                      {t("admin.sets.button.inspect")}
                     </button>
                   </div>
                 </td>
@@ -107,7 +124,9 @@ export default function SetTable({
                         : "bg-amber-50 text-amber-700"
                     }`}
                   >
-                    {set.show ? "Visible" : "Hidden"}
+                    {set.show
+                      ? t("admin.sets.visibility.visible")
+                      : t("admin.sets.visibility.hidden")}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -116,13 +135,13 @@ export default function SetTable({
                       onClick={() => onEdit?.(set)}
                       className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
                     >
-                      <Edit3 className="h-4 w-4" /> Edit
+                      <Edit3 className="h-4 w-4" /> {t("admin.sets.button.edit")}
                     </button>
                     <button
                       onClick={() => onDelete?.(set)}
                       className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
                     >
-                      <Trash2 className="h-4 w-4" /> Delete
+                      <Trash2 className="h-4 w-4" /> {t("admin.sets.button.delete")}
                     </button>
                   </div>
                 </td>
@@ -135,6 +154,8 @@ export default function SetTable({
       {inspectOpen && inspectSet && (
         <StockInspectModal
           setItem={inspectSet}
+          t={t}
+          language={i18n.language}
           onClose={() => {
             setInspectOpen(false);
             setInspectSet(null);
@@ -147,7 +168,7 @@ export default function SetTable({
 
 /* ------------------------- Inspect Modal ------------------------- */
 
-function StockInspectModal({ setItem, onClose }) {
+function StockInspectModal({ setItem, onClose, t, language }) {
   // Her ürün için varyantları hazırla
   const rows = useMemo(() => {
     const items = [];
@@ -157,7 +178,7 @@ function StockInspectModal({ setItem, onClose }) {
       if (inv.length === 0) {
         items.push({
           key: `${p.id || p._id || "p"}::default`,
-          productName: p.name || "Unnamed product",
+          productName: p.name || t("admin.sets.inspect.unnamed"),
           qtyInSet: sp.quantity || 1,
           variant: { color: null, size: null, attributeValue: null },
           stockCatalog: 0,
@@ -177,7 +198,7 @@ function StockInspectModal({ setItem, onClose }) {
 
         items.push({
           key: `${p.id || p._id || "p"}::${idx}`,
-          productName: p.name || "Unnamed product",
+          productName: p.name || t("admin.sets.inspect.unnamed"),
           qtyInSet: sp.quantity || 1,
           variant: {
             color: v.color ?? null,
@@ -191,7 +212,7 @@ function StockInspectModal({ setItem, onClose }) {
       });
     });
     return items;
-  }, [setItem]);
+  }, [setItem, t]);
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
@@ -199,17 +220,17 @@ function StockInspectModal({ setItem, onClose }) {
         <header className="flex items-center justify-between border-b border-[var(--color-border-admin)] px-5 py-3">
           <div>
             <h3 className="font-semibold text-[var(--color-text-admin)]">
-              Stock details — {setItem.name}
+              {t("admin.sets.inspect.title", { name: setItem.name })}
             </h3>
             <p className="text-xs text-[var(--color-text-admin-muted)]">
-              Variant-level stock (color · size · attribute)
+              {t("admin.sets.inspect.subtitle")}
             </p>
           </div>
           <button
             onClick={onClose}
             className="rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            Close
+            {t("admin.sets.inspect.close")}
           </button>
         </header>
 
@@ -217,17 +238,23 @@ function StockInspectModal({ setItem, onClose }) {
           <table className="min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
             <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">Product</th>
-                <th className="px-3 py-2 text-left font-medium">Variant</th>
-                <th className="px-3 py-2 text-right font-medium">Qty in Set</th>
-                <th className="px-3 py-2 text-right font-medium">
-                  Stock (Catalog)
+                <th className="px-3 py-2 text-left font-medium">
+                  {t("admin.sets.inspect.product")}
+                </th>
+                <th className="px-3 py-2 text-left font-medium">
+                  {t("admin.sets.inspect.variant")}
                 </th>
                 <th className="px-3 py-2 text-right font-medium">
-                  Stock (Set)
+                  {t("admin.sets.inspect.qty")}
                 </th>
                 <th className="px-3 py-2 text-right font-medium">
-                  Stock (Legacy)
+                  {t("admin.sets.inspect.stockCatalog")}
+                </th>
+                <th className="px-3 py-2 text-right font-medium">
+                  {t("admin.sets.inspect.stockSet")}
+                </th>
+                <th className="px-3 py-2 text-right font-medium">
+                  {t("admin.sets.inspect.stockLegacy")}
                 </th>
               </tr>
             </thead>
@@ -240,14 +267,19 @@ function StockInspectModal({ setItem, onClose }) {
                       color={r.variant.color}
                       size={r.variant.size}
                       attributeValue={r.variant.attributeValue}
+                      t={t}
                     />
                   </td>
                   <td className="px-3 py-2 text-right">{r.qtyInSet}</td>
                   <td className="px-3 py-2 text-right">
-                    {r.stockCatalog ?? "—"}
+                    {formatNumber(r.stockCatalog, language)}
                   </td>
-                  <td className="px-3 py-2 text-right">{r.stockSet ?? "—"}</td>
-                  <td className="px-3 py-2 text-right">{r.stock ?? "—"}</td>
+                  <td className="px-3 py-2 text-right">
+                    {formatNumber(r.stockSet, language)}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {formatNumber(r.stock, language)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -260,7 +292,7 @@ function StockInspectModal({ setItem, onClose }) {
 
 /* --------------------- Variant label (renkli) --------------------- */
 
-function VariantLabel({ color, size, attributeValue }) {
+function VariantLabel({ color, size, attributeValue, t }) {
   const info = getColorInfo(color);
   const parts = [
     info.label || null, // renk adı (paletten çözülmüş)
@@ -277,7 +309,15 @@ function VariantLabel({ color, size, attributeValue }) {
           aria-hidden="true"
         />
       )}
-      <span>{parts.length ? parts.join(" · ") : "Default"}</span>
+      <span>{parts.length ? parts.join(" · ") : t("admin.sets.inspect.default")}</span>
     </div>
   );
+}
+
+function formatNumber(value, language) {
+  if (value == null) return "—";
+  const locale = language || navigator.language || "tr-TR";
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 0,
+  }).format(value);
 }

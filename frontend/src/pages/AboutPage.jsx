@@ -3,10 +3,12 @@ import BreadCrumb from "../components/shop/BreadCrumb";
 import { Link } from "react-router-dom";
 import { aboutApi } from "../api/about";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function AboutPage() {
   const [about, setAbout] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let mounted = true;
@@ -33,7 +35,7 @@ export default function AboutPage() {
   if (!about)
     return (
       <main className="flex h-[70vh] items-center justify-center text-secondary">
-        <p>No about data found.</p>
+        <p>{t("pages.about.noData")}</p>
       </main>
     );
 
@@ -57,7 +59,12 @@ export default function AboutPage() {
     <main className="bg-surface-light/60">
       {/* Breadcrumb */}
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
-        <BreadCrumb items={[{ label: "Home", to: "/" }, { label: "About" }]} />
+        <BreadCrumb
+          items={[
+            { label: t("common.breadcrumb.home"), to: "/" },
+            { label: t("pages.about.title") },
+          ]}
+        />
       </section>
 
       {/* Hero */}

@@ -6,25 +6,28 @@ import {
 } from "../utils/cloudinaryUpload.js";
 import {
   normalizeArray,
+  normalizeDetails,
   parseBoolean,
   parseAttribute,
   parseInventory,
   sanitizeOption,
   shapeProduct,
+  sanitizeProductLocalizedPayload,
 } from "../utils/productHelpers.js";
 import {
   fetchActiveDiscounts,
   computeProductDiscountMap,
 } from "../utils/discountHelpers.js";
 import { recalculateSetStockForProductIds } from "../utils/setStock.js";
+import {
+  assignLocalizedBulk,
+  assignLocalizedFields,
+  parseLocalizedPayload,
+  DEFAULT_LANGUAGE,
+} from "../utils/i18n.js";
 
 const isValidObjectId = (val) =>
   typeof val === "string" && val.match(/^[0-9a-fA-F]{24}$/);
-
-const normalizeDetails = (value) => {
-  const arr = normalizeArray(value);
-  return arr.map((item) => String(item));
-};
 
 async function resolveCategory(category) {
   if (!category) return null;
@@ -45,7 +48,7 @@ function productId(doc) {
   );
 }
 
-async function shapeProductsWithDiscounts(products) {
+async function shapeProductsWithDiscounts(products, options = {}) {
   if (!products?.length) return [];
   const activeDiscounts = await fetchActiveDiscounts();
   const discountMap = activeDiscounts.length
@@ -55,13 +58,13 @@ async function shapeProductsWithDiscounts(products) {
   return products.map((product) => {
     const id = productId(product);
     const discount = id ? discountMap.get(id) || null : null;
-    return shapeProduct(product, { discount });
+    return shapeProduct(product, { ...options, discount });
   });
 }
 
-async function shapeProductWithDiscount(product) {
+async function shapeProductWithDiscount(product, options = {}) {
   if (!product) return null;
-  const [shaped] = await shapeProductsWithDiscounts([product]);
+  const [shaped] = await shapeProductsWithDiscounts([product], options);
   return shaped || null;
 }
 
@@ -94,6 +97,7 @@ export async function createProduct(req, res) {
       showSizes,
       customAttribute,
       inventory,
+      localized: localizedRaw,
     } = req.body;
 
     if (!name || !price) {
@@ -107,6 +111,9 @@ export async function createProduct(req, res) {
       return res.status(400).json({ message: "Price must be a valid number" });
     }
 
+    const parsedDetails = normalizeDetails(details);
+    const parsedAttribute = parseAttribute(customAttribute);
+
     let categoryDoc = null;
     if (category) {
       categoryDoc = await resolveCategory(category);
@@ -117,26 +124,50 @@ export async function createProduct(req, res) {
       images = await uploadImages(req.files);
     }
 
+    const localizedPayload = sanitizeProductLocalizedPayload(
+      parseLocalizedPayload(localizedRaw) || {}
+    );
+
+    const baseLocalized = {
+      name,
+      description: description ?? "",
+      careInstructions: careInstructions ?? "",
+      details: parsedDetails,
+      customAttribute: {
+        title: parsedAttribute.title || "",
+        values: parsedAttribute.values || [],
+      },
+    };
+
+    localizedPayload[DEFAULT_LANGUAGE] = {
+      ...baseLocalized,
+      ...(localizedPayload[DEFAULT_LANGUAGE] || {}),
+    };
+
     const product = await Product.create({
       name,
       price: parsedPrice,
       description: description ?? "",
       careInstructions: careInstructions ?? "",
-      details: normalizeDetails(details),
+      details: parsedDetails,
       category: categoryDoc?._id ?? null,
       colors: normalizeArray(colors),
       sizes: normalizeArray(sizes),
       showColors: parseBoolean(showColors, true),
       showSizes: parseBoolean(showSizes, true),
-      customAttribute: parseAttribute(customAttribute),
+      customAttribute: parsedAttribute,
       inventory: parseInventory(inventory),
       listedInCatalog: parseBoolean(req.body.listedInCatalog, true),
       images,
+      localized: localizedPayload,
     });
 
     const populated = await product.populate("category");
     res.status(201).json({
-      product: await shapeProductWithDiscount(populated),
+      product: await shapeProductWithDiscount(populated, {
+        lang: req.locale,
+        includeLocalized: Boolean(req.user?.role === "admin"),
+      }),
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -151,6 +182,10 @@ export async function listProducts(req, res) {
 
     const filter = {};
     const includeHidden = parseBoolean(req.query.includeHidden, false);
+    const includeLocalized = parseBoolean(
+      req.query.includeLocalized,
+      Boolean(req.user?.role === "admin")
+    );
 
     if (search) {
       filter.name = { $regex: search, $options: "i" };
@@ -181,7 +216,10 @@ export async function listProducts(req, res) {
     ]);
 
     res.json({
-      products: await shapeProductsWithDiscounts(items),
+      products: await shapeProductsWithDiscounts(items, {
+        lang: req.locale,
+        includeLocalized,
+      }),
       pagination: {
         page: pageNumber,
         limit: pageSize,
@@ -214,13 +252,22 @@ export async function getProduct(req, res) {
 
     const includeHidden = parseBoolean(req.query.includeHidden, false);
     const isAdmin = Boolean(req.user?.role === "admin");
+    const includeLocalized = parseBoolean(
+      req.query.includeLocalized,
+      isAdmin
+    );
     if (!includeHidden && !isAdmin) {
       if (product.listedInCatalog !== true || product.isActive !== true) {
         return res.status(404).json({ message: "Product not found" });
       }
     }
 
-    res.json({ product: await shapeProductWithDiscount(product) });
+    res.json({
+      product: await shapeProductWithDiscount(product, {
+        lang: req.locale,
+        includeLocalized,
+      }),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -245,6 +292,7 @@ export async function updateProduct(req, res) {
       customAttribute,
       inventory,
       listedInCatalog,
+      localized: localizedRaw,
     } = req.body;
 
     const product = isValidObjectId(idOrSlug)
@@ -305,6 +353,34 @@ export async function updateProduct(req, res) {
         product.listedInCatalog
       );
 
+    const localizedPayload = sanitizeProductLocalizedPayload(
+      parseLocalizedPayload(localizedRaw) || {}
+    );
+    const baseLocalized = {
+      name: product.name,
+      description: product.description ?? "",
+      careInstructions: product.careInstructions ?? "",
+      details: Array.isArray(product.details) ? product.details : [],
+      customAttribute: {
+        title: product.customAttribute?.title || "",
+        values: product.customAttribute?.values || [],
+      },
+    };
+    assignLocalizedBulk(product, localizedPayload, [
+      "name",
+      "description",
+      "careInstructions",
+      "details",
+      "customAttribute",
+    ]);
+    assignLocalizedFields(product, DEFAULT_LANGUAGE, baseLocalized, [
+      "name",
+      "description",
+      "careInstructions",
+      "details",
+      "customAttribute",
+    ]);
+
     if (category !== undefined) {
       if (!category) product.category = null;
       else {
@@ -335,7 +411,12 @@ export async function updateProduct(req, res) {
       await recalculateSetStockForProductIds([product._id]);
     }
     const populated = await product.populate("category");
-    res.json({ product: await shapeProductWithDiscount(populated) });
+    res.json({
+      product: await shapeProductWithDiscount(populated, {
+        lang: req.locale,
+        includeLocalized: Boolean(req.user?.role === "admin"),
+      }),
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

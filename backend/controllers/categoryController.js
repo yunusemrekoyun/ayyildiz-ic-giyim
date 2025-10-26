@@ -5,6 +5,15 @@ import {
   deleteFromCloudinary,
 } from "../utils/cloudinaryUpload.js";
 import { configureCloudinary } from "../config/cloudinary.js";
+import {
+  assignLocalizedBulk,
+  assignLocalizedFields,
+  DEFAULT_LANGUAGE,
+  parseLocalizedPayload,
+  pickLocalizedField,
+  sanitizeLocalizedStrings,
+  toLocalizedObject,
+} from "../utils/i18n.js";
 
 const isValidObjectId = (val) =>
   typeof val === "string" && val.match(/^[0-9a-fA-F]{24}$/);
@@ -20,17 +29,35 @@ const toPlainImage = (image) => {
   };
 };
 
-const shapeCategory = (doc) => ({
-  id: doc._id,
-  name: doc.name,
-  slug: doc.slug,
-  parent: doc.parent,
-  level: doc.level,
-  ancestors: doc.ancestors,
-  image: toPlainImage(doc.image),
-  createdAt: doc.createdAt,
-  updatedAt: doc.updatedAt,
-});
+const shapeCategory = (doc, { lang, includeLocalized = false } = {}) => {
+  if (!doc) return null;
+
+  const id = doc._id?.toString?.() || doc.id?.toString?.() || String(doc._id);
+  const parentId = doc.parent
+    ? doc.parent?.toString?.() || String(doc.parent)
+    : null;
+  const ancestors = Array.isArray(doc.ancestors)
+    ? doc.ancestors.map((entry) => entry?.toString?.() || entry)
+    : [];
+
+  const payload = {
+    id,
+    name: pickLocalizedField(doc, "name", lang, DEFAULT_LANGUAGE) || "",
+    slug: doc.slug,
+    parent: parentId,
+    level: doc.level,
+    ancestors,
+    image: toPlainImage(doc.image),
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
+
+  if (includeLocalized) {
+    payload.localized = toLocalizedObject(doc.localized);
+  }
+
+  return payload;
+};
 
 const parseBoolean = (value) => {
   if (typeof value === "boolean") return value;
@@ -79,15 +106,33 @@ export async function createCategory(req, res) {
       imagePayload = toImagePayload(uploadResult);
     }
 
+    const localizedPayloadRaw = parseLocalizedPayload(req.body.localized);
+    const localizedStrings = sanitizeLocalizedStrings(
+      ["name"],
+      localizedPayloadRaw
+    );
+
+    if (!localizedStrings[DEFAULT_LANGUAGE]) {
+      localizedStrings[DEFAULT_LANGUAGE] = { name };
+    } else if (!localizedStrings[DEFAULT_LANGUAGE].name) {
+      localizedStrings[DEFAULT_LANGUAGE].name = name;
+    }
+
     const data = {
       name,
       parent: parentDoc?._id ?? null,
+      localized: localizedStrings,
     };
     if (imagePayload) data.image = imagePayload;
 
     const category = await Category.create(data);
 
-    res.status(201).json({ category: shapeCategory(category) });
+    res.status(201).json({
+      category: shapeCategory(category, {
+        lang: req.locale,
+        includeLocalized: true,
+      }),
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -97,6 +142,10 @@ export async function listCategories(req, res) {
   try {
     const { parent } = req.query;
     const filter = {};
+    const includeLocalized = parseBoolean(
+      req.query.includeLocalized,
+      Boolean(req.user?.role === "admin")
+    );
 
     if (parent === "root") filter.parent = null;
     else if (parent) {
@@ -110,7 +159,11 @@ export async function listCategories(req, res) {
     }
 
     const categories = await Category.find(filter).sort({ level: 1, name: 1 });
-    res.json({ categories: categories.map(shapeCategory) });
+    res.json({
+      categories: categories.map((doc) =>
+        shapeCategory(doc, { lang: req.locale, includeLocalized })
+      ),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -127,7 +180,17 @@ export async function getCategory(req, res) {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    res.json({ category: shapeCategory(category) });
+    const includeLocalized = parseBoolean(
+      req.query.includeLocalized,
+      Boolean(req.user?.role === "admin")
+    );
+
+    res.json({
+      category: shapeCategory(category, {
+        lang: req.locale,
+        includeLocalized,
+      }),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -136,7 +199,12 @@ export async function getCategory(req, res) {
 export async function updateCategory(req, res) {
   try {
     const { idOrSlug } = req.params;
-    const { name, parent = undefined, removeImage = undefined } = req.body;
+    const {
+      name,
+      parent = undefined,
+      removeImage = undefined,
+      localized: localizedRaw = undefined,
+    } = req.body;
 
     const category = isValidObjectId(idOrSlug)
       ? await Category.findById(idOrSlug)
@@ -189,8 +257,25 @@ export async function updateCategory(req, res) {
       category.markModified("image");
     }
 
+    const localizedPayload = sanitizeLocalizedStrings(
+      ["name"],
+      parseLocalizedPayload(localizedRaw) || {}
+    );
+    assignLocalizedBulk(category, localizedPayload, ["name"]);
+    assignLocalizedFields(
+      category,
+      DEFAULT_LANGUAGE,
+      { name: category.name },
+      ["name"]
+    );
+
     await category.save();
-    res.json({ category: shapeCategory(category) });
+    res.json({
+      category: shapeCategory(category, {
+        lang: req.locale,
+        includeLocalized: true,
+      }),
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -234,10 +319,20 @@ export async function deleteCategory(req, res) {
 
 export async function getCategoryTree(req, res) {
   try {
+    const includeLocalized = parseBoolean(
+      req.query.includeLocalized,
+      Boolean(req.user?.role === "admin")
+    );
+
     const categories = await Category.find().sort({ level: 1, name: 1 }).lean();
+    const shaped = categories.map((doc) =>
+      shapeCategory(doc, { lang: req.locale, includeLocalized })
+    );
 
     const byId = new Map();
-    categories.forEach((cat) => byId.set(String(cat._id), { ...cat, children: [] }));
+    shaped.forEach((cat) => {
+      byId.set(String(cat.id), { ...cat, children: [] });
+    });
 
     const roots = [];
     byId.forEach((cat) => {
@@ -249,16 +344,13 @@ export async function getCategoryTree(req, res) {
       }
     });
 
-    const format = (node) => ({
-      id: node._id,
-      name: node.name,
-      slug: node.slug,
-      level: node.level,
-      image: toPlainImage(node.image),
-      children: node.children.map(format),
-    });
+    const sortTree = (nodes) => {
+      nodes.sort((a, b) => a.name.localeCompare(b.name));
+      nodes.forEach((node) => sortTree(node.children || []));
+    };
+    sortTree(roots);
 
-    res.json({ categories: roots.map(format) });
+    res.json({ categories: roots });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 /**
  * slides item yapısı (backend'den heroApi.list ile geliyor):
@@ -17,6 +18,7 @@ export default function Hero({
 }) {
   const [index, setIndex] = useState(0);
   const active = slides[index] || null;
+  const { t } = useTranslation();
 
   // Her slayt için video referansı (sadece aktif olanı oynatacağız)
   const videoRefs = useRef({});
@@ -125,7 +127,7 @@ export default function Hero({
               />
             ) : (
               <div className="absolute inset-0 grid place-items-center bg-black/5 text-white/80">
-                No media
+                {t("hero.noMedia")}
               </div>
             )}
 
@@ -182,7 +184,7 @@ export default function Hero({
                 ? "scale-110 bg-white"
                 : "bg-white/70 hover:bg-white/90",
             ].join(" ")}
-            aria-label={`Go to slide ${i + 1}`}
+            aria-label={t("hero.gotoSlide", { index: i + 1 })}
           />
         ))}
       </div>
@@ -193,14 +195,14 @@ export default function Hero({
           <button
             onClick={() => go(-1)}
             className="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/30 px-3 py-2 text-white backdrop-blur hover:bg-black/40"
-            aria-label="Prev"
+            aria-label={t("hero.prev")}
           >
             ‹
           </button>
           <button
             onClick={() => go(1)}
             className="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/30 px-3 py-2 text-white backdrop-blur hover:bg-black/40"
-            aria-label="Next"
+            aria-label={t("hero.next")}
           >
             ›
           </button>

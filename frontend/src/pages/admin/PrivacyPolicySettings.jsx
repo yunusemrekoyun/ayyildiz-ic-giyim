@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import privacyApi from "../../api/privacy.js";
 import {
   Loader2,
@@ -19,13 +20,24 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+const toArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") return [value];
+  return [];
+};
+
 /* -------------------- PAGE -------------------- */
 
 export default function PrivacySettings() {
+  const { t } = useTranslation();
   const [form, setForm] = useState(EMPTY_MODEL);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
+  const tips = useMemo(
+    () => toArray(t("admin.privacy.tips.items", { returnObjects: true })),
+    [t]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -37,14 +49,15 @@ export default function PrivacySettings() {
       } catch (err) {
         setBanner({
           variant: "danger",
-          message: extractMessage(err) || "Failed to load privacy content.",
+          message:
+            extractMessage(err, t) || t("admin.privacy.messages.loadError"),
         });
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => (mounted = false);
-  }, []);
+  }, [t]);
 
   const canSave = useMemo(() => !!form.heroTitle.trim(), [form.heroTitle]);
 
@@ -56,12 +69,13 @@ export default function PrivacySettings() {
       setForm(normalizeIncoming(updated));
       setBanner({
         variant: "success",
-        message: "Privacy Policy saved successfully.",
+        message: t("admin.privacy.messages.saveSuccess"),
       });
     } catch (err) {
       setBanner({
         variant: "danger",
-        message: extractMessage(err) || "Failed to save content.",
+        message:
+          extractMessage(err, t) || t("admin.privacy.messages.saveError"),
       });
     } finally {
       setSaving(false);
@@ -81,18 +95,17 @@ export default function PrivacySettings() {
           <div className="flex flex-col gap-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
               <ShieldCheck className="h-4 w-4" />
-              Content • Privacy Policy
+              {t("admin.privacy.badge")}
             </div>
             <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-              Privacy Policy Page
+              {t("admin.privacy.headerTitle")}
             </h1>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Manage the privacy policy headline, sections, footer, and SEO
-              metadata. This controls{" "}
+              {t("admin.privacy.headerDescription.before")}
               <code className="rounded bg-[var(--color-bg-hover)] px-1 py-0.5">
                 /privacy
-              </code>{" "}
-              page.
+              </code>
+              {t("admin.privacy.headerDescription.after")}
             </p>
           </div>
 
@@ -119,7 +132,9 @@ export default function PrivacySettings() {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              Save Changes
+              {saving
+                ? t("admin.privacy.buttons.saving")
+                : t("admin.privacy.buttons.save")}
             </button>
 
             <Link
@@ -128,7 +143,7 @@ export default function PrivacySettings() {
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             >
               <Eye className="h-4 w-4" />
-              Preview
+              {t("admin.privacy.buttons.preview")}
             </Link>
 
             <button
@@ -138,12 +153,12 @@ export default function PrivacySettings() {
               {form.isActive ? (
                 <>
                   <ToggleRight className="h-4 w-4 text-emerald-600" />
-                  Active
+                  {t("admin.privacy.buttons.active")}
                 </>
               ) : (
                 <>
                   <ToggleLeft className="h-4 w-4 text-rose-600" />
-                  Inactive
+                  {t("admin.privacy.buttons.inactive")}
                 </>
               )}
             </button>
@@ -154,28 +169,30 @@ export default function PrivacySettings() {
         <div className="mt-6 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
           <div className="mb-4 flex items-center gap-2">
             <Info className="h-5 w-5 text-[var(--color-text-admin-muted)]" />
-            <h2 className="text-lg font-semibold">Hero</h2>
+            <h2 className="text-lg font-semibold">
+              {t("admin.privacy.hero.cardTitle")}
+            </h2>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
             <div className="md:col-span-6">
-              <Label>Page Title</Label>
+              <Label>{t("admin.privacy.hero.fields.titleLabel")}</Label>
               <Input
                 value={form.heroTitle}
                 onChange={(e) =>
                   setForm((p) => ({ ...p, heroTitle: e.target.value }))
                 }
-                placeholder="Privacy Policy"
+                placeholder={t("admin.privacy.hero.fields.titlePlaceholder")}
               />
             </div>
             <div className="md:col-span-6">
-              <Label>Subtitle</Label>
+              <Label>{t("admin.privacy.hero.fields.subtitleLabel")}</Label>
               <Input
                 value={form.heroIntro}
                 onChange={(e) =>
                   setForm((p) => ({ ...p, heroIntro: e.target.value }))
                 }
-                placeholder="Your privacy matters..."
+                placeholder={t("admin.privacy.hero.fields.subtitlePlaceholder")}
               />
             </div>
           </div>
@@ -203,12 +220,13 @@ export default function PrivacySettings() {
       {/* --- RIGHT SIDEBAR --- */}
       <aside className="xl:col-span-4">
         <div className="sticky top-4 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          <h3 className="text-lg font-semibold">Tips</h3>
+          <h3 className="text-lg font-semibold">
+            {t("admin.privacy.tips.title")}
+          </h3>
           <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-admin-muted)]">
-            <li>Keep sections concise and numbered clearly.</li>
-            <li>Use anchors for quick navigation.</li>
-            <li>Footer can contain contact or compliance text.</li>
-            <li>SEO metadata improves visibility.</li>
+            {tips.map((item, index) => (
+              <li key={`privacy-tip-${index}`}>{item}</li>
+            ))}
           </ul>
         </div>
       </aside>
@@ -219,6 +237,7 @@ export default function PrivacySettings() {
 /* -------------------- COMPONENTS -------------------- */
 
 function SectionsEditor({ sections = [], onChange }) {
+  const { t } = useTranslation();
   function addSection() {
     onChange([...sections, { id: "", title: "", content: [""] }]);
   }
@@ -242,20 +261,22 @@ function SectionsEditor({ sections = [], onChange }) {
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-[var(--color-text-admin-muted)]" />
-          <h2 className="text-lg font-semibold">Sections</h2>
+          <h2 className="text-lg font-semibold">
+            {t("admin.privacy.sections.title")}
+          </h2>
         </div>
         <button
           onClick={addSection}
           className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
-          Add Section
+          {t("admin.privacy.sections.add")}
         </button>
       </div>
 
       {sections.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--color-border-admin)] p-6 text-sm text-[var(--color-text-admin-muted)]">
-          No sections yet. Click “Add Section” to begin.
+          {t("admin.privacy.sections.empty")}
         </div>
       ) : (
         <div className="space-y-6">
@@ -267,18 +288,24 @@ function SectionsEditor({ sections = [], onChange }) {
               <div className="flex justify-between">
                 <div className="flex items-center gap-2 text-sm text-[var(--color-text-admin-muted)]">
                   <GripVertical className="h-4 w-4" />
-                  Section {i + 1}
+                  {t("admin.privacy.sections.itemLabel", { index: i + 1 })}
                 </div>
                 <div className="flex items-center gap-2">
-                  <IconButton onClick={() => move(i, -1)} title="Move up">
+                  <IconButton
+                    onClick={() => move(i, -1)}
+                    title={t("admin.privacy.sections.actions.moveUp")}
+                  >
                     <ChevronUp className="h-4 w-4" />
                   </IconButton>
-                  <IconButton onClick={() => move(i, +1)} title="Move down">
+                  <IconButton
+                    onClick={() => move(i, +1)}
+                    title={t("admin.privacy.sections.actions.moveDown")}
+                  >
                     <ChevronDown className="h-4 w-4" />
                   </IconButton>
                   <IconButton
                     danger
-                    title="Remove section"
+                    title={t("admin.privacy.sections.actions.remove")}
                     onClick={() => removeSection(i)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -288,33 +315,33 @@ function SectionsEditor({ sections = [], onChange }) {
 
               <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-12">
                 <div className="md:col-span-4">
-                  <Label>Section ID (anchor)</Label>
+                  <Label>{t("admin.privacy.sections.idLabel")}</Label>
                   <Input
                     value={s.id}
                     onChange={(e) =>
                       updateSection(i, { id: e.target.value.trim() })
                     }
-                    placeholder="controller, data-processed..."
+                    placeholder={t("admin.privacy.sections.idPlaceholder")}
                   />
                 </div>
                 <div className="md:col-span-8">
-                  <Label>Title</Label>
+                  <Label>{t("admin.privacy.sections.titleLabel")}</Label>
                   <Input
                     value={s.title}
                     onChange={(e) =>
                       updateSection(i, { title: e.target.value })
                     }
-                    placeholder="1. Data Controller"
+                    placeholder={t("admin.privacy.sections.titlePlaceholder")}
                   />
                 </div>
               </div>
 
               <div className="mt-4">
-                <Label>Content Paragraphs</Label>
+                <Label>{t("admin.privacy.sections.contentLabel")}</Label>
                 <MultiText
                   values={s.content || []}
                   onChange={(vals) => updateSection(i, { content: vals })}
-                  placeholder="Enter a paragraph..."
+                  placeholder={t("admin.privacy.sections.paragraphPlaceholder")}
                 />
               </div>
             </article>
@@ -326,14 +353,17 @@ function SectionsEditor({ sections = [], onChange }) {
 }
 
 function FooterEditor({ value, onChange }) {
+  const { t } = useTranslation();
   return (
     <div className="mt-6 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-      <h2 className="mb-4 text-lg font-semibold">Footer Notice (HTML)</h2>
+      <h2 className="mb-4 text-lg font-semibold">
+        {t("admin.privacy.footer.title")}
+      </h2>
       <textarea
         rows={6}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder='If you have questions, contact us at <a href="mailto:privacy@...">privacy@...</a>'
+        placeholder={t("admin.privacy.footer.placeholder")}
         className="w-full rounded-2xl border border-[var(--color-border-admin)] bg-white px-4 py-3 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] focus:ring-2 focus:ring-[var(--color-text-admin)]/10"
       />
     </div>
@@ -341,6 +371,7 @@ function FooterEditor({ value, onChange }) {
 }
 
 function SEOEditor({ seo, onChange }) {
+  const { t } = useTranslation();
   const [kwInput, setKwInput] = useState("");
   function addKeyword() {
     const v = kwInput.trim();
@@ -361,28 +392,30 @@ function SEOEditor({ seo, onChange }) {
     <div className="mt-6 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
       <div className="mb-4 flex items-center gap-2">
         <Globe className="h-5 w-5 text-[var(--color-text-admin-muted)]" />
-        <h2 className="text-lg font-semibold">SEO Metadata</h2>
+        <h2 className="text-lg font-semibold">
+          {t("admin.privacy.seo.title")}
+        </h2>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         <div className="md:col-span-6">
-          <Label>Meta Title</Label>
+          <Label>{t("admin.privacy.seo.metaTitle")}</Label>
           <Input
             value={seo.title}
             onChange={(e) => onChange({ ...seo, title: e.target.value })}
-            placeholder="Privacy Policy — Evim & Stil"
+            placeholder={t("admin.privacy.seo.metaTitlePlaceholder")}
           />
         </div>
         <div className="md:col-span-6">
-          <Label>Meta Description</Label>
+          <Label>{t("admin.privacy.seo.metaDescription")}</Label>
           <Input
             value={seo.description}
             onChange={(e) => onChange({ ...seo, description: e.target.value })}
-            placeholder="How we process and protect your data..."
+            placeholder={t("admin.privacy.seo.metaDescriptionPlaceholder")}
           />
         </div>
       </div>
       <div className="mt-4">
-        <Label>Keywords</Label>
+        <Label>{t("admin.privacy.seo.keywords")}</Label>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {(seo.keywords || []).map((k) => (
             <span
@@ -393,6 +426,7 @@ function SEOEditor({ seo, onChange }) {
               {k}
               <button
                 onClick={() => removeKeyword(k)}
+                aria-label={t("admin.privacy.seo.removeKeyword")}
                 className="rounded-full p-1 hover:bg-[var(--color-bg-hover)]"
               >
                 ✕
@@ -403,14 +437,14 @@ function SEOEditor({ seo, onChange }) {
             <input
               value={kwInput}
               onChange={(e) => setKwInput(e.target.value)}
-              placeholder="Add keyword"
+              placeholder={t("admin.privacy.seo.keywordPlaceholder")}
               className="rounded-full border border-[var(--color-border-admin)] bg-white px-3 py-1 text-xs outline-none focus:border-[var(--color-text-admin)]"
             />
             <button
               onClick={addKeyword}
               className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold hover:bg-[var(--color-bg-hover)]"
             >
-              <Plus className="h-3.5 w-3.5" /> Add
+              <Plus className="h-3.5 w-3.5" /> {t("admin.privacy.seo.addKeyword")}
             </button>
           </div>
         </div>
@@ -457,6 +491,7 @@ function IconButton({ children, onClick, danger, title }) {
 }
 
 function MultiText({ values = [], onChange, placeholder }) {
+  const { t } = useTranslation();
   function setValue(i, v) {
     onChange(values.map((x, idx) => (idx === i ? v : x)));
   }
@@ -467,11 +502,11 @@ function MultiText({ values = [], onChange, placeholder }) {
     onChange(values.filter((_, idx) => idx !== i));
   }
   function move(i, dir) {
-    const t = i + dir;
-    if (t < 0 || t >= values.length) return;
+    const target = i + dir;
+    if (target < 0 || target >= values.length) return;
     const next = [...values];
     const [it] = next.splice(i, 1);
-    next.splice(t, 0, it);
+    next.splice(target, 0, it);
     onChange(next);
   }
 
@@ -487,13 +522,23 @@ function MultiText({ values = [], onChange, placeholder }) {
             className="w-full rounded-2xl border border-[var(--color-border-admin)] bg-white px-4 py-3 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] focus:ring-2 focus:ring-[var(--color-text-admin)]/10"
           />
           <div className="mt-1 flex flex-col gap-1">
-            <IconButton onClick={() => move(i, -1)} title="Move up">
+            <IconButton
+              onClick={() => move(i, -1)}
+              title={t("admin.privacy.sections.actions.moveUp")}
+            >
               <ChevronUp className="h-4 w-4" />
             </IconButton>
-            <IconButton onClick={() => move(i, +1)} title="Move down">
+            <IconButton
+              onClick={() => move(i, +1)}
+              title={t("admin.privacy.sections.actions.moveDown")}
+            >
               <ChevronDown className="h-4 w-4" />
             </IconButton>
-            <IconButton onClick={() => remove(i)} danger title="Remove">
+            <IconButton
+              onClick={() => remove(i)}
+              danger
+              title={t("admin.privacy.sections.actions.remove")}
+            >
               <Trash2 className="h-4 w-4" />
             </IconButton>
           </div>
@@ -505,7 +550,7 @@ function MultiText({ values = [], onChange, placeholder }) {
         className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold hover:bg-[var(--color-bg-hover)]"
       >
         <Plus className="h-3.5 w-3.5" />
-        Add paragraph
+        {t("admin.privacy.sections.addParagraph")}
       </button>
     </div>
   );
@@ -564,13 +609,13 @@ function normalizeOutgoing(form) {
   };
 }
 
-function extractMessage(err) {
-  if (!err) return "Unexpected error";
+function extractMessage(err, t) {
+  if (!err) return t("common.genericError");
   try {
     const parsed = JSON.parse(String(err.message || err));
     if (parsed?.message) return parsed.message;
   } catch {
     // ignore
   }
-  return err.message || String(err);
+  return err?.message || t("common.genericError");
 }

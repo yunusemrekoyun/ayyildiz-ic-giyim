@@ -396,6 +396,7 @@ export async function getFavorites(req, res) {
           const id = product?._id?.toString?.() || "";
           return shapeProduct(product, {
             discount: id ? productDiscountMap.get(id) || null : null,
+            lang: req.locale,
           });
         }),
         sets: sets.map((set) => {

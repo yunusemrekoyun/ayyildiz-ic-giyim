@@ -1,3 +1,5 @@
+import i18n, { DEFAULT_LANGUAGE } from "../i18n/config.js";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const ACCESS_KEY = "accessToken";
@@ -37,6 +39,7 @@ function buildHeaders({ body, headers = {}, auth }) {
     ...(auth && getAccessToken()
       ? { Authorization: `Bearer ${getAccessToken()}` }
       : {}),
+    "Accept-Language": i18n.language || DEFAULT_LANGUAGE,
     ...headers,
   };
 }

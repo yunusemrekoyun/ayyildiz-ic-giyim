@@ -1,5 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, Trash2, Upload } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { SUPPORTED_LANGUAGES } from "../../../i18n/config.js";
+
+const BASE_LANGUAGE = SUPPORTED_LANGUAGES[0]?.code || "tr";
+const BASE_LANGUAGE_LABEL =
+  SUPPORTED_LANGUAGES.find((lang) => lang.code === BASE_LANGUAGE)?.label ||
+  "Default";
+const TRANSLATION_LANGUAGES = SUPPORTED_LANGUAGES.filter(
+  (lang) => lang.code !== BASE_LANGUAGE
+);
+
+const createInitialLocalizedState = () =>
+  TRANSLATION_LANGUAGES.reduce((acc, lang) => {
+    acc[lang.code] = { name: "" };
+    return acc;
+  }, {});
 
 export default function CategoryForm({
   category,
@@ -11,12 +27,17 @@ export default function CategoryForm({
   onCancelEdit,
 }) {
   const isEditing = Boolean(category?.id);
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [parent, setParent] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [removeImage, setRemoveImage] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [error, setError] = useState("");
+  const [localized, setLocalized] = useState(() =>
+    createInitialLocalizedState()
+  );
+  const [initialLocalizedCodes, setInitialLocalizedCodes] = useState([]);
 
   useEffect(() => {
     setName(category?.name ?? "");
@@ -25,7 +46,17 @@ export default function CategoryForm({
     setImageFile(null);
     setPreviewUrl(category?.image?.url ?? "");
     setError("");
-  }, [category?.id]);
+    const nextLocalized = createInitialLocalizedState();
+    const existingCodes = [];
+    TRANSLATION_LANGUAGES.forEach(({ code }) => {
+      const entry = category?.localized?.[code];
+      const value = entry?.name ?? "";
+      nextLocalized[code] = { name: value };
+      if (value && value.trim()) existingCodes.push(code);
+    });
+    setLocalized(nextLocalized);
+    setInitialLocalizedCodes(existingCodes);
+  }, [category]);
 
   useEffect(() => {
     if (!imageFile) return undefined;
@@ -35,18 +66,16 @@ export default function CategoryForm({
   }, [imageFile]);
 
   const parentHelper = useMemo(() => {
-    if (!category) return "Select where this category lives (optional).";
-    if (category.level === 0)
-      return "This is a top-level category. You can nest it under another root.";
-    if (category.level === 1)
-      return "This is a second-level category. You can promote/demote it.";
-    return "Leaf categories cannot have children.";
-  }, [category]);
+    if (!category) return t("admin.categories.parentHelperNone");
+    if (category.level === 0) return t("admin.categories.parentHelperRoot");
+    if (category.level === 1) return t("admin.categories.parentHelperSecond");
+    return t("admin.categories.parentHelperLeaf");
+  }, [category, t]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Category name is required");
+      setError(t("admin.categories.errors.nameRequired"));
       return;
     }
     setError("");
@@ -55,6 +84,18 @@ export default function CategoryForm({
       name: name.trim(),
       parent: parent || "",
     };
+
+    const localizedPayload = {};
+    TRANSLATION_LANGUAGES.forEach(({ code }) => {
+      const value = (localized[code]?.name || "").trim();
+      if (value || initialLocalizedCodes.includes(code)) {
+        localizedPayload[code] = { name: value };
+      }
+    });
+
+    if (Object.keys(localizedPayload).length) {
+      payload.localized = localizedPayload;
+    }
 
     if (imageFile) payload.image = imageFile;
     if (isEditing && removeImage && !imageFile) payload.removeImage = true;
@@ -66,6 +107,8 @@ export default function CategoryForm({
         setImageFile(null);
         setRemoveImage(false);
         setPreviewUrl("");
+        setLocalized(createInitialLocalizedState());
+        setInitialLocalizedCodes([]);
       },
     });
   };
@@ -74,7 +117,7 @@ export default function CategoryForm({
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setError("Please upload an image file");
+      setError(t("admin.categories.imageError"));
       return;
     }
     setImageFile(file);
@@ -89,17 +132,29 @@ export default function CategoryForm({
     }
   };
 
+  const handleLocalizedNameChange = (langCode, value) => {
+    setLocalized((prev) => ({
+      ...prev,
+      [langCode]: {
+        ...(prev[langCode] || {}),
+        name: value,
+      },
+    }));
+  };
+
   return (
     <div className="rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-sm">
       <div className="flex items-start justify-between border-b border-[var(--color-border-admin)] px-5 py-4">
         <div>
           <h3 className="text-lg font-semibold text-[var(--color-text-admin)]">
-            {isEditing ? "Edit Category" : "Create Category"}
+            {isEditing
+              ? t("admin.categories.formTitleEdit")
+              : t("admin.categories.formTitleCreate")}
           </h3>
           <p className="text-sm text-[var(--color-text-admin-muted)]">
             {isEditing
-              ? "Update the category name, hierarchy or thumbnail."
-              : "Add a new category at any level of the catalog."}
+              ? t("admin.categories.formSubtitleEdit")
+              : t("admin.categories.formSubtitleCreate")}
           </p>
         </div>
         {isEditing && (
@@ -108,7 +163,7 @@ export default function CategoryForm({
             onClick={onCancelEdit}
             className="rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            Create new
+            {t("admin.common.createNew")}
           </button>
         )}
       </div>
@@ -123,27 +178,61 @@ export default function CategoryForm({
           <>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Category name<span className="text-[var(--color-accent)]">*</span>
+                {t("admin.categories.name")}
+                <span className="text-[var(--color-accent)]">*</span>
               </span>
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 maxLength={120}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="e.g. Lingerie"
+                placeholder={t("admin.categories.namePlaceholder")}
               />
             </label>
 
+            {TRANSLATION_LANGUAGES.length > 0 && (
+              <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-4 py-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-[var(--color-text-admin)]">
+                    {t("admin.categories.addTranslation")}
+                  </span>
+                  <p className="text-xs text-[var(--color-text-admin-muted)]">
+                    {t("admin.categories.translationHelper", {
+                      base: BASE_LANGUAGE_LABEL,
+                    })}
+                  </p>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {TRANSLATION_LANGUAGES.map(({ code, label }) => (
+                    <label key={code} className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
+                        {label}
+                      </span>
+                      <input
+                        value={localized[code]?.name || ""}
+                        onChange={(event) =>
+                          handleLocalizedNameChange(code, event.target.value)
+                        }
+                        maxLength={120}
+                        className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                        placeholder={label}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Parent category
+                {t("admin.categories.parent")}
               </span>
               <select
                 value={parent || ""}
                 onChange={(event) => setParent(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
               >
-                <option value="">No parent (root)</option>
+                <option value="">{t("admin.categories.noParent")}</option>
                 {parentOptions.map((option) => (
                   <option
                     key={option.id}
@@ -163,15 +252,15 @@ export default function CategoryForm({
 
             <div>
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Thumbnail image
+                {t("admin.categories.thumbnail")}
               </span>
               <p className="mb-2 text-xs text-[var(--color-text-admin-muted)]">
-                Optional 1:1 cover used in catalog menus. PNG or JPG up to 2MB.
+                {t("admin.categories.thumbnailHelp")}
               </p>
               <div className="flex flex-wrap gap-3">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--color-border-admin)] px-4 py-3 text-sm text-[var(--color-text-admin)] hover:border-[var(--color-text-admin)]">
                   <Upload className="h-4 w-4" />
-                  Upload image
+                  {t("admin.categories.upload")}
                   <input
                     type="file"
                     accept="image/*"
@@ -197,7 +286,7 @@ export default function CategoryForm({
                       onClick={handleClearImage}
                       className="absolute inset-x-0 bottom-0 bg-black/50 py-1 text-xs font-semibold text-white"
                     >
-                      Remove
+                      {t("admin.common.remove")}
                     </button>
                   </div>
                 )}
@@ -212,7 +301,7 @@ export default function CategoryForm({
                 )}
                 {removeImage && !imageFile && (
                   <span className="inline-flex items-center rounded-full bg-[var(--color-bg-hover)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)]">
-                    Image will be removed
+                    {t("admin.categories.removeImage")}
                   </span>
                 )}
               </div>
@@ -234,7 +323,7 @@ export default function CategoryForm({
               className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
-              Delete
+              {t("admin.common.delete")}
             </button>
           )}
           <div className="ml-auto flex items-center gap-3">
@@ -243,7 +332,7 @@ export default function CategoryForm({
               disabled={submitting}
               className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-60"
             >
-              {submitting ? "Saving..." : isEditing ? "Save changes" : "Create category"}
+              {submitting ? t("admin.common.saving") : t("admin.common.save")}
             </button>
           </div>
         </div>

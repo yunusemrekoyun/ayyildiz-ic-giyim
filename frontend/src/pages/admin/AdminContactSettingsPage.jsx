@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { contactPageApi } from "../../api/contact";
 import {
   MapPin,
   Mail,
   Phone,
   Clock3,
-  Image as ImageIcon,
-  Upload,
   Trash2,
   Save,
   RefreshCcw,
@@ -22,32 +21,43 @@ const makeBlock = (title = "", lines = []) => ({
   lines,
 });
 
-const emptyConfig = {
-  heroTitle: "We're here to help",
-  heroSubtitle:
-    "Our customer care team is available Monday to Friday, 09:00–18:00 CET. Send us a note and we'll respond within one business day.",
-  heroImage: null,
-  addressBlock: makeBlock("Visit our European studio", [
-    "Kurfürstendamm 45, 10719 Berlin",
-    "Showroom & click-and-collect (appointment recommended)",
-  ]),
-  hoursBlock: makeBlock("Opening hours (CET)", [
-    "Mon – Fri: 09:00 – 18:00",
-    "Sat: 10:00 – 16:00 (showroom only)",
-    "Sun & public holidays: closed",
-  ]),
-  emailBlock: makeBlock("Customer service", [
-    "support@evimstil.com",
-    "Average response time: < 24 h",
-  ]),
-  phoneBlock: makeBlock("Phone", [
-    "+49 (0) 30 234 567 89",
-    "WhatsApp & Signal available on the same number",
-  ]),
-  formEnabled: true,
-  successMessage:
-    "Thank you for your message. We have received your enquiry and will reply via e-mail shortly. If you need immediate assistance, call us on the number below.",
+const resolveLines = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") return [value];
+  return [];
 };
+
+const createEmptyConfig = (t) => ({
+  heroTitle: t("admin.contact.defaults.heroTitle"),
+  heroSubtitle: t("admin.contact.defaults.heroSubtitle"),
+  heroImage: null,
+  addressBlock: makeBlock(
+    t("admin.contact.defaults.addressBlock.title"),
+    resolveLines(
+      t("admin.contact.defaults.addressBlock.lines", { returnObjects: true })
+    )
+  ),
+  hoursBlock: makeBlock(
+    t("admin.contact.defaults.hoursBlock.title"),
+    resolveLines(
+      t("admin.contact.defaults.hoursBlock.lines", { returnObjects: true })
+    )
+  ),
+  emailBlock: makeBlock(
+    t("admin.contact.defaults.emailBlock.title"),
+    resolveLines(
+      t("admin.contact.defaults.emailBlock.lines", { returnObjects: true })
+    )
+  ),
+  phoneBlock: makeBlock(
+    t("admin.contact.defaults.phoneBlock.title"),
+    resolveLines(
+      t("admin.contact.defaults.phoneBlock.lines", { returnObjects: true })
+    )
+  ),
+  formEnabled: true,
+  successMessage: t("admin.contact.defaults.successMessage"),
+});
 
 const deepClone = (value) =>
   typeof structuredClone === "function"
@@ -67,8 +77,8 @@ const normalizeBlock = (block, fallback) => {
   };
 };
 
-const normalizeState = (raw) => {
-  const base = deepClone(emptyConfig);
+const normalizeState = (raw, defaults) => {
+  const base = deepClone(defaults);
   if (!raw) return base;
 
   base.heroTitle = asString(raw.heroTitle, base.heroTitle);
@@ -88,13 +98,10 @@ const normalizeState = (raw) => {
         }
       : null;
 
-  base.addressBlock = normalizeBlock(
-    raw.addressBlock,
-    emptyConfig.addressBlock
-  );
-  base.hoursBlock = normalizeBlock(raw.hoursBlock, emptyConfig.hoursBlock);
-  base.emailBlock = normalizeBlock(raw.emailBlock, emptyConfig.emailBlock);
-  base.phoneBlock = normalizeBlock(raw.phoneBlock, emptyConfig.phoneBlock);
+  base.addressBlock = normalizeBlock(raw.addressBlock, defaults.addressBlock);
+  base.hoursBlock = normalizeBlock(raw.hoursBlock, defaults.hoursBlock);
+  base.emailBlock = normalizeBlock(raw.emailBlock, defaults.emailBlock);
+  base.phoneBlock = normalizeBlock(raw.phoneBlock, defaults.phoneBlock);
 
   return base;
 };
@@ -131,8 +138,8 @@ const sanitizePayload = (raw) => {
   return result;
 };
 
-function getMessage(err) {
-  if (!err) return "Unexpected error";
+function getMessage(err, t) {
+  if (!err) return t("common.genericError");
   if (typeof err === "string") return err;
   if (err.message) {
     try {
@@ -143,14 +150,28 @@ function getMessage(err) {
     }
     return err.message;
   }
-  return String(err);
+  return String(err || "") || t("common.genericError");
 }
 
 export default function AdminContactSettingsPageInner() {
-  const [data, setData] = useState(() => deepClone(emptyConfig));
+  const { t } = useTranslation();
+  const defaults = useMemo(() => createEmptyConfig(t), [t]);
+  const defaultsRef = useRef(defaults);
+  useEffect(() => {
+    defaultsRef.current = defaults;
+  }, [defaults]);
+
+  const [data, setData] = useState(() => deepClone(defaults));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
+  const tipItems = useMemo(
+    () =>
+      resolveLines(
+        t("admin.contact.tips.items", { returnObjects: true })
+      ),
+    [t]
+  );
 
   useEffect(() => {
     let active = true;
@@ -159,11 +180,14 @@ export default function AdminContactSettingsPageInner() {
       try {
         const conf = await contactPageApi.get();
         if (!active) return;
-        setData(normalizeState(conf));
+        setData(normalizeState(conf, defaultsRef.current));
       } catch (err) {
         if (!active) return;
-        setBanner({ variant: "danger", message: getMessage(err) });
-        setData(deepClone(emptyConfig));
+        setBanner({
+          variant: "danger",
+          message: getMessage(err, t),
+        });
+        setData(deepClone(defaultsRef.current));
       } finally {
         if (active) setLoading(false);
       }
@@ -171,7 +195,7 @@ export default function AdminContactSettingsPageInner() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   const canSave = useMemo(() => !saving && !loading, [saving, loading]);
   const disabled = loading || saving;
@@ -218,13 +242,13 @@ export default function AdminContactSettingsPageInner() {
     try {
       const payload = sanitizePayload(data);
       const saved = await contactPageApi.upsert(payload);
-      setData(normalizeState(saved || payload));
+      setData(normalizeState(saved || payload, defaultsRef.current));
       setBanner({
         variant: "success",
-        message: "Contact page settings saved.",
+        message: t("admin.contact.messages.saved"),
       });
     } catch (err) {
-      setBanner({ variant: "danger", message: getMessage(err) });
+      setBanner({ variant: "danger", message: getMessage(err, t) });
     } finally {
       setSaving(false);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -236,10 +260,10 @@ export default function AdminContactSettingsPageInner() {
     setBanner(null);
     try {
       const conf = await contactPageApi.get();
-      setData(normalizeState(conf));
+      setData(normalizeState(conf, defaultsRef.current));
     } catch (err) {
-      setBanner({ variant: "danger", message: getMessage(err) });
-      setData(deepClone(emptyConfig));
+      setBanner({ variant: "danger", message: getMessage(err, t) });
+      setData(deepClone(defaultsRef.current));
     } finally {
       setLoading(false);
     }
@@ -252,12 +276,13 @@ export default function AdminContactSettingsPageInner() {
           <div className="flex flex-col gap-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
               <ShieldCheck className="h-4 w-4" />
-              Contact Page
+              {t("admin.contact.badge")}
             </div>
-            <h2 className="text-2xl font-semibold">Contact Page Content</h2>
+            <h2 className="text-2xl font-semibold">
+              {t("admin.contact.headerTitle")}
+            </h2>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Edit hero copy, sidebar blocks and form behaviour for the public
-              contact page.
+              {t("admin.contact.headerDescription")}
             </p>
           </div>
 
@@ -278,72 +303,88 @@ export default function AdminContactSettingsPageInner() {
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
             <div className="space-y-6 xl:col-span-7">
               <Card
-                title="Hero Section"
-                subtitle="Headline, intro copy and optional hero image."
+                title={t("admin.contact.hero.title")}
+                subtitle={t("admin.contact.hero.subtitle")}
               >
                 <Field
                   icon={Type}
-                  label="Hero title"
+                  label={t("admin.contact.hero.fields.title")}
                   value={data.heroTitle}
                   onChange={(value) => update({ heroTitle: value })}
-                  placeholder="We're here to help"
+                  placeholder={t("admin.contact.hero.fields.titlePlaceholder")}
                   disabled={disabled}
                 />
                 <TextArea
                   icon={Quote}
-                  label="Hero subtitle"
+                  label={t("admin.contact.hero.fields.subtitle")}
                   rows={3}
                   value={data.heroSubtitle}
                   onChange={(value) => update({ heroSubtitle: value })}
-                  placeholder="Short paragraph describing your contact policy."
+                  placeholder={t(
+                    "admin.contact.hero.fields.subtitlePlaceholder"
+                  )}
                   disabled={disabled}
                 />
                 <div></div>
               </Card>
 
               <Card
-                title="Address & Opening Hours"
-                subtitle="Configure sidebar blocks for visitors."
+                title={t("admin.contact.address.title")}
+                subtitle={t("admin.contact.address.subtitle")}
               >
                 <Field
                   icon={MapPin}
-                  label="Address block title"
+                  label={t("admin.contact.address.blockTitle")}
                   value={data.addressBlock.title}
                   onChange={(value) => changeBlockTitle("addressBlock", value)}
-                  placeholder="Visit our European studio"
+                  placeholder={t(
+                    "admin.contact.address.blockTitlePlaceholder"
+                  )}
                   disabled={disabled}
                 />
                 <Repeater
                   icon={MapPin}
-                  label="Address lines"
+                  label={t("admin.contact.address.lines")}
                   items={data.addressBlock.lines}
                   onAdd={() => addLine("addressBlock")}
                   onRemove={(index) => removeLine("addressBlock", index)}
                   onChange={(index, value) =>
                     changeLine("addressBlock", index, value)
                   }
-                  placeholder="Street, city, extra note…"
+                  placeholder={t(
+                    "admin.contact.address.linesPlaceholder"
+                  )}
+                  addLabel={t("admin.contact.repeater.add")}
+                  removeLabel={t("admin.contact.repeater.remove")}
+                  removeTitle={t("admin.contact.repeater.remove")}
+                  emptyLabel={t("admin.contact.repeater.empty")}
                   disabled={disabled}
                 />
                 <Separator />
                 <Field
                   icon={Clock3}
-                  label="Opening hours title"
+                  label={t("admin.contact.hours.blockTitle")}
                   value={data.hoursBlock.title}
                   onChange={(value) => changeBlockTitle("hoursBlock", value)}
-                  placeholder="Opening hours (CET)"
+                  placeholder={t(
+                    "admin.contact.hours.blockTitlePlaceholder"
+                  )}
                   disabled={disabled}
                 />
                 <Repeater
                   icon={Clock3}
-                  label="Opening hours lines"
+                  label={t("admin.contact.hours.lines")}
                   items={data.hoursBlock.lines}
                   onAdd={() => addLine("hoursBlock")}
                   onRemove={(index) => removeLine("hoursBlock", index)}
                   onChange={(index, value) =>
                     changeLine("hoursBlock", index, value)
                   }
-                  placeholder="Mon – Fri: 09:00 – 18:00"
+                  placeholder={t("admin.contact.hours.linesPlaceholder")}
+                  addLabel={t("admin.contact.repeater.add")}
+                  removeLabel={t("admin.contact.repeater.remove")}
+                  removeTitle={t("admin.contact.repeater.remove")}
+                  emptyLabel={t("admin.contact.repeater.empty")}
                   disabled={disabled}
                 />
               </Card>
@@ -351,78 +392,98 @@ export default function AdminContactSettingsPageInner() {
 
             <div className="space-y-6 xl:col-span-5">
               <Card
-                title="Contact Channels"
-                subtitle="Emails and phone numbers shown in the sidebar."
+                title={t("admin.contact.channels.title")}
+                subtitle={t("admin.contact.channels.subtitle")}
               >
                 <Field
                   icon={Mail}
-                  label="Email block title"
+                  label={t("admin.contact.channels.emailTitle")}
                   value={data.emailBlock.title}
                   onChange={(value) => changeBlockTitle("emailBlock", value)}
-                  placeholder="Customer service"
+                  placeholder={t(
+                    "admin.contact.channels.emailTitlePlaceholder"
+                  )}
                   disabled={disabled}
                 />
                 <Repeater
                   icon={Mail}
-                  label="Email lines"
+                  label={t("admin.contact.channels.emailLines")}
                   items={data.emailBlock.lines}
                   onAdd={() => addLine("emailBlock")}
                   onRemove={(index) => removeLine("emailBlock", index)}
                   onChange={(index, value) =>
                     changeLine("emailBlock", index, value)
                   }
-                  placeholder="support@domain.com"
+                  placeholder={t(
+                    "admin.contact.channels.emailLinesPlaceholder"
+                  )}
+                  addLabel={t("admin.contact.repeater.add")}
+                  removeLabel={t("admin.contact.repeater.remove")}
+                  removeTitle={t("admin.contact.repeater.remove")}
+                  emptyLabel={t("admin.contact.repeater.empty")}
                   disabled={disabled}
                 />
                 <Separator />
                 <Field
                   icon={Phone}
-                  label="Phone block title"
+                  label={t("admin.contact.channels.phoneTitle")}
                   value={data.phoneBlock.title}
                   onChange={(value) => changeBlockTitle("phoneBlock", value)}
-                  placeholder="Phone"
+                  placeholder={t(
+                    "admin.contact.channels.phoneTitlePlaceholder"
+                  )}
                   disabled={disabled}
                 />
                 <Repeater
                   icon={Phone}
-                  label="Phone lines"
+                  label={t("admin.contact.channels.phoneLines")}
                   items={data.phoneBlock.lines}
                   onAdd={() => addLine("phoneBlock")}
                   onRemove={(index) => removeLine("phoneBlock", index)}
                   onChange={(index, value) =>
                     changeLine("phoneBlock", index, value)
                   }
-                  placeholder="+49 30 123 456 78"
+                  placeholder={t(
+                    "admin.contact.channels.phoneLinesPlaceholder"
+                  )}
+                  addLabel={t("admin.contact.repeater.add")}
+                  removeLabel={t("admin.contact.repeater.remove")}
+                  removeTitle={t("admin.contact.repeater.remove")}
+                  emptyLabel={t("admin.contact.repeater.empty")}
                   disabled={disabled}
                 />
               </Card>
 
               <Card
-                title="Form Behaviour"
-                subtitle="Toggle the contact form and edit the confirmation copy."
+                title={t("admin.contact.form.title")}
+                subtitle={t("admin.contact.form.subtitle")}
               >
                 <ToggleRow
-                  label="Enable contact form"
+                  label={t("admin.contact.form.enableLabel")}
                   checked={Boolean(data.formEnabled)}
                   onChange={(value) => update({ formEnabled: value })}
                   disabled={saving}
                 />
                 <TextArea
                   icon={Send}
-                  label="Success message"
+                  label={t("admin.contact.form.successLabel")}
                   rows={4}
                   value={data.successMessage}
                   onChange={(value) => update({ successMessage: value })}
-                  placeholder="Shown after a successful form submission."
+                  placeholder={t("admin.contact.form.successPlaceholder")}
                   disabled={disabled}
                 />
               </Card>
 
               <Card
-                title="Quick Preview"
-                subtitle="Live snapshot of the right sidebar."
+                title={t("admin.contact.preview.title")}
+                subtitle={t("admin.contact.preview.subtitle")}
               >
-                <PreviewSidebar data={data} />
+                <PreviewSidebar
+                  data={data}
+                  defaults={defaultsRef.current}
+                  emptyLabel={t("admin.contact.preview.empty")}
+                />
               </Card>
             </div>
           </div>
@@ -435,7 +496,7 @@ export default function AdminContactSettingsPageInner() {
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
             >
               <RefreshCcw className="h-4 w-4" />
-              Reset
+              {t("admin.contact.buttons.reset")}
             </button>
             <button
               type="button"
@@ -446,12 +507,12 @@ export default function AdminContactSettingsPageInner() {
               {saving ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving…
+                  {t("admin.contact.buttons.saving")}
                 </span>
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  Save changes
+                  {t("admin.contact.buttons.save")}
                 </>
               )}
             </button>
@@ -462,12 +523,13 @@ export default function AdminContactSettingsPageInner() {
       <aside className="xl:col-span-4">
         <div className="sticky top-20 space-y-6">
           <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-            <h3 className="text-lg font-semibold">Content tips</h3>
+            <h3 className="text-lg font-semibold">
+              {t("admin.contact.tips.title")}
+            </h3>
             <ul className="mt-4 space-y-2 text-sm text-[var(--color-text-admin-muted)]">
-              <li>Keep hero copy under 140 characters for easy scanning.</li>
-              <li>Combine address lines logically and avoid duplicates.</li>
-              <li>Highlight the fastest support channel in the first line.</li>
-              <li>Success message should set clear response expectations.</li>
+              {tipItems.map((item, index) => (
+                <li key={`tip-${index}`}>{item}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -593,6 +655,10 @@ function Repeater({
   onChange,
   placeholder,
   disabled,
+  addLabel,
+  removeLabel,
+  removeTitle,
+  emptyLabel,
 }) {
   return (
     <div>
@@ -611,7 +677,7 @@ function Repeater({
           className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
           disabled={disabled}
         >
-          + Add
+          {addLabel || "+ Add"}
         </button>
       </div>
 
@@ -633,8 +699,8 @@ function Repeater({
               type="button"
               onClick={() => (disabled ? null : onRemove?.(index))}
               className="rounded-full border border-rose-300 p-1.5 text-rose-600 hover:bg-rose-50 disabled:opacity-60"
-              aria-label="Remove"
-              title="Remove"
+              aria-label={removeLabel || "Remove"}
+              title={removeTitle || removeLabel || "Remove"}
               disabled={disabled}
             >
               <Trash2 className="h-4 w-4" />
@@ -643,7 +709,7 @@ function Repeater({
         ))}
         {!items?.length ? (
           <div className="rounded-xl border border-dashed border-[var(--color-border-admin)] p-3 text-center text-xs text-[var(--color-text-admin-muted)]">
-            No items yet
+            {emptyLabel || "No items yet"}
           </div>
         ) : null}
       </div>
@@ -655,26 +721,26 @@ function Separator() {
   return <div className="my-3 h-px w-full bg-[var(--color-border-admin)]/60" />;
 }
 
-function PreviewSidebar({ data }) {
+function PreviewSidebar({ data, defaults, emptyLabel }) {
   const blocks = [
     {
       icon: MapPin,
-      title: data.addressBlock.title || emptyConfig.addressBlock.title,
+      title: data.addressBlock.title || defaults.addressBlock.title,
       items: data.addressBlock.lines,
     },
     {
       icon: Clock3,
-      title: data.hoursBlock.title || emptyConfig.hoursBlock.title,
+      title: data.hoursBlock.title || defaults.hoursBlock.title,
       items: data.hoursBlock.lines,
     },
     {
       icon: Mail,
-      title: data.emailBlock.title || emptyConfig.emailBlock.title,
+      title: data.emailBlock.title || defaults.emailBlock.title,
       items: data.emailBlock.lines,
     },
     {
       icon: Phone,
-      title: data.phoneBlock.title || emptyConfig.phoneBlock.title,
+      title: data.phoneBlock.title || defaults.phoneBlock.title,
       items: data.phoneBlock.lines,
     },
   ];
@@ -687,13 +753,14 @@ function PreviewSidebar({ data }) {
           icon={block.icon}
           title={block.title}
           items={block.items}
+          emptyLabel={emptyLabel}
         />
       ))}
     </div>
   );
 }
 
-function PreviewCard({ icon: IconComponent, title, items = [] }) {
+function PreviewCard({ icon: IconComponent, title, items = [], emptyLabel }) {
   return (
     <div className="rounded-2xl border border-[var(--color-border-admin)] bg-white p-4 shadow-sm">
       <div className="mb-2 flex items-center gap-2 text-[var(--color-text-admin)]">
@@ -706,7 +773,7 @@ function PreviewCard({ icon: IconComponent, title, items = [] }) {
         {(items || []).map((item, index) => (
           <li key={`${title}-${index}`}>{item}</li>
         ))}
-        {!items?.length ? <li>—</li> : null}
+        {!items?.length ? <li>{emptyLabel || "—"}</li> : null}
       </ul>
     </div>
   );

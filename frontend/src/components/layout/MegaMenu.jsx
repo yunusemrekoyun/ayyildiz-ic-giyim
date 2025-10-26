@@ -1,11 +1,13 @@
 // src/components/nav/MegaMenu.jsx
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function MegaMenu({ label, data = [], onRootClick }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const closeTimer = useRef(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!data.length) {
@@ -81,7 +83,10 @@ export default function MegaMenu({ label, data = [], onRootClick }) {
 
             {/* Sağ panel */}
             <div className="flex-1 p-4">
-              <RightPanel items={data[active]?.children ?? []} />
+              <RightPanel
+                items={data[active]?.children ?? []}
+                emptyLabel={t("megaMenu.noSubcategories")}
+              />
             </div>
           </div>
         </div>
@@ -90,11 +95,11 @@ export default function MegaMenu({ label, data = [], onRootClick }) {
   );
 }
 
-function RightPanel({ items }) {
+function RightPanel({ items, emptyLabel }) {
   if (!items?.length) {
     return (
       <div className="grid h-full place-items-center rounded-lg border border-dashed border-border/70 bg-surface-hover p-8 text-center text-secondary">
-        No subcategories
+        {emptyLabel}
       </div>
     );
   }

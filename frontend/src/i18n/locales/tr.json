@@ -1,0 +1,611 @@
+{
+  "common": {
+    "language": {
+      "turkish": "Türkçe",
+      "english": "İngilizce",
+      "german": "Almanca"
+    },
+    "loading": "Yükleniyor...",
+    "categoriesUnavailable": "Kategoriler kullanılamıyor",
+    "noData": "Veri bulunamadı.",
+    "sale": "İndirim",
+    "search": "Ara",
+    "searchPlaceholder": "Ürün ara",
+    "viewAll": "{{title}} ürünlerinin tümünü gör",
+    "genericError": "Beklenmeyen bir hata oluştu.",
+    "breadcrumb": {
+      "home": "Ana Sayfa"
+    }
+  },
+  "hero": {
+    "noMedia": "Medya bulunmuyor",
+    "gotoSlide": "{{index}}. slayta git",
+    "prev": "Önceki",
+    "next": "Sonraki"
+  },
+  "header": {
+    "searchAria": "Ara",
+    "cartAria": "Sepet",
+    "wishlistAria": "Favoriler",
+    "accountAria": "Hesabım"
+  },
+  "megaMenu": {
+    "noSubcategories": "Alt kategori bulunmuyor"
+  },
+  "footer": {
+    "about": "Hakkımızda",
+    "contact": "İletişim",
+    "faq": "SSS",
+    "shippingReturns": "Kargo ve İade",
+    "privacy": "Gizlilik Politikası",
+    "terms": "Kullanım Şartları",
+    "rights": "© {{year}} Ayyıldız İç Giyim. Tüm hakları saklıdır."
+  },
+  "authPage": {
+    "loginTitle": "Tekrar Hoş Geldiniz",
+    "registerTitle": "Hesap Oluştur",
+    "loginSubtitle": "Siparişlerinizi ve favorilerinizi yönetmek için giriş yapın.",
+    "registerSubtitle": "Hızlı ödeme ve seçili ürünler için bize katılın.",
+    "switchToRegister": "Üye değil misiniz? ",
+    "switchToLogin": "Zaten hesabınız var mı? ",
+    "createAccount": "Hesap oluştur",
+    "loginAccount": "Giriş yap"
+  },
+  "authForm": {
+    "email": "E-posta",
+    "password": "Şifre",
+    "fullName": "Ad Soyad",
+    "phone": "Telefon",
+    "agree": "Şartlar ve Gizlilik Politikası'nı kabul ediyorum.",
+    "forgot": "Şifremi unuttum",
+    "loginButton": "Giriş Yap",
+    "registerButton": "Hesap Oluştur",
+    "loading": "Yükleniyor...",
+    "loginLoading": "Giriş yapılıyor...",
+    "registerLoading": "Hesap oluşturuluyor...",
+    "emailPlaceholder": "ornek@eposta.com",
+    "phonePlaceholder": "+90 5xx xxx xx xx",
+    "passwordPlaceholder": "Minimum 8 karakter",
+    "namePlaceholder": "Ayla Yılmaz"
+  },
+  "account": {
+    "tabs": {
+      "overview": "Profil",
+      "orders": "Siparişler",
+      "addresses": "Adresler",
+      "wishlist": "Favoriler"
+    },
+    "sidebar": {
+      "logout": "Çıkış Yap",
+      "loading": "Yükleniyor..."
+    },
+    "overview": {
+      "title": "Profil Özeti",
+      "description": "Kişisel bilgilerinizi ve profil fotoğrafınızı güncelleyin.",
+      "success": "Profil güncellendi",
+      "fields": {
+        "firstName": "Ad",
+        "lastName": "Soyad",
+        "email": "E-posta",
+        "emailHelp": "E-postayı değiştirmek için yeni doğrulama gerekebilir.",
+        "phone": "Telefon"
+      },
+      "avatar": {
+        "title": "Profil Fotoğrafı",
+        "help": "JPG veya PNG, tek görsel. Yüksek boyutlu dosyalar sıkıştırılarak gönderilir.",
+        "remove": "Kaldır",
+        "removeActive": "Kaldırılacak",
+        "upload": "Yükle",
+        "removeFile": "Dosyayı kaldır"
+      },
+      "save": "Değişiklikleri Kaydet",
+      "fallbackName": "Müşteri"
+    },
+    "orders": {
+      "title": "Siparişler",
+      "empty": "Henüz bir siparişiniz bulunmuyor.",
+      "status": {
+        "created": "Oluşturuldu",
+        "pending": "Beklemede",
+        "paid": "Ödendi",
+        "processing": "Hazırlanıyor",
+        "shipped": "Kargolandı",
+        "completed": "Tamamlandı",
+        "cancelled": "İptal edildi"
+      },
+      "orderNumber": "Sipariş #{{number}}",
+      "shipping": "Teslimat: {{name}} ({{price}})",
+      "total": "Toplam: {{total}}",
+      "viewDetails": "Detayları gör"
+    },
+    "addresses": {
+      "title": "Adresler",
+      "add": "Yeni Adres",
+      "empty": "Kayıtlı adresiniz bulunmuyor.",
+      "default": "Varsayılan",
+      "edit": "Düzenle",
+      "delete": "Sil",
+      "added": "Adres eklendi",
+      "updated": "Adres güncellendi",
+      "removed": "Adres silindi",
+      "form": {
+        "fullName": "Ad Soyad",
+        "phone": "Telefon",
+        "line1": "Adres Satırı 1",
+        "line2": "Adres Satırı 2",
+        "city": "Şehir",
+        "state": "İl / İlçe",
+        "postalCode": "Posta Kodu",
+        "country": "Ülke",
+        "cancel": "Vazgeç",
+        "save": "Adresi Kaydet",
+        "saving": "Kaydediliyor..."
+      }
+    },
+    "wishlist": {
+      "title": "Favoriler",
+      "empty": "Favori listeniz şimdilik boş.",
+      "remove": "Favorilerden kaldır",
+      "price": "{{price}} €",
+      "noImage": "Görsel yok"
+    }
+  },
+  "pages": {
+    "about": {
+      "title": "Hakkımızda",
+      "noData": "Hakkımızda içeriği bulunamadı."
+    }
+  },
+  "cart": {
+    "itemCount": "{{count}} ürün"
+  },
+  "languageSwitcher": {
+    "label": "Dil",
+    "aria": "Dil değiştir"
+  },
+  "auth": {
+    "login": "Giriş Yap",
+    "logout": "Çıkış Yap"
+  },
+  "admin": {
+    "common": {
+      "refresh": "Yenile",
+      "createNew": "Yeni oluştur",
+      "cancel": "Vazgeç",
+      "save": "Kaydet",
+      "saving": "Kaydediliyor...",
+      "delete": "Sil",
+      "edit": "Düzenle",
+      "previous": "Önceki",
+      "next": "Sonraki",
+      "remove": "Kaldır",
+      "actions": "İşlemler",
+      "search": "Ara",
+      "loadMore": "Daha fazla yükle",
+      "warning": "Uyarı",
+      "success": "Başarılı",
+      "error": "Hata"
+    },
+    "categories": {
+      "pageTitle": "Kategoriler",
+      "pageSubtitle": "Üç seviyeli katalog ağacını ve görselleri yönetin.",
+      "formTitleCreate": "Kategori Oluştur",
+      "formTitleEdit": "Kategori Düzenle",
+      "formSubtitleCreate": "Yeni bir kategori ekleyin.",
+      "formSubtitleEdit": "Kategori adını, hiyerarşiyi veya görseli güncelleyin.",
+      "name": "Kategori adı",
+      "namePlaceholder": "Örn. İç Giyim",
+      "parent": "Üst kategori",
+      "parentHelperNone": "Bu kategorinin hangi seviyede olacağını seçin (opsiyonel).",
+      "parentHelperRoot": "Bu üst seviye bir kategoridir. Dilerseniz başka bir köke taşıyabilirsiniz.",
+      "parentHelperSecond": "Bu ikinci seviye bir kategoridir. Yukarı veya aşağı taşıyabilirsiniz.",
+      "parentHelperLeaf": "Yaprak kategoriler alt kategori alamaz.",
+      "noParent": "Üst kategori yok (kök)",
+      "thumbnail": "Kapak görseli",
+      "thumbnailHelp": "Opsiyonel. Mega menüde 1:1 görsel olarak kullanılır. PNG/JPG (maks. 2MB).",
+      "upload": "Görsel Yükle",
+      "removeImage": "Görsel kaldırılacak",
+      "noImage": "Görsel yok",
+      "deleteConfirmTitle": "{{name}} silinsin mi?",
+      "deleteConfirmText": "Bu işlem geri alınamaz.",
+      "listEmpty": "Henüz kategori yok.",
+      "addTranslation": "Çeviriler",
+      "translationHelper": "Diğer diller için ad girebilirsiniz. Boş alanlar {{base}} metnini kullanır.",
+      "imageError": "Lütfen bir görsel dosyası yükleyin.",
+      "created": "Kategori oluşturuldu",
+      "updated": "Kategori güncellendi",
+      "deleted": "Kategori silindi",
+      "errors": {
+        "nameRequired": "Kategori adı zorunludur."
+      },
+      "tree": {
+        "title": "Kategori Ağacı",
+        "total": "{{count}} kategori",
+        "newRoot": "Yeni kök kategori",
+        "imageBadge": "görsel",
+        "children": "{{count}} alt kategori",
+        "empty": "Henüz kategori yok. İlk kök kategorinizi oluşturun.",
+        "addRoot": "Kök kategori ekle",
+        "collapse": "Daralt",
+        "expand": "Genişlet",
+        "total_plural": "{{count}} kategori",
+        "children_plural": "{{count}} alt kategori"
+      }
+    },
+    "media": {
+      "title": "Medya Kütüphanesi",
+      "subtitle": "Cloudinary kullanımını takip edin ve yüklenen varlıkları yönetin.",
+      "refresh": "Kullanımı yenile",
+      "searchPlaceholder": "Public ID veya klasöre göre filtrele",
+      "showing": "Toplam {{count}} medya",
+      "deleteTitle": "“{{id}}” varlığını sil",
+      "deleteDescription": "Bu işlem geri alınamaz. Varlığı silmek istediğinize emin misiniz?",
+      "removed": "Varlık silindi",
+      "noAssets": "Henüz herhangi bir varlık yüklemediniz veya filtreleriniz sonuç döndürmedi.",
+      "folderRoot": "kök",
+      "table": {
+        "asset": "Varlık",
+        "folder": "Klasör",
+        "size": "Boyut",
+        "created": "Oluşturulma",
+        "actions": "İşlemler"
+      },
+      "usage": {
+        "title": "Cloudinary kullanımı",
+        "summary": "Plan: {{plan}} • Güncellendi {{date}}",
+        "refreshing": "Yenileniyor...",
+        "storage": "Depolama",
+        "bandwidth": "Bant genişliği",
+        "noLimit": "Sınırsız",
+        "notAvailable": "Yok",
+        "progress": "{{used}} / {{limit}}",
+        "unknownPlan": "Bilinmiyor",
+        "unknownDate": "Belirtilmedi"
+      }
+    },
+    "products": {
+      "pageTitle": "Ürünler",
+      "pageSubtitle": "Mağaza kataloğundaki ürünleri yönetin.",
+      "newProduct": "Yeni Ürün",
+      "editProduct": "Ürünü Düzenle",
+      "createProduct": "Ürün Oluştur",
+      "name": "Ürün adı",
+      "namePlaceholder": "Örn. Lüks Saten Pijama",
+      "price": "Fiyat (EUR)",
+      "category": "Kategori",
+      "visibility": "Görünürlük",
+      "visible": "Mağazada göster",
+      "hidden": "Gizli",
+      "description": "Açıklama",
+      "descriptionPlaceholder": "Ürün sayfasında görünecek kısa tanıtım metni",
+      "care": "Bakım talimatları",
+      "carePlaceholder": "Örn. Soğuk suda elde yıkayın, kurutma makinesi kullanmayın",
+      "details": "Öne çıkan detaylar",
+      "detailsPlaceholder": "Her satır bir madde olacak şekilde yazın",
+      "detailsHelper": "Her satır bir madde olacak şekilde yazın.",
+      "colors": "Renkler",
+      "colorsDescription": "Opsiyonel renk örneklerini ekleyin.",
+      "colorsHelper": "Hazır renk paletlerinden seçebilir veya özel HEX kodu ekleyebilirsiniz.",
+      "sizes": "Bedenler",
+      "sizesDescription": "Mevcut beden seçeneklerini yönetin.",
+      "sizesLabel": "Beden seçenekleri",
+      "sizesPlaceholder": "Beden ekleyip Enter'a basın",
+      "sizesHelper": "Örneğin: XS, S, M, L, XL",
+      "attribute": "Ürün özelliği",
+      "attributeDescription": "Uzunluk veya kumaş gibi özel bir alan ekleyin.",
+      "attributeTitle": "Özellik başlığı",
+      "attributeValues": "Özellik değerleri",
+      "attributeTitlePlaceholder": "Örn. Kumaş",
+      "attributeValuesPlaceholder": "Her satır bir seçenek",
+      "attributeOptionsLabel": "Özellik seçenekleri",
+      "attributeOptionsPlaceholder": "Seçenek ekleyip Enter'a basın",
+      "attributeOptionsHelper": "Özellik başlığının altında gösterilir.",
+      "inventory": "Stok",
+      "inventorySectionTitle": "Stok yönetimi",
+      "inventorySectionDescription": "Her varyant için stok girin. Boş değerler 0 kabul edilir.",
+      "inventoryShow": "Stokları yönet",
+      "inventoryHide": "Stokları gizle",
+      "inventoryStock": "Adet",
+      "translations": "Çeviriler",
+      "translationsHelper": "Diğer diller için içerik girin. Boş alanlar {{base}} metnini kullanır.",
+      "translationClears": "Bu dildeki çeviri silinecek.",
+      "save": "Kaydet",
+      "saving": "Kaydediliyor...",
+      "delete": "Sil",
+      "deleteConfirm": "Silmek istediğinize emin misiniz?",
+      "searchPlaceholder": "Ürün ara",
+      "allCategories": "Tüm kategoriler",
+      "totalCount": "{{total}} ürün • sayfa {{page}} / {{pages}}",
+      "created": "Ürün oluşturuldu",
+      "updated": "Ürün güncellendi",
+      "deleted": "Ürün silindi",
+      "deleteConfirmTitle": "{{name}} silinsin mi?",
+      "deleteConfirmDescription": "Bu işlem geri alınamaz.",
+      "variant": "Varyant",
+      "variantDefault": "Varsayılan",
+      "mediaTitle": "Medya galerisi",
+      "mediaCount": "{{count}} / {{limit}} görsel",
+      "mediaHelp": "Yüksek çözünürlüklü kare görseller ekleyin. Kaydettikten sonra sürükleyerek sıralayabilirsiniz.",
+      "mediaAdd": "Görsel ekle",
+      "mediaNewAlt": "Yeni yükleme",
+      "saveError": "Ürün kaydedilemedi",
+      "errors": {
+        "nameRequired": "Ürün adı zorunludur.",
+        "priceInvalid": "Geçerli bir ürün fiyatı girin.",
+        "maxImages": "En fazla 8 görsel yükleyebilirsiniz."
+      },
+      "pricePlaceholder": "129,90",
+      "noCategory": "Kategori seçilmedi",
+      "modalTitleEdit": "Ürünü Düzenle",
+      "modalTitleCreate": "Ürün Oluştur",
+      "modalDescription": "Katalog girdilerini, fiyatları ve görselleri yönetin.",
+      "modalSaving": "Kaydediliyor...",
+      "modalUpdate": "Ürünü güncelle",
+      "modalCreate": "Ürün oluştur",
+      "selectionShow": "Göster",
+      "table": {
+        "empty": "Henüz ürün bulunmuyor. İlk ürününüzü ekleyin.",
+        "product": "Ürün",
+        "category": "Kategori",
+        "price": "Fiyat",
+        "status": "Durum",
+        "updated": "Güncellendi",
+        "actions": "İşlemler",
+        "statusVisible": "Yayında",
+        "statusHidden": "Gizli"
+      }
+    },
+    "sets": {
+      "pageTitle": "Setler",
+      "pageSubtitle": "Koleksiyonlarınızdaki ürün setlerini yönetin.",
+      "refresh": "Yenile",
+      "new": "Yeni set",
+      "deleteTitle": "\"{{name}}\" seti silinsin mi?",
+      "deleteDescription": "Bu işlem geri alınamaz. \"{{name}}\" setini silmek istediğinize emin misiniz?",
+      "deleted": "Set silindi",
+      "updated": "Set güncellendi",
+      "created": "Set oluşturuldu",
+      "empty": "Henüz set bulunmuyor. Yeni bir set oluşturun.",
+      "table": {
+        "set": "Set",
+        "price": "Fiyat",
+        "stock": "Stok",
+        "visibility": "Görünürlük",
+        "actions": "İşlemler",
+        "items": "{{count}} ürün"
+      },
+      "button": {
+        "inspect": "Stok detayı",
+        "edit": "Düzenle",
+        "delete": "Sil"
+      },
+      "visibility": {
+        "visible": "Yayında",
+        "hidden": "Gizli"
+      },
+      "inspect": {
+        "title": "{{name}} seti",
+        "subtitle": "Setteki ürünlerin stok dağılımı",
+        "close": "Kapat",
+        "product": "Ürün",
+        "variant": "Varyant",
+        "qty": "Set miktarı",
+        "stockCatalog": "Katalog stoğu",
+        "stockSet": "Set stoğu",
+        "stockLegacy": "Toplam stok",
+        "unnamed": "İsimsiz ürün",
+        "default": "Varsayılan"
+      },
+      "form": {
+        "titleCreate": "Set Oluştur",
+        "titleEdit": "Seti Düzenle",
+        "description": "Kataloğunuzdaki ürünlerden yeni bir set oluşturun ve mağazada öne çıkarın.",
+        "nameLabel": "Set adı",
+        "namePlaceholder": "Örn. Premium Düğün Paketi",
+        "priceLabel": "Fiyat ({{currency}})",
+        "pricePlaceholder": "499.00",
+        "descriptionLabel": "Açıklama",
+        "descriptionPlaceholder": "Setin içeriğini ve öne çıkan özelliklerini anlatın.",
+        "visibleLabel": "Mağazada göster",
+        "imagesTitle": "Görseller",
+        "upload": "Yükle",
+        "newImageAlt": "Yeni görsel",
+        "productsTitle": "Set ürünleri",
+        "productsHelp": "Katalogdan ürün seçerek sete ekleyin.",
+        "addProduct": "Ürün ekle",
+        "productCardTitle": "Ürün",
+        "productLabel": "Ürün",
+        "quantityLabel": "Adet",
+        "saving": "Kaydediliyor...",
+        "saveChanges": "Değişiklikleri kaydet",
+        "create": "Set oluştur"
+      },
+      "errors": {
+        "nameRequired": "Set adı zorunludur.",
+        "priceInvalid": "Lütfen geçerli bir fiyat girin.",
+        "productRequired": "Sete en az bir ürün ekleyin.",
+        "saveFailed": "Set kaydedilemedi."
+      }
+    },
+    "contact": {
+      "badge": "İletişim Sayfası",
+      "headerTitle": "İletişim Sayfası İçeriği",
+      "headerDescription": "Kamuya açık iletişim sayfasında görünen kahraman metni, yan bloklar ve form davranışını düzenleyin.",
+      "messages": {
+        "saved": "İletişim sayfası ayarları kaydedildi."
+      },
+      "defaults": {
+        "heroTitle": "Size yardımcı olmaya hazırız",
+        "heroSubtitle": "Müşteri hizmetleri ekibimiz Pazartesi'den Cuma'ya 09:00–18:00 (CET) arasında hizmet veriyor. Bize bir not bırakın, bir iş günü içinde dönüş yapalım.",
+        "addressBlock": {
+          "title": "Avrupa stüdyomuzu ziyaret edin",
+          "lines": [
+            "Kurfürstendamm 45, 10719 Berlin",
+            "Showroom ve mağazadan teslim (randevu önerilir)"
+          ]
+        },
+        "hoursBlock": {
+          "title": "Çalışma saatleri (CET)",
+          "lines": [
+            "Pzt – Cum: 09:00 – 18:00",
+            "Cmt: 10:00 – 16:00 (yalnızca showroom)",
+            "Pazartesi ve resmi tatiller: kapalı"
+          ]
+        },
+        "emailBlock": {
+          "title": "Müşteri hizmetleri",
+          "lines": [
+            "support@evimstil.com",
+            "Ortalama yanıt süresi: < 24 saat"
+          ]
+        },
+        "phoneBlock": {
+          "title": "Telefon",
+          "lines": [
+            "+49 (0) 30 234 567 89",
+            "WhatsApp ve Signal aynı numaradan ulaşılabilir"
+          ]
+        },
+        "successMessage": "Mesajınız için teşekkür ederiz. Talebinizi aldık ve en kısa sürede e-posta ile dönüş yapacağız. Acil destek gerekiyorsa aşağıdaki numaradan bize ulaşabilirsiniz."
+      },
+      "hero": {
+        "title": "Hero Bölümü",
+        "subtitle": "Başlık, giriş metni ve isteğe bağlı hero görseli.",
+        "fields": {
+          "title": "Hero başlığı",
+          "titlePlaceholder": "Size yardımcı olmaya hazırız",
+          "subtitle": "Hero alt başlık",
+          "subtitlePlaceholder": "İletişim politikası hakkında kısa bir paragraf yazın."
+        }
+      },
+      "address": {
+        "title": "Adres ve Çalışma Saatleri",
+        "subtitle": "Ziyaretçilerin gördüğü yan blokları düzenleyin.",
+        "blockTitle": "Adres blok başlığı",
+        "blockTitlePlaceholder": "Avrupa stüdyomuzu ziyaret edin",
+        "lines": "Adres satırları",
+        "linesPlaceholder": "Sokak, şehir, ek not…"
+      },
+      "hours": {
+        "blockTitle": "Çalışma saatleri başlığı",
+        "blockTitlePlaceholder": "Çalışma saatleri (CET)",
+        "lines": "Çalışma saatleri satırları",
+        "linesPlaceholder": "Pzt – Cum: 09:00 – 18:00"
+      },
+      "channels": {
+        "title": "İletişim Kanalları",
+        "subtitle": "Yan çubukta gösterilen e-posta ve telefon bilgileri.",
+        "emailTitle": "E-posta blok başlığı",
+        "emailTitlePlaceholder": "Müşteri hizmetleri",
+        "emailLines": "E-posta satırları",
+        "emailLinesPlaceholder": "support@domain.com",
+        "phoneTitle": "Telefon blok başlığı",
+        "phoneTitlePlaceholder": "Telefon",
+        "phoneLines": "Telefon satırları",
+        "phoneLinesPlaceholder": "+49 30 123 456 78"
+      },
+      "repeater": {
+        "add": "Satır ekle",
+        "remove": "Kaldır",
+        "empty": "Henüz satır eklenmedi"
+      },
+      "form": {
+        "title": "Form Davranışı",
+        "subtitle": "İletişim formunu açıp kapatın ve başarı mesajını düzenleyin.",
+        "enableLabel": "İletişim formunu etkinleştir",
+        "successLabel": "Başarı mesajı",
+        "successPlaceholder": "Form başarıyla gönderildiğinde gösterilecek mesaj."
+      },
+      "preview": {
+        "title": "Hızlı Önizleme",
+        "subtitle": "Sağ yan çubuğun canlı görünümü.",
+        "empty": "—"
+      },
+      "buttons": {
+        "reset": "Sıfırla",
+        "saving": "Kaydediliyor...",
+        "save": "Değişiklikleri kaydet"
+      },
+      "tips": {
+        "title": "İçerik ipuçları",
+        "items": [
+          "Hero metnini kolay okunabilir olması için 140 karakterin altında tutun.",
+          "Adres satırlarını mantıklı şekilde birleştirin ve tekrarları önleyin.",
+          "En hızlı destek kanalını ilk satırda vurgulayın.",
+          "Başarı mesajı, dönüş süresi beklentisini net şekilde anlatmalı."
+        ]
+      }
+    },
+    "privacy": {
+      "badge": "İçerik • Gizlilik Politikası",
+      "headerTitle": "Gizlilik Politikası Sayfası",
+      "headerDescription": {
+        "before": "Gizlilik politikası başlığını, bölümleri, alt bilgiyi ve SEO metadatasını yönetin. Bu yapı ",
+        "after": " sayfasını kontrol eder."
+      },
+      "messages": {
+        "loadError": "Gizlilik politikası içeriği yüklenemedi.",
+        "saveSuccess": "Gizlilik politikası başarıyla kaydedildi.",
+        "saveError": "İçerik kaydedilemedi."
+      },
+      "buttons": {
+        "save": "Değişiklikleri kaydet",
+        "saving": "Kaydediliyor...",
+        "preview": "Önizle",
+        "active": "Aktif",
+        "inactive": "Pasif"
+      },
+      "hero": {
+        "cardTitle": "Hero",
+        "fields": {
+          "titleLabel": "Sayfa başlığı",
+          "titlePlaceholder": "Gizlilik Politikası",
+          "subtitleLabel": "Alt başlık",
+          "subtitlePlaceholder": "Gizliliğiniz bizim için önemli..."
+        }
+      },
+      "sections": {
+        "title": "Bölümler",
+        "add": "Bölüm ekle",
+        "empty": "Henüz bölüm yok. Başlamak için \"Bölüm ekle\" butonuna tıklayın.",
+        "itemLabel": "{{index}}. Bölüm",
+        "idLabel": "Bölüm kimliği (anchor)",
+        "idPlaceholder": "denetleyici, veri-isleme...",
+        "titleLabel": "Başlık",
+        "titlePlaceholder": "1. Veri Sorumlusu",
+        "contentLabel": "Paragraflar",
+        "paragraphPlaceholder": "Bir paragraf girin...",
+        "actions": {
+          "moveUp": "Yukarı taşı",
+          "moveDown": "Aşağı taşı",
+          "remove": "Bölümü kaldır"
+        },
+        "addParagraph": "Paragraf ekle"
+      },
+      "footer": {
+        "title": "Alt bilgi notu (HTML)",
+        "placeholder": "Sorularınız için <a href=\"mailto:privacy@...\">privacy@...</a> adresinden bize yazabilirsiniz."
+      },
+      "seo": {
+        "title": "SEO metadatası",
+        "metaTitle": "Meta başlık",
+        "metaTitlePlaceholder": "Gizlilik Politikası — Evim & Stil",
+        "metaDescription": "Meta açıklama",
+        "metaDescriptionPlaceholder": "Verilerinizi nasıl işlediğimizi ve koruduğumuzu keşfedin...",
+        "keywords": "Anahtar kelimeler",
+        "keywordPlaceholder": "Anahtar kelime ekle",
+        "addKeyword": "Ekle",
+        "removeKeyword": "Anahtar kelimeyi kaldır"
+      },
+      "tips": {
+        "title": "İpuçları",
+        "items": [
+          "Bölümleri kısa ve net tutun, numaralandırmayı açık yapın.",
+          "Hızlı gezinme için anchor bağlantıları kullanın.",
+          "Alt bilgiye iletişim veya uyumluluk metni ekleyebilirsiniz.",
+          "SEO metadatası görünürlüğü artırır."
+        ]
+      }
+    }
+  }
+}

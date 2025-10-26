@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, Upload } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import AdminModal from "../common/AdminModal";
 import TagInput from "../common/TagInput";
 import ColorSelector from "./ColorSelector.jsx";
@@ -8,12 +9,48 @@ import {
   getColorInfo,
   normalizeColorValue,
 } from "../../../utils/colors.js";
+import { SUPPORTED_LANGUAGES } from "../../../i18n/config.js";
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "EUR",
-  minimumFractionDigits: 2,
-});
+const BASE_LANGUAGE = SUPPORTED_LANGUAGES[0]?.code || "tr";
+const BASE_LANGUAGE_LABEL =
+  SUPPORTED_LANGUAGES.find((lang) => lang.code === BASE_LANGUAGE)?.label ||
+  "Default";
+const TRANSLATION_LANGUAGES = SUPPORTED_LANGUAGES.filter(
+  (lang) => lang.code !== BASE_LANGUAGE
+);
+
+const emptyTranslation = {
+  name: "",
+  description: "",
+  careInstructions: "",
+  details: "",
+  attributeTitle: "",
+  attributeValues: "",
+};
+
+const createTranslationState = () =>
+  TRANSLATION_LANGUAGES.reduce((acc, lang) => {
+    acc[lang.code] = { ...emptyTranslation };
+    return acc;
+  }, {});
+
+const splitLines = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value))
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  if (typeof value === "string")
+    return value
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  return [];
+};
+
+const joinLines = (value) => {
+  if (!value) return "";
+  if (Array.isArray(value)) return value.join("\n");
+  return String(value);
+};
 
 const makeKey = ({ color, size, attributeValue }) =>
   [color || "", size || "", attributeValue || ""].join("||");
@@ -26,6 +63,7 @@ export default function ProductForm({
   categories = [],
 }) {
   const isEditing = Boolean(initialProduct?.id);
+  const { t, i18n } = useTranslation();
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -48,6 +86,16 @@ export default function ProductForm({
   const [removeImageIds, setRemoveImageIds] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [localized, setLocalized] = useState(() => createTranslationState());
+  const [initialLocalizedCodes, setInitialLocalizedCodes] = useState([]);
+  const currencyFormatter = useMemo(() => {
+    const locale = i18n.language || navigator.language || "tr-TR";
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 2,
+    });
+  }, [i18n.language]);
 
   useEffect(() => {
     if (!open) return;
@@ -96,6 +144,35 @@ export default function ProductForm({
     setRemoveImageIds([]);
     setError("");
     setSubmitting(false);
+
+    const translations = createTranslationState();
+    const existingCodes = [];
+    TRANSLATION_LANGUAGES.forEach(({ code }) => {
+      const entry = initialProduct?.localized?.[code];
+      if (!entry || typeof entry !== "object") return;
+      const custom = entry.customAttribute || {};
+      const translation = {
+        name: entry.name ?? "",
+        description: entry.description ?? "",
+        careInstructions: entry.careInstructions ?? "",
+        details: joinLines(entry.details),
+        attributeTitle: custom.title ?? "",
+        attributeValues: joinLines(custom.values),
+      };
+      translations[code] = translation;
+      if (
+        translation.name?.trim() ||
+        translation.description?.trim() ||
+        translation.careInstructions?.trim() ||
+        translation.details?.trim() ||
+        translation.attributeTitle?.trim() ||
+        translation.attributeValues?.trim()
+      ) {
+        existingCodes.push(code);
+      }
+    });
+    setLocalized(translations);
+    setInitialLocalizedCodes(existingCodes);
   }, [initialProduct, open]);
 
   useEffect(() => {
@@ -215,7 +292,7 @@ export default function ProductForm({
       8 - (existingImages.length + newImages.length)
     );
     if (remainingSlots <= 0) {
-      setError("Maximum of 8 images reached");
+      setError(t("admin.products.errors.maxImages"));
       return;
     }
 
@@ -246,6 +323,16 @@ export default function ProductForm({
     setError("");
   };
 
+  const handleTranslationChange = (langCode, field, value) => {
+    setLocalized((prev) => ({
+      ...prev,
+      [langCode]: {
+        ...(prev[langCode] || { ...emptyTranslation }),
+        [field]: value,
+      },
+    }));
+  };
+
   const handleStockChange = (comboKey, value) => {
     const numeric = Math.max(0, Math.floor(Number(value)));
     setInventory((prev) =>
@@ -260,12 +347,12 @@ export default function ProductForm({
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Product name is required");
+      setError(t("admin.products.errors.nameRequired"));
       return;
     }
     const priceValue = Number(price);
     if (Number.isNaN(priceValue) || priceValue < 0) {
-      setError("Enter a valid product price");
+      setError(t("admin.products.errors.priceInvalid"));
       return;
     }
 
@@ -310,10 +397,49 @@ export default function ProductForm({
         removeImagePublicIds: removeImageIds,
       };
 
+      const localizedPayload = {};
+      TRANSLATION_LANGUAGES.forEach(({ code }) => {
+        const entry = localized[code] || emptyTranslation;
+        const normalizedEntry = {
+          name: entry.name?.trim() || "",
+          description: entry.description?.trim() || "",
+          careInstructions: entry.careInstructions?.trim() || "",
+          details: splitLines(entry.details),
+          attributeTitle: entry.attributeTitle?.trim() || "",
+          attributeValues: splitLines(entry.attributeValues),
+        };
+
+        const hasContent =
+          normalizedEntry.name ||
+          normalizedEntry.description ||
+          normalizedEntry.careInstructions ||
+          normalizedEntry.details.length > 0 ||
+          normalizedEntry.attributeTitle ||
+          normalizedEntry.attributeValues.length > 0;
+
+        if (hasContent || initialLocalizedCodes.includes(code)) {
+          localizedPayload[code] = {
+            name: normalizedEntry.name,
+            description: normalizedEntry.description,
+            careInstructions: normalizedEntry.careInstructions,
+            details: normalizedEntry.details,
+            customAttribute: {
+              title: normalizedEntry.attributeTitle,
+              values: normalizedEntry.attributeValues,
+            },
+          };
+        }
+      });
+
+      if (Object.keys(localizedPayload).length) {
+        payload.localized = localizedPayload;
+      }
+
       await onSubmit?.(payload);
       onClose?.();
     } catch (err) {
-      const message = extractMessage(err) || "Unable to save product";
+      const message =
+        extractMessage(err) || t("admin.products.saveError");
       setError(message);
     } finally {
       setSubmitting(false);
@@ -323,14 +449,16 @@ export default function ProductForm({
   const variantColumns = useMemo(() => {
     const columns = [];
     if (showColors && colors.length)
-      columns.push({ key: "color", label: "Color" });
-    if (showSizes && sizes.length) columns.push({ key: "size", label: "Size" });
+      columns.push({ key: "color", label: t("admin.products.colors") });
+    if (showSizes && sizes.length)
+      columns.push({ key: "size", label: t("admin.products.sizes") });
     if (attributeActive)
       columns.push({
         key: "attributeValue",
-        label: attributeTitle || "Option",
+        label: attributeTitle || t("admin.products.attributeValues"),
       });
-    if (!columns.length) columns.push({ key: "variant", label: "Variant" });
+    if (!columns.length)
+      columns.push({ key: "variant", label: t("admin.products.variant") });
     return columns;
   }, [
     showColors,
@@ -339,10 +467,11 @@ export default function ProductForm({
     sizes.length,
     attributeActive,
     attributeTitle,
+    t,
   ]);
 
   const renderVariantValue = (columnKey, combo) => {
-    if (columnKey === "variant") return "Default";
+    if (columnKey === "variant") return t("admin.products.variantDefault");
     if (columnKey === "color") {
       return <ColorBadge value={combo.color} />;
     }
@@ -356,8 +485,12 @@ export default function ProductForm({
         if (submitting) return;
         onClose?.();
       }}
-      title={isEditing ? "Edit product" : "Create product"}
-      description="Manage catalog entries, pricing and imagery."
+      title={
+        isEditing
+          ? t("admin.products.modalTitleEdit")
+          : t("admin.products.modalTitleCreate")
+      }
+      description={t("admin.products.modalDescription")}
       footer={
         <>
           <button
@@ -366,7 +499,7 @@ export default function ProductForm({
             className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             disabled={submitting}
           >
-            Cancel
+            {t("admin.common.cancel")}
           </button>
           <button
             type="submit"
@@ -375,10 +508,10 @@ export default function ProductForm({
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-60"
           >
             {submitting
-              ? "Saving..."
+              ? t("admin.products.modalSaving")
               : isEditing
-              ? "Update product"
-              : "Create product"}
+              ? t("admin.products.modalUpdate")
+              : t("admin.products.modalCreate")}
           </button>
         </>
       }
@@ -392,7 +525,7 @@ export default function ProductForm({
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Product name
+                {t("admin.products.name")}
                 <span className="text-[var(--color-accent)]">*</span>
               </span>
               <input
@@ -400,13 +533,14 @@ export default function ProductForm({
                 onChange={(event) => setName(event.target.value)}
                 maxLength={160}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="Luxury Silk Pajama Set"
+                placeholder={t("admin.products.namePlaceholder")}
               />
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Price (EUR)<span className="text-[var(--color-accent)]">*</span>
+                {t("admin.products.price")}
+                <span className="text-[var(--color-accent)]">*</span>
               </span>
               <input
                 type="number"
@@ -415,7 +549,7 @@ export default function ProductForm({
                 value={price}
                 onChange={(event) => setPrice(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="129.90"
+                placeholder={t("admin.products.pricePlaceholder")}
               />
               {price && !Number.isNaN(Number(price)) && (
                 <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
@@ -426,14 +560,14 @@ export default function ProductForm({
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Category
+                {t("admin.products.category")}
               </span>
               <select
                 value={categoryId || ""}
                 onChange={(event) => setCategoryId(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
               >
-                <option value="">No category assigned</option>
+                <option value="">{t("admin.products.noCategory")}</option>
                 {categories.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
@@ -444,7 +578,7 @@ export default function ProductForm({
 
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-[var(--color-text-admin)]">
-                Visibility
+                {t("admin.products.visibility")}
               </span>
               <label className="inline-flex cursor-pointer items-center gap-2">
                 <input
@@ -454,7 +588,9 @@ export default function ProductForm({
                   className="h-4 w-4 rounded border-[var(--color-border-admin)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                 />
                 <span className="text-sm text-[var(--color-text-admin)]">
-                  {isActive ? "Visible in storefront" : "Hidden"}
+                  {isActive
+                    ? t("admin.products.visible")
+                    : t("admin.products.hidden")}
                 </span>
               </label>
             </div>
@@ -463,53 +599,214 @@ export default function ProductForm({
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Description
+                {t("admin.products.description")}
               </span>
               <textarea
                 rows={4}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="Short marketing copy shown on the product page."
+                placeholder={t("admin.products.descriptionPlaceholder")}
               />
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Care instructions
+                {t("admin.products.care")}
               </span>
               <textarea
                 rows={3}
                 value={careInstructions}
                 onChange={(event) => setCareInstructions(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="e.g. Hand wash cold, do not tumble dry"
+                placeholder={t("admin.products.carePlaceholder")}
               />
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Bullet details
+                {t("admin.products.details")}
               </span>
               <textarea
                 rows={4}
                 value={detailsInput}
                 onChange={(event) => setDetailsInput(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="One detail per line"
+                placeholder={t("admin.products.detailsPlaceholder")}
               />
               <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
-                These points appear as bullet items under “Details”.
+                {t("admin.products.detailsHelper")}
               </p>
             </label>
           </div>
         </div>
 
+        {TRANSLATION_LANGUAGES.length > 0 && (
+          <div className="mt-8 space-y-4 rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-5">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--color-text-admin)]">
+                {t("admin.products.translations")}
+              </h3>
+              <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
+                {t("admin.products.translationsHelper", {
+                  base: BASE_LANGUAGE_LABEL,
+                })}
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {TRANSLATION_LANGUAGES.map(({ code, label }) => {
+                const values = localized[code] || emptyTranslation;
+                const clearing =
+                  initialLocalizedCodes.includes(code) &&
+                  !(
+                    values.name?.trim() ||
+                    values.description?.trim() ||
+                    values.careInstructions?.trim() ||
+                    values.details?.trim() ||
+                    values.attributeTitle?.trim() ||
+                    values.attributeValues?.trim()
+                  );
+
+                return (
+                  <div
+                    key={code}
+                    className="space-y-3 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-[var(--color-text-admin)]">
+                        {label}
+                      </span>
+                      {clearing && (
+                        <span className="text-[10px] uppercase text-[var(--color-text-admin-muted)]">
+                          {t("admin.products.translationClears")}
+                        </span>
+                      )}
+                    </div>
+
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
+                        {t("admin.products.name")}
+                      </span>
+                      <input
+                        value={values.name}
+                        onChange={(event) =>
+                          handleTranslationChange(
+                            code,
+                            "name",
+                            event.target.value
+                          )
+                        }
+                        className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                        placeholder={label}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
+                        {t("admin.products.description")}
+                      </span>
+                      <textarea
+                        rows={3}
+                        value={values.description}
+                        onChange={(event) =>
+                          handleTranslationChange(
+                            code,
+                            "description",
+                            event.target.value
+                          )
+                        }
+                        className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
+                        {t("admin.products.care")}
+                      </span>
+                      <textarea
+                        rows={2}
+                        value={values.careInstructions}
+                        onChange={(event) =>
+                          handleTranslationChange(
+                            code,
+                            "careInstructions",
+                            event.target.value
+                          )
+                        }
+                        className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
+                        {t("admin.products.details")}
+                      </span>
+                      <textarea
+                        rows={3}
+                        value={values.details}
+                        onChange={(event) =>
+                          handleTranslationChange(
+                            code,
+                            "details",
+                            event.target.value
+                          )
+                        }
+                        className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                        placeholder={t("admin.products.detailsHelper")}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
+                        {t("admin.products.attributeTitle")}
+                      </span>
+                      <input
+                        value={values.attributeTitle}
+                        onChange={(event) =>
+                          handleTranslationChange(
+                            code,
+                            "attributeTitle",
+                            event.target.value
+                          )
+                        }
+                        disabled={!showAttribute}
+                        className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] disabled:opacity-60"
+                        placeholder={t("admin.products.attributeTitlePlaceholder")}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
+                        {t("admin.products.attributeValues")}
+                      </span>
+                      <textarea
+                        rows={2}
+                        value={values.attributeValues}
+                        onChange={(event) =>
+                          handleTranslationChange(
+                            code,
+                            "attributeValues",
+                            event.target.value
+                          )
+                        }
+                        disabled={!showAttribute}
+                        className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] disabled:opacity-60"
+                        placeholder={t("admin.products.attributeValuesPlaceholder")}
+                      />
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-4 lg:grid-cols-3">
           <SelectionCard
-            title="Colors"
-            description="Add optional colour swatches."
+            title={t("admin.products.colors")}
+            description={t("admin.products.colorsDescription")}
             checked={showColors}
+            toggleLabel={t("admin.products.selectionShow")}
             onToggle={() => setShowColors((prev) => !prev)}
           >
             <ColorSelector
@@ -518,51 +815,52 @@ export default function ProductForm({
               disabled={!showColors}
             />
             <p className="text-[11px] text-[var(--color-text-admin-muted)]">
-              Choose from curated swatches or add custom HEX colours for this
-              product.
+              {t("admin.products.colorsHelper")}
             </p>
           </SelectionCard>
 
           <SelectionCard
-            title="Sizes"
-            description="Maintain available clothing sizes."
+            title={t("admin.products.sizes")}
+            description={t("admin.products.sizesDescription")}
             checked={showSizes}
+            toggleLabel={t("admin.products.selectionShow")}
             onToggle={() => setShowSizes((prev) => !prev)}
           >
             <TagInput
-              label="Size options"
+              label={t("admin.products.sizesLabel")}
               values={sizes}
               onChange={setSizes}
-              placeholder="Add size and press Enter"
-              helper="Example: XS, S, M, L, XL"
+              placeholder={t("admin.products.sizesPlaceholder")}
+              helper={t("admin.products.sizesHelper")}
               disabled={!showSizes}
             />
           </SelectionCard>
 
           <SelectionCard
-            title="Product attribute"
-            description="Add a custom option like length or material."
+            title={t("admin.products.attribute")}
+            description={t("admin.products.attributeDescription")}
             checked={showAttribute}
+            toggleLabel={t("admin.products.selectionShow")}
             onToggle={() => setShowAttribute((prev) => !prev)}
           >
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Attribute title
+                {t("admin.products.attributeTitle")}
               </span>
               <input
                 value={attributeTitle}
                 onChange={(event) => setAttributeTitle(event.target.value)}
                 disabled={!showAttribute}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] disabled:opacity-60"
-                placeholder="e.g. Cut length"
+                placeholder={t("admin.products.attributeTitlePlaceholder")}
               />
             </label>
             <TagInput
-              label="Attribute options"
+              label={t("admin.products.attributeOptionsLabel")}
               values={attributeValues}
               onChange={setAttributeValues}
-              placeholder="Add option and press Enter"
-              helper="Shown beneath the attribute title."
+              placeholder={t("admin.products.attributeOptionsPlaceholder")}
+              helper={t("admin.products.attributeOptionsHelper")}
               disabled={!showAttribute || !attributeTitle.trim()}
             />
           </SelectionCard>
@@ -572,10 +870,10 @@ export default function ProductForm({
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h4 className="text-sm font-semibold text-[var(--color-text-admin)]">
-                Inventory management
+                {t("admin.products.inventorySectionTitle")}
               </h4>
               <p className="text-xs text-[var(--color-text-admin-muted)]">
-                Set stock per variant. Missing values default to zero.
+                {t("admin.products.inventorySectionDescription")}
               </p>
             </div>
             <button
@@ -583,7 +881,9 @@ export default function ProductForm({
               onClick={() => setInventoryOpen((prev) => !prev)}
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             >
-              {inventoryOpen ? "Hide inventory" : "Manage inventory"}
+              {inventoryOpen
+                ? t("admin.products.inventoryHide")
+                : t("admin.products.inventoryShow")}
             </button>
           </div>
           {inventoryOpen && (
@@ -599,7 +899,9 @@ export default function ProductForm({
                         {column.label}
                       </th>
                     ))}
-                    <th className="px-3 py-2 text-left font-medium">Stock</th>
+                    <th className="px-3 py-2 text-left font-medium">
+                      {t("admin.products.inventoryStock")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border-admin)]/60 text-[var(--color-text-admin)]">
@@ -635,19 +937,22 @@ export default function ProductForm({
         <div>
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-[var(--color-text-admin)]">
-              Media gallery
+              {t("admin.products.mediaTitle")}
             </h4>
             <span className="text-xs text-[var(--color-text-admin-muted)]">
-              {totalImages} / 8 images
+              {t("admin.products.mediaCount", {
+                count: totalImages,
+                limit: 8,
+              })}
             </span>
           </div>
           <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
-            Upload high-quality square images. Drag to reorder after save.
+            {t("admin.products.mediaHelp")}
           </p>
           <div className="mt-3 flex flex-wrap gap-3">
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--color-border-admin)] px-4 py-3 text-sm text-[var(--color-text-admin)] hover:border-[var(--color-text-admin)]">
               <Upload className="h-4 w-4" />
-              Add images
+              {t("admin.products.mediaAdd")}
               <input
                 type="file"
                 accept="image/*"
@@ -671,7 +976,7 @@ export default function ProductForm({
                   onClick={() => removeExistingImage(image)}
                   className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-xs font-semibold text-white"
                 >
-                  Remove
+                  {t("admin.common.remove")}
                 </button>
               </figure>
             ))}
@@ -682,7 +987,7 @@ export default function ProductForm({
               >
                 <img
                   src={image.preview}
-                  alt="New upload"
+                  alt={t("admin.products.mediaNewAlt")}
                   className="h-24 w-24 object-cover"
                 />
                 <button
@@ -690,7 +995,7 @@ export default function ProductForm({
                   onClick={() => removeNewImage(image)}
                   className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-xs font-semibold text-white"
                 >
-                  Remove
+                  {t("admin.common.remove")}
                 </button>
               </figure>
             ))}
@@ -739,7 +1044,14 @@ function extractMessage(error) {
   return String(error);
 }
 
-function SelectionCard({ title, description, checked, onToggle, children }) {
+function SelectionCard({
+  title,
+  description,
+  checked,
+  onToggle,
+  toggleLabel,
+  children,
+}) {
   return (
     <div className="rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
@@ -758,7 +1070,7 @@ function SelectionCard({ title, description, checked, onToggle, children }) {
             onChange={onToggle}
             className="h-4 w-4 rounded border-[var(--color-border-admin)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
           />
-          Show
+          {toggleLabel}
         </label>
       </div>
       <div className="mt-3 space-y-3">{children}</div>

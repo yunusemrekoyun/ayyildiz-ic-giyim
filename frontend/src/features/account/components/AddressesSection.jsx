@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { extractErrorMessage } from "../helpers.js";
 import AlertBanner from "../../../components/ui/AlertBanner.jsx";
 import LoadingOverlay from "../../../components/ui/LoadingOverlay.jsx";
@@ -53,6 +54,7 @@ function AddressField({ label, value, onChange, required, wide }) {
 }
 
 export default function AddressesSection({ addresses, onCreate, onUpdate, onDelete }) {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyAddress());
   const [saving, setSaving] = useState(false);
@@ -84,10 +86,10 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
     try {
       if (editingId === "new") {
         await onCreate(cleanAddress(form));
-        setBanner({ variant: "success", message: "Address added" });
+        setBanner({ variant: "success", message: t("account.addresses.added") });
       } else if (editingId) {
         await onUpdate(editingId, cleanAddress(form));
-        setBanner({ variant: "success", message: "Address updated" });
+        setBanner({ variant: "success", message: t("account.addresses.updated") });
       }
       cancel();
     } catch (error) {
@@ -103,7 +105,7 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
   const handleDelete = async (id) => {
     try {
       await onDelete(id);
-      setBanner({ variant: "warning", message: "Address removed" });
+      setBanner({ variant: "warning", message: t("account.addresses.removed") });
     } catch (error) {
       setBanner({ variant: "danger", message: extractErrorMessage(error) });
     }
@@ -122,18 +124,20 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-primary">Addresses</h2>
+        <h2 className="text-xl font-semibold text-primary">
+          {t("account.addresses.title")}
+        </h2>
         <button
           onClick={startNew}
           className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-primary hover:bg-surface-hover"
         >
           <Plus className="h-4 w-4" />
-          Add New
+          {t("account.addresses.add")}
         </button>
       </div>
 
       {addresses.length === 0 && !editingId && (
-        <p className="mt-2 text-secondary">No saved addresses.</p>
+        <p className="mt-2 text-secondary">{t("account.addresses.empty")}</p>
       )}
 
       <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -158,7 +162,7 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
                 )}
                 {address.isDefault && (
                   <div className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
-                    Default
+                    {t("account.addresses.default")}
                   </div>
                 )}
               </div>
@@ -166,14 +170,14 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
                 <button
                   onClick={() => startEdit(address)}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-hover"
-                  title="Edit"
+                  title={t("account.addresses.edit")}
                 >
                   <Pencil className="h-4 w-4 text-secondary" />
                 </button>
                 <button
                   onClick={() => handleDelete(address.id)}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-hover"
-                  title="Delete"
+                  title={t("account.addresses.delete")}
                 >
                   <Trash2 className="h-4 w-4 text-rose-500" />
                 </button>
@@ -191,18 +195,18 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
           <LoadingOverlay show={saving} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AddressField
-              label="Full Name"
+              label={t("account.addresses.form.fullName")}
               value={form.fullName}
               onChange={(value) => setForm((prev) => ({ ...prev, fullName: value }))}
               required
             />
             <AddressField
-              label="Phone"
+              label={t("account.addresses.form.phone")}
               value={form.phone}
               onChange={(value) => setForm((prev) => ({ ...prev, phone: value }))}
             />
             <AddressField
-              label="Address Line 1"
+              label={t("account.addresses.form.line1")}
               value={form.addressLine1}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, addressLine1: value }))
@@ -211,7 +215,7 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
               wide
             />
             <AddressField
-              label="Address Line 2"
+              label={t("account.addresses.form.line2")}
               value={form.addressLine2}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, addressLine2: value }))
@@ -219,25 +223,25 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
               wide
             />
             <AddressField
-              label="City"
+              label={t("account.addresses.form.city")}
               value={form.city}
               onChange={(value) => setForm((prev) => ({ ...prev, city: value }))}
               required
             />
             <AddressField
-              label="State"
+              label={t("account.addresses.form.state")}
               value={form.state}
               onChange={(value) => setForm((prev) => ({ ...prev, state: value }))}
             />
             <AddressField
-              label="Postal Code"
+              label={t("account.addresses.form.postalCode")}
               value={form.postalCode}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, postalCode: value }))
               }
             />
             <AddressField
-              label="Country"
+              label={t("account.addresses.form.country")}
               value={form.country}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, country: value }))
@@ -252,14 +256,16 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
               onClick={cancel}
               className="rounded-full border border-border px-4 py-2 text-sm text-secondary hover:bg-surface-hover"
             >
-              Cancel
+              {t("account.addresses.form.cancel")}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
             >
-              {saving ? "Saving..." : "Save address"}
+              {saving
+                ? t("account.addresses.form.saving")
+                : t("account.addresses.form.save")}
             </button>
           </div>
         </form>

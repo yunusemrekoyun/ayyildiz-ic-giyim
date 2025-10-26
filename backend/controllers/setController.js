@@ -310,6 +310,7 @@ function shapeSet(
                   entry.product?.id?.toString?.() ||
                   ""
               ) || null,
+            lang: req?.locale,
           })
         : entry.product,
     })),

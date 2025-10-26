@@ -1,0 +1,612 @@
+{
+  "common": {
+    "language": {
+      "turkish": "Türkisch",
+      "english": "Englisch",
+      "german": "Deutsch"
+    },
+    "loading": "Wird geladen...",
+    "categoriesUnavailable": "Kategorien nicht verfügbar",
+    "noData": "Keine Daten gefunden.",
+    "sale": "Angebote",
+    "search": "Suchen",
+    "searchPlaceholder": "Produkte suchen",
+    "viewAll": "Alle {{title}} ansehen",
+    "genericError": "Es ist ein Fehler aufgetreten.",
+    "breadcrumb": {
+      "home": "Startseite"
+    }
+  },
+  "hero": {
+    "noMedia": "Kein Medium",
+    "gotoSlide": "Zu Folie {{index}} wechseln",
+    "prev": "Zurück",
+    "next": "Weiter"
+  },
+  "header": {
+    "searchAria": "Suchen",
+    "cartAria": "Warenkorb",
+    "wishlistAria": "Favoriten",
+    "accountAria": "Konto"
+  },
+  "megaMenu": {
+    "noSubcategories": "Keine Unterkategorien"
+  },
+  "footer": {
+    "about": "Über uns",
+    "contact": "Kontakt",
+    "faq": "FAQ",
+    "shippingReturns": "Versand & Rückgabe",
+    "privacy": "Datenschutz",
+    "terms": "Nutzungsbedingungen",
+    "rights": "© {{year}} Ayyıldız İç Giyim. Alle Rechte vorbehalten."
+  },
+  "authPage": {
+    "loginTitle": "Willkommen zurück",
+    "registerTitle": "Konto erstellen",
+    "loginSubtitle": "Melden Sie sich an, um Bestellungen und Favoriten zu verwalten.",
+    "registerSubtitle": "Registrieren Sie sich für einen schnelleren Checkout und kuratierte Empfehlungen.",
+    "switchToRegister": "Noch kein Mitglied? ",
+    "switchToLogin": "Bereits ein Konto? ",
+    "createAccount": "Konto erstellen",
+    "loginAccount": "Anmelden"
+  },
+  "authForm": {
+    "email": "E-Mail",
+    "password": "Passwort",
+    "fullName": "Vollständiger Name",
+    "phone": "Telefon",
+    "agree": "Ich akzeptiere die AGB und Datenschutzbestimmungen.",
+    "forgot": "Passwort vergessen?",
+    "loginButton": "Anmelden",
+    "registerButton": "Konto erstellen",
+    "loading": "Wird geladen...",
+    "loginLoading": "Anmeldung läuft...",
+    "registerLoading": "Konto wird erstellt...",
+    "emailPlaceholder": "sie@example.com",
+    "phonePlaceholder": "+90 5xx xxx xx xx",
+    "passwordPlaceholder": "Mindestens 8 Zeichen",
+    "namePlaceholder": "Ayla Yılmaz"
+  },
+  "account": {
+    "tabs": {
+      "overview": "Profil",
+      "orders": "Bestellungen",
+      "addresses": "Adressen",
+      "wishlist": "Favoriten"
+    },
+    "sidebar": {
+      "logout": "Abmelden",
+      "loading": "Wird geladen..."
+    },
+    "overview": {
+      "title": "Profilübersicht",
+      "description": "Aktualisieren Sie Ihre persönlichen Daten und Ihr Profilfoto.",
+      "success": "Profil aktualisiert",
+      "fields": {
+        "firstName": "Vorname",
+        "lastName": "Nachname",
+        "email": "E-Mail",
+        "emailHelp": "Eine Änderung der E-Mail kann eine Verifizierung erfordern.",
+        "phone": "Telefon"
+      },
+      "avatar": {
+        "title": "Profilfoto",
+        "help": "JPG oder PNG. Große Dateien werden vor dem Upload komprimiert.",
+        "remove": "Entfernen",
+        "removeActive": "Wird entfernt",
+        "upload": "Hochladen",
+        "removeFile": "Datei entfernen"
+      },
+      "save": "Änderungen speichern",
+      "fallbackName": "Kunde"
+    },
+    "orders": {
+      "title": "Bestellungen",
+      "empty": "Sie haben noch keine Bestellungen.",
+      "status": {
+        "created": "Erstellt",
+        "pending": "Ausstehend",
+        "paid": "Bezahlt",
+        "processing": "In Bearbeitung",
+        "shipped": "Versandt",
+        "completed": "Abgeschlossen",
+        "cancelled": "Storniert"
+      },
+      "orderNumber": "Bestellung #{{number}}",
+      "shipping": "Versand: {{name}} ({{price}})",
+      "total": "Gesamt: {{total}}",
+      "viewDetails": "Details anzeigen"
+    },
+    "addresses": {
+      "title": "Adressen",
+      "add": "Neue Adresse",
+      "empty": "Keine gespeicherten Adressen.",
+      "default": "Standard",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "added": "Adresse hinzugefügt",
+      "updated": "Adresse aktualisiert",
+      "removed": "Adresse gelöscht",
+      "form": {
+        "fullName": "Vollständiger Name",
+        "phone": "Telefon",
+        "line1": "Adresszeile 1",
+        "line2": "Adresszeile 2",
+        "city": "Stadt",
+        "state": "Bundesland / Bezirk",
+        "postalCode": "Postleitzahl",
+        "country": "Land",
+        "cancel": "Abbrechen",
+        "save": "Adresse speichern",
+        "saving": "Wird gespeichert..."
+      }
+    },
+    "wishlist": {
+      "title": "Favoriten",
+      "empty": "Ihre Favoritenliste ist derzeit leer.",
+      "remove": "Aus Favoriten entfernen",
+      "price": "{{price}} €",
+      "noImage": "Kein Bild"
+    }
+  },
+  "pages": {
+    "about": {
+      "title": "Über uns",
+      "noData": "Keine \"Über uns\"-Daten gefunden."
+    }
+  },
+  "cart": {
+    "itemCount": "{{count}} Artikel"
+  },
+  "languageSwitcher": {
+    "label": "Sprache",
+    "aria": "Sprache wechseln"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "logout": "Abmelden"
+  },
+  "admin": {
+    "common": {
+      "refresh": "Aktualisieren",
+      "createNew": "Neu erstellen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Wird gespeichert...",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "remove": "Entfernen",
+      "actions": "Aktionen",
+      "search": "Suchen",
+      "loadMore": "Mehr laden",
+      "warning": "Warnung",
+      "success": "Erfolg",
+      "error": "Fehler"
+    },
+    "categories": {
+      "pageTitle": "Kategorien",
+      "pageSubtitle": "Verwalten Sie die dreistufige Katalogstruktur und Thumbnails.",
+      "formTitleCreate": "Kategorie erstellen",
+      "formTitleEdit": "Kategorie bearbeiten",
+      "formSubtitleCreate": "Fügen Sie eine neue Kategorie hinzu.",
+      "formSubtitleEdit": "Aktualisieren Sie Name, Hierarchie oder Thumbnail.",
+      "name": "Kategoriename",
+      "namePlaceholder": "z. B. Dessous",
+      "parent": "Übergeordnete Kategorie",
+      "parentHelperNone": "Wählen Sie die Ebene dieser Kategorie (optional).",
+      "parentHelperRoot": "Dies ist eine Hauptkategorie. Sie können sie einer anderen Wurzel zuordnen.",
+      "parentHelperSecond": "Dies ist eine Kategorie der zweiten Ebene. Sie können sie hoch- oder herabstufen.",
+      "parentHelperLeaf": "Blattkategorien können keine Unterkategorien haben.",
+      "noParent": "Keine übergeordnete Kategorie (Wurzel)",
+      "thumbnail": "Titelbild",
+      "thumbnailHelp": "Optionales 1:1-Bild für Menüs. PNG/JPG bis 2 MB.",
+      "upload": "Bild hochladen",
+      "removeImage": "Bild wird entfernt",
+      "noImage": "Kein Bild",
+      "deleteConfirmTitle": "\"{{name}}\" löschen?",
+      "deleteConfirmText": "Dieser Vorgang kann nicht rückgängig gemacht werden.",
+      "listEmpty": "Noch keine Kategorien vorhanden.",
+      "addTranslation": "Übersetzungen",
+      "translationHelper": "Fügen Sie Namen für andere Sprachen hinzu. Leere Felder verwenden {{base}}.",
+      "imageError": "Bitte laden Sie eine Bilddatei hoch.",
+      "created": "Kategorie erstellt",
+      "updated": "Kategorie aktualisiert",
+      "deleted": "Kategorie gelöscht",
+      "errors": {
+        "nameRequired": "Der Kategoriename ist erforderlich."
+      },
+      "tree": {
+        "title": "Kategoriebaum",
+        "total": "{{count}} Eintrag",
+        "total_plural": "{{count}} Einträge",
+        "newRoot": "Neue Hauptkategorie",
+        "imageBadge": "Bild",
+        "children": "{{count}} Unterkategorie",
+        "children_plural": "{{count}} Unterkategorien",
+        "empty": "Noch keine Kategorien vorhanden. Erstellen Sie Ihre erste Hauptkategorie.",
+        "addRoot": "Hauptkategorie hinzufügen",
+        "collapse": "Einklappen",
+        "expand": "Ausklappen"
+      }
+    },
+    "media": {
+      "title": "Medienbibliothek",
+      "subtitle": "Verfolgen Sie die Cloudinary-Nutzung und verwalten Sie hochgeladene Dateien.",
+      "refresh": "Nutzung aktualisieren",
+      "searchPlaceholder": "Nach Public ID oder Ordner filtern",
+      "showing": "{{count}} Dateien angezeigt",
+      "deleteTitle": "Datei „{{id}}“ löschen",
+      "deleteDescription": "Dieser Vorgang kann nicht rückgängig gemacht werden. Möchten Sie die Datei wirklich löschen?",
+      "removed": "Datei gelöscht",
+      "noAssets": "Sie haben noch keine Dateien hochgeladen oder die Filter ergaben keine Treffer.",
+      "folderRoot": "root",
+      "table": {
+        "asset": "Datei",
+        "folder": "Ordner",
+        "size": "Größe",
+        "created": "Erstellt am",
+        "actions": "Aktionen"
+      },
+      "usage": {
+        "title": "Cloudinary-Nutzung",
+        "summary": "Plan: {{plan}} • Aktualisiert am {{date}}",
+        "refreshing": "Aktualisierung...",
+        "storage": "Speicher",
+        "bandwidth": "Bandbreite",
+        "noLimit": "Unbegrenzt",
+        "notAvailable": "k.A.",
+        "progress": "{{used}} / {{limit}}",
+        "unknownPlan": "Unbekannt",
+        "unknownDate": "Nicht angegeben"
+      }
+    },
+    "products": {
+      "pageTitle": "Produkte",
+      "pageSubtitle": "Verwalten Sie die Artikel im Shop-Katalog.",
+      "newProduct": "Neues Produkt",
+      "editProduct": "Produkt bearbeiten",
+      "createProduct": "Produkt erstellen",
+      "name": "Produktname",
+      "namePlaceholder": "z. B. Luxuriöses Seidenpyjama",
+      "price": "Preis (EUR)",
+      "category": "Kategorie",
+      "visibility": "Sichtbarkeit",
+      "visible": "Im Shop sichtbar",
+      "hidden": "Ausgeblendet",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Kurzbeschreibung, die auf der Produktseite erscheint",
+      "care": "Pflegehinweise",
+      "carePlaceholder": "z. B. Kalt von Hand waschen, nicht im Trockner trocknen",
+      "details": "Produktdetails",
+      "detailsPlaceholder": "Jede Zeile ergibt einen Stichpunkt",
+      "detailsHelper": "Jede Zeile wird als Punkt angezeigt.",
+      "colors": "Farben",
+      "colorsDescription": "Optionale Farbmuster hinzufügen.",
+      "colorsHelper": "Wählen Sie aus der Palette oder fügen Sie einen eigenen HEX-Farbcode hinzu.",
+      "sizes": "Größen",
+      "sizesDescription": "Verfügbare Größen verwalten.",
+      "sizesLabel": "Größenoptionen",
+      "sizesPlaceholder": "Größe eingeben und Enter drücken",
+      "sizesHelper": "Beispiel: XS, S, M, L, XL",
+      "attribute": "Produktattribut",
+      "attributeDescription": "Fügen Sie eine benutzerdefinierte Option wie Länge oder Material hinzu.",
+      "attributeTitle": "Attributtitel",
+      "attributeTitlePlaceholder": "z. B. Material",
+      "attributeValues": "Attributwerte",
+      "attributeValuesPlaceholder": "Jede Zeile ein Wert",
+      "attributeOptionsLabel": "Attributoptionen",
+      "attributeOptionsPlaceholder": "Option eingeben und Enter drücken",
+      "attributeOptionsHelper": "Wird unter dem Attributtitel angezeigt.",
+      "inventory": "Lagerbestand",
+      "inventorySectionTitle": "Bestandsverwaltung",
+      "inventorySectionDescription": "Legen Sie den Bestand je Variante fest. Leere Werte gelten als 0.",
+      "inventoryShow": "Bestand verwalten",
+      "inventoryHide": "Bestand ausblenden",
+      "inventoryStock": "Bestand",
+      "translations": "Übersetzungen",
+      "translationsHelper": "Inhalt für andere Sprachen angeben. Leere Felder nutzen {{base}}.",
+      "translationClears": "Übersetzung wird entfernt",
+      "save": "Speichern",
+      "saving": "Wird gespeichert...",
+      "delete": "Löschen",
+      "deleteConfirm": "Möchten Sie wirklich löschen?",
+      "searchPlaceholder": "Produkte suchen",
+      "allCategories": "Alle Kategorien",
+      "totalCount": "{{total}} Produkte • Seite {{page}} von {{pages}}",
+      "created": "Produkt erstellt",
+      "updated": "Produkt aktualisiert",
+      "deleted": "Produkt gelöscht",
+      "deleteConfirmTitle": "\"{{name}}\" löschen?",
+      "deleteConfirmDescription": "Dieser Vorgang kann nicht rückgängig gemacht werden.",
+      "variant": "Variante",
+      "variantDefault": "Standard",
+      "mediaTitle": "Mediengalerie",
+      "mediaCount": "{{count}} / {{limit}} Bilder",
+      "mediaHelp": "Laden Sie hochwertige quadratische Bilder hoch. Nach dem Speichern können Sie per Drag & Drop sortieren.",
+      "mediaAdd": "Bilder hinzufügen",
+      "mediaNewAlt": "Neuer Upload",
+      "saveError": "Produkt konnte nicht gespeichert werden",
+      "errors": {
+        "nameRequired": "Der Produktname ist erforderlich.",
+        "priceInvalid": "Bitte geben Sie einen gültigen Produktpreis ein.",
+        "maxImages": "Sie können maximal 8 Bilder hochladen."
+      },
+      "pricePlaceholder": "129,90",
+      "noCategory": "Keine Kategorie zugewiesen",
+      "modalTitleEdit": "Produkt bearbeiten",
+      "modalTitleCreate": "Produkt erstellen",
+      "modalDescription": "Verwalten Sie Katalogeinträge, Preise und Medien.",
+      "modalSaving": "Wird gespeichert...",
+      "modalUpdate": "Produkt aktualisieren",
+      "modalCreate": "Produkt erstellen",
+      "selectionShow": "Anzeigen",
+      "table": {
+        "empty": "Noch keine Produkte vorhanden. Fügen Sie Ihr erstes Produkt hinzu.",
+        "product": "Produkt",
+        "category": "Kategorie",
+        "price": "Preis",
+        "status": "Status",
+        "updated": "Aktualisiert",
+        "actions": "Aktionen",
+        "statusVisible": "Aktiv",
+        "statusHidden": "Ausgeblendet"
+      }
+    },
+    "sets": {
+      "pageTitle": "Sets",
+      "pageSubtitle": "Verwalten Sie die Produkt-Bundles in Ihrem Katalog.",
+      "refresh": "Aktualisieren",
+      "new": "Neues Set",
+      "deleteTitle": "\"{{name}}\" löschen?",
+      "deleteDescription": "Sind Sie sicher, dass Sie das Set \"{{name}}\" löschen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+      "deleted": "Set gelöscht",
+      "updated": "Set aktualisiert",
+      "created": "Set erstellt",
+      "empty": "Noch keine Sets vorhanden. Legen Sie Ihr erstes Set an.",
+      "table": {
+        "set": "Set",
+        "price": "Preis",
+        "stock": "Bestand",
+        "visibility": "Sichtbarkeit",
+        "actions": "Aktionen",
+        "items": "{{count}} Artikel",
+        "items_plural": "{{count}} Artikel"
+      },
+      "button": {
+        "inspect": "Bestand prüfen",
+        "edit": "Bearbeiten",
+        "delete": "Löschen"
+      },
+      "visibility": {
+        "visible": "Sichtbar",
+        "hidden": "Ausgeblendet"
+      },
+      "inspect": {
+        "title": "Set \"{{name}}\"",
+        "subtitle": "Bestandsübersicht der Set-Produkte.",
+        "close": "Schließen",
+        "product": "Produkt",
+        "variant": "Variante",
+        "qty": "Menge im Set",
+        "stockCatalog": "Katalogbestand",
+        "stockSet": "Set-Bestand",
+        "stockLegacy": "Altbestand",
+        "unnamed": "Unbenanntes Produkt",
+        "default": "Standardvariante"
+      },
+      "form": {
+        "titleCreate": "Set erstellen",
+        "titleEdit": "Set bearbeiten",
+        "description": "Stellen Sie ein Bundle aus bestehenden Produkten zusammen und heben Sie es im Shop hervor.",
+        "nameLabel": "Set-Name",
+        "namePlaceholder": "z. B. Premium-Hochzeitspaket",
+        "priceLabel": "Preis ({{currency}})",
+        "pricePlaceholder": "499.00",
+        "descriptionLabel": "Beschreibung",
+        "descriptionPlaceholder": "Beschreiben Sie, was dieses Set besonders macht.",
+        "visibleLabel": "Im Shop anzeigen",
+        "imagesTitle": "Bilder",
+        "upload": "Hochladen",
+        "newImageAlt": "Neues Bild",
+        "productsTitle": "Set-Produkte",
+        "productsHelp": "Wählen Sie Artikel aus Ihrem Katalog für dieses Set.",
+        "addProduct": "Produkt hinzufügen",
+        "productCardTitle": "Produkt",
+        "productLabel": "Produkt",
+        "quantityLabel": "Menge",
+        "saving": "Speichern...",
+        "saveChanges": "Änderungen speichern",
+        "create": "Set erstellen"
+      },
+      "errors": {
+        "nameRequired": "Der Set-Name ist erforderlich.",
+        "priceInvalid": "Bitte geben Sie einen gültigen Preis ein.",
+        "productRequired": "Fügen Sie mindestens ein Produkt zum Set hinzu.",
+        "saveFailed": "Set konnte nicht gespeichert werden."
+      }
+    },
+    "contact": {
+      "badge": "Kontaktseite",
+      "headerTitle": "Inhalte der Kontaktseite",
+      "headerDescription": "Bearbeiten Sie Hero-Text, Seitenleistenblöcke und das Formularverhalten der öffentlichen Kontaktseite.",
+      "messages": {
+        "saved": "Einstellungen der Kontaktseite wurden gespeichert."
+      },
+      "defaults": {
+        "heroTitle": "Wir sind für Sie da",
+        "heroSubtitle": "Unser Kundenservice ist von Montag bis Freitag, 09:00–18:00 Uhr (CET) erreichbar. Senden Sie uns eine Nachricht – wir antworten innerhalb eines Geschäftstages.",
+        "addressBlock": {
+          "title": "Besuchen Sie unser Studio in Europa",
+          "lines": [
+            "Kurfürstendamm 45, 10719 Berlin",
+            "Showroom & Abholung (Termin empfohlen)"
+          ]
+        },
+        "hoursBlock": {
+          "title": "Öffnungszeiten (CET)",
+          "lines": [
+            "Mo – Fr: 09:00 – 18:00",
+            "Sa: 10:00 – 16:00 (nur Showroom)",
+            "So & gesetzliche Feiertage: geschlossen"
+          ]
+        },
+        "emailBlock": {
+          "title": "Kundenservice",
+          "lines": [
+            "support@evimstil.com",
+            "Durchschnittliche Antwortzeit: < 24 h"
+          ]
+        },
+        "phoneBlock": {
+          "title": "Telefon",
+          "lines": [
+            "+49 (0) 30 234 567 89",
+            "WhatsApp & Signal unter derselben Nummer verfügbar"
+          ]
+        },
+        "successMessage": "Vielen Dank für Ihre Nachricht. Wir haben Ihre Anfrage erhalten und melden uns in Kürze per E-Mail. Bei dringenden Anliegen rufen Sie uns bitte unter der untenstehenden Nummer an."
+      },
+      "hero": {
+        "title": "Hero-Bereich",
+        "subtitle": "Überschrift, Einleitungstext und optionales Hero-Bild.",
+        "fields": {
+          "title": "Hero-Titel",
+          "titlePlaceholder": "Wir sind für Sie da",
+          "subtitle": "Hero-Unterzeile",
+          "subtitlePlaceholder": "Kurzer Absatz, der Ihre Kontaktpolitik beschreibt."
+        }
+      },
+      "address": {
+        "title": "Adresse & Öffnungszeiten",
+        "subtitle": "Konfigurieren Sie die Seitenleisten-Blöcke für Besucher:innen.",
+        "blockTitle": "Titel des Adressblocks",
+        "blockTitlePlaceholder": "Besuchen Sie unser Studio in Europa",
+        "lines": "Adresszeilen",
+        "linesPlaceholder": "Straße, Stadt, zusätzlicher Hinweis…"
+      },
+      "hours": {
+        "blockTitle": "Titel des Öffnungszeiten-Blocks",
+        "blockTitlePlaceholder": "Öffnungszeiten (CET)",
+        "lines": "Öffnungszeiten-Zeilen",
+        "linesPlaceholder": "Mo – Fr: 09:00 – 18:00"
+      },
+      "channels": {
+        "title": "Kontaktkanäle",
+        "subtitle": "E-Mails und Telefonnummern, die in der Seitenleiste erscheinen.",
+        "emailTitle": "Titel des E-Mail-Blocks",
+        "emailTitlePlaceholder": "Kundenservice",
+        "emailLines": "E-Mail-Zeilen",
+        "emailLinesPlaceholder": "support@domain.com",
+        "phoneTitle": "Titel des Telefonblocks",
+        "phoneTitlePlaceholder": "Telefon",
+        "phoneLines": "Telefonzeilen",
+        "phoneLinesPlaceholder": "+49 30 123 456 78"
+      },
+      "repeater": {
+        "add": "Zeile hinzufügen",
+        "remove": "Entfernen",
+        "empty": "Noch keine Einträge"
+      },
+      "form": {
+        "title": "Formularverhalten",
+        "subtitle": "Schalten Sie das Kontaktformular ein oder aus und bearbeiten Sie die Bestätigungsnachricht.",
+        "enableLabel": "Kontaktformular aktivieren",
+        "successLabel": "Erfolgsmeldung",
+        "successPlaceholder": "Text, der nach erfolgreicher Formularübermittlung angezeigt wird."
+      },
+      "preview": {
+        "title": "Schnellvorschau",
+        "subtitle": "Live-Vorschau der rechten Seitenleiste.",
+        "empty": "—"
+      },
+      "buttons": {
+        "reset": "Zurücksetzen",
+        "saving": "Speichern...",
+        "save": "Änderungen speichern"
+      },
+      "tips": {
+        "title": "Inhaltstipps",
+        "items": [
+          "Halten Sie den Hero-Text für eine schnelle Aufnahme unter 140 Zeichen.",
+          "Kombinieren Sie Adresszeilen logisch und vermeiden Sie Duplikate.",
+          "Heben Sie den schnellsten Support-Kanal in der ersten Zeile hervor.",
+          "Die Erfolgsmeldung sollte klare Erwartungen an die Antwortzeit setzen."
+        ]
+      }
+    },
+    "privacy": {
+      "badge": "Inhalte • Datenschutz",
+      "headerTitle": "Datenschutzseite",
+      "headerDescription": {
+        "before": "Verwalten Sie Überschrift, Abschnitte, Fußbereich und SEO-Metadaten der Datenschutzseite. Dies steuert die Seite ",
+        "after": " Seite."
+      },
+      "messages": {
+        "loadError": "Datenschutzinhalte konnten nicht geladen werden.",
+        "saveSuccess": "Datenschutzrichtlinie wurde erfolgreich gespeichert.",
+        "saveError": "Inhalt konnte nicht gespeichert werden."
+      },
+      "buttons": {
+        "save": "Änderungen speichern",
+        "saving": "Speichern...",
+        "preview": "Vorschau",
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "hero": {
+        "cardTitle": "Hero",
+        "fields": {
+          "titleLabel": "Seitentitel",
+          "titlePlaceholder": "Datenschutz",
+          "subtitleLabel": "Untertitel",
+          "subtitlePlaceholder": "Ihre Privatsphäre ist uns wichtig..."
+        }
+      },
+      "sections": {
+        "title": "Abschnitte",
+        "add": "Abschnitt hinzufügen",
+        "empty": "Noch keine Abschnitte. Klicken Sie auf \"Abschnitt hinzufügen\", um zu beginnen.",
+        "itemLabel": "Abschnitt {{index}}",
+        "idLabel": "Abschnitts-ID (Anchor)",
+        "idPlaceholder": "verantwortlicher, daten-verarbeitung...",
+        "titleLabel": "Titel",
+        "titlePlaceholder": "1. Verantwortlicher",
+        "contentLabel": "Absatzinhalte",
+        "paragraphPlaceholder": "Geben Sie einen Absatz ein...",
+        "actions": {
+          "moveUp": "Nach oben verschieben",
+          "moveDown": "Nach unten verschieben",
+          "remove": "Abschnitt entfernen"
+        },
+        "addParagraph": "Absatz hinzufügen"
+      },
+      "footer": {
+        "title": "Fußzeilenhinweis (HTML)",
+        "placeholder": "Bei Fragen schreiben Sie uns an <a href=\"mailto:privacy@...\">privacy@...</a>."
+      },
+      "seo": {
+        "title": "SEO-Metadaten",
+        "metaTitle": "Meta-Titel",
+        "metaTitlePlaceholder": "Datenschutz – Evim & Stil",
+        "metaDescription": "Meta-Beschreibung",
+        "metaDescriptionPlaceholder": "Erfahren Sie, wie wir Ihre Daten verarbeiten und schützen...",
+        "keywords": "Schlüsselwörter",
+        "keywordPlaceholder": "Schlüsselwort hinzufügen",
+        "addKeyword": "Hinzufügen",
+        "removeKeyword": "Schlüsselwort entfernen"
+      },
+      "tips": {
+        "title": "Tipps",
+        "items": [
+          "Halten Sie Abschnitte knapp und klar nummeriert.",
+          "Verwenden Sie Ankerlinks für eine schnelle Navigation.",
+          "Der Fußbereich kann Kontakt- oder Compliance-Texte enthalten.",
+          "SEO-Metadaten verbessern die Sichtbarkeit."
+        ]
+      }
+    }
+  }
+}

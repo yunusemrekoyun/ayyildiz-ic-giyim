@@ -1,7 +1,9 @@
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 function WishlistCard({ title, price, image, href, onRemove }) {
+  const { t } = useTranslation();
   return (
     <div className="group overflow-hidden rounded-xl border border-border bg-white">
       <Link to={href} className="block">
@@ -14,7 +16,7 @@ function WishlistCard({ title, price, image, href, onRemove }) {
             />
           ) : (
             <div className="grid h-full place-items-center text-secondary/70">
-              No image
+              {t("account.wishlist.noImage")}
             </div>
           )}
         </div>
@@ -25,13 +27,15 @@ function WishlistCard({ title, price, image, href, onRemove }) {
             {title}
           </div>
           <div className="text-xs text-secondary">
-            €{Number(price || 0).toFixed(2)}
+            {t("account.wishlist.price", {
+              price: Number(price || 0).toFixed(2),
+            })}
           </div>
         </div>
         <button
           onClick={onRemove}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-hover"
-          title="Remove from wishlist"
+          title={t("account.wishlist.remove")}
         >
           <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
         </button>
@@ -41,6 +45,7 @@ function WishlistCard({ title, price, image, href, onRemove }) {
 }
 
 export default function WishlistSection({ favorites, onToggle }) {
+  const { t } = useTranslation();
   const products = favorites?.products || [];
   const sets = favorites?.sets || [];
   const hasItems = products.length || sets.length;
@@ -48,15 +53,19 @@ export default function WishlistSection({ favorites, onToggle }) {
   if (!hasItems) {
     return (
       <div>
-        <h2 className="text-xl font-semibold text-primary">Wishlist</h2>
-        <p className="mt-2 text-secondary">Your wishlist is empty for now.</p>
+        <h2 className="text-xl font-semibold text-primary">
+          {t("account.wishlist.title")}
+        </h2>
+        <p className="mt-2 text-secondary">{t("account.wishlist.empty")}</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-primary">Wishlist</h2>
+      <h2 className="text-xl font-semibold text-primary">
+        {t("account.wishlist.title")}
+      </h2>
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {products.map((item) => (

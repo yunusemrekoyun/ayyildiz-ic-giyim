@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { User as UserIcon, Mail, Phone, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { extractErrorMessage } from "../helpers.js";
 import Avatar from "../../../components/ui/Avatar.jsx";
 
@@ -25,6 +26,7 @@ function Field({ label, value, onChange, icon, help }) {
 }
 
 export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     firstName: profile?.firstName ?? user?.firstName ?? "",
     lastName: profile?.lastName ?? user?.lastName ?? "",
@@ -55,7 +57,7 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
       await onSave({ ...form, avatarFile, removeAvatar });
       setAvatarFile(null);
       setRemoveAvatar(false);
-      setMessage({ type: "success", text: "Profile updated" });
+      setMessage({ type: "success", text: t("account.overview.success") });
     } catch (error) {
       setMessage({ type: "error", text: extractErrorMessage(error) });
     } finally {
@@ -72,14 +74,17 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
       ? `${profile?.firstName ?? user?.firstName ?? ""} ${
           profile?.lastName ?? user?.lastName ?? ""
         }`.trim()
-      : user?.name || profile?.email || user?.email || "Customer";
+      : user?.name ||
+        profile?.email ||
+        user?.email ||
+        t("account.overview.fallbackName");
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-xl font-semibold text-primary">Account Overview</h2>
-      <p className="mt-2 text-secondary">
-        Update your personal info and profile picture.
-      </p>
+      <h2 className="text-xl font-semibold text-primary">
+        {t("account.overview.title")}
+      </h2>
+      <p className="mt-2 text-secondary">{t("account.overview.description")}</p>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         {message && (
@@ -97,13 +102,13 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field
-            label="First Name"
+            label={t("account.overview.fields.firstName")}
             value={form.firstName}
             onChange={(v) => onChange("firstName", v)}
             icon={<UserIcon className="h-4 w-4" />}
           />
           <Field
-            label="Last Name"
+            label={t("account.overview.fields.lastName")}
             value={form.lastName}
             onChange={(v) => onChange("lastName", v)}
             icon={<UserIcon className="h-4 w-4" />}
@@ -111,15 +116,15 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
         </div>
 
         <Field
-          label="Email"
+          label={t("account.overview.fields.email")}
           value={form.email}
           onChange={(v) => onChange("email", v)}
           icon={<Mail className="h-4 w-4" />}
-          help="Changing email may require verification later."
+          help={t("account.overview.fields.emailHelp")}
         />
 
         <Field
-          label="Phone"
+          label={t("account.overview.fields.phone")}
           value={form.phone}
           onChange={(v) => onChange("phone", v)}
           icon={<Phone className="h-4 w-4" />}
@@ -136,10 +141,10 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
               />
               <div>
                 <div className="text-sm font-medium text-primary">
-                  Profile Photo
+                  {t("account.overview.avatar.title")}
                 </div>
                 <div className="text-xs text-secondary">
-                  JPG/PNG, tek görsel. Front’ta sıkıştırıp gönderebilirsin.
+                  {t("account.overview.avatar.help")}
                 </div>
               </div>
             </div>
@@ -156,7 +161,9 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
                       : "border-border text-primary hover:bg-surface-hover",
                   ].join(" ")}
                 >
-                  {removeAvatar ? "Will remove" : "Remove"}
+                  {removeAvatar
+                    ? t("account.overview.avatar.removeActive")
+                    : t("account.overview.avatar.remove")}
                 </button>
               )}
 
@@ -167,7 +174,7 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
                   className="hidden"
                   onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
                 />
-                Upload
+                {t("account.overview.avatar.upload")}
               </label>
             </div>
           </div>
@@ -179,7 +186,7 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
                 type="button"
                 onClick={() => setAvatarFile(null)}
                 className="inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-surface-hover"
-                title="Remove file"
+                title={t("account.overview.avatar.removeFile")}
               >
                 <X className="h-4 w-4 text-secondary" />
               </button>
@@ -193,7 +200,7 @@ export default function OverviewSection({ user, profile, avatarSrc, onSave }) {
             disabled={saving}
             className="inline-flex items-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
           >
-            Save changes
+            {t("account.overview.save")}
           </button>
         </div>
       </form>

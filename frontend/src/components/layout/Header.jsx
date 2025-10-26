@@ -6,6 +6,9 @@ import MegaMenu from "./MegaMenu";
 import { categoryApi } from "../../api/categories";
 import { mapCategoryTree } from "../../utils/catalog";
 import { useCart } from "../../hooks/useCart";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "../../context/LanguageContext.jsx";
+import LanguageSwitcher from "./LanguageSwitcher.jsx";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -13,9 +16,13 @@ export default function Header() {
   const [categoryTree, setCategoryTree] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [navError, setNavError] = useState(null);
+  const { t } = useTranslation();
+  const { language } = useLanguage();
 
   useEffect(() => {
     let mounted = true;
+    setLoadingCategories(true);
+    setNavError(null);
     (async () => {
       try {
         const tree = await categoryApi.tree();
@@ -30,16 +37,16 @@ export default function Header() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [language]);
 
   const navigationItems = useMemo(() => {
     return (categoryTree || []).map((node) => ({
       id: node.id,
       label: node.name,
       hasChildren: node.children && node.children.length > 0,
-      menu: buildMegaMenuData(node),
+      menu: buildMegaMenuData(node, t),
     }));
-  }, [categoryTree]);
+  }, [categoryTree, t]);
 
   const onSearchSubmit = (e) => {
     e.preventDefault();
@@ -81,7 +88,7 @@ export default function Header() {
                 <Search className="h-4 w-4 text-secondary" />
                 <input
                   type="text"
-                  placeholder="Search"
+                  placeholder={t("common.searchPlaceholder")}
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   className="ml-2 w-full border-none text-sm outline-none placeholder:text-secondary/60"
@@ -97,8 +104,8 @@ export default function Header() {
                   );
                 }}
                 className="md:hidden inline-flex rounded-full p-2 hover:bg-surface-hover"
-                aria-label="Search"
-                title="Search"
+                aria-label={t("header.searchAria")}
+                title={t("common.search")}
               >
                 <Search className="h-6 w-6 text-secondary" />
               </button>
@@ -109,6 +116,7 @@ export default function Header() {
               <Link
                 to="/cart"
                 className="relative inline-flex rounded-full p-2 hover:bg-surface-hover"
+                aria-label={t("header.cartAria")}
               >
                 <ShoppingBag className="h-6 w-6 text-secondary" />
                 {totalItems > 0 && (
@@ -120,15 +128,18 @@ export default function Header() {
               <Link
                 to="/account?tab=Wishlist"
                 className="inline-flex rounded-full p-2 hover:bg-surface-hover"
+                aria-label={t("header.wishlistAria")}
               >
                 <Heart className="h-6 w-6 text-secondary" />
               </Link>
               <Link
                 to="/account"
                 className="inline-flex rounded-full p-2 hover:bg-surface-hover"
+                aria-label={t("header.accountAria")}
               >
                 <User className="h-6 w-6 text-secondary" />
               </Link>
+              <LanguageSwitcher />
             </div>
           </div>
         </div>
@@ -144,11 +155,13 @@ export default function Header() {
               "
             >
               {loadingCategories && (
-                <span className="text-sm text-secondary">Loading...</span>
+                <span className="text-sm text-secondary">
+                  {t("common.loading")}
+                </span>
               )}
               {!loadingCategories && navError && (
                 <span className="text-sm text-secondary">
-                  Categories unavailable
+                  {t("common.categoriesUnavailable")}
                 </span>
               )}
               {!loadingCategories &&
@@ -175,7 +188,7 @@ export default function Header() {
                 to="/sale"
                 className="shrink-0 text-accent hover:text-accent-hover"
               >
-                Sale
+                {t("common.sale")}
               </Link>
             </nav>
           </div>
@@ -185,13 +198,13 @@ export default function Header() {
   );
 }
 
-function buildMegaMenuData(node) {
+function buildMegaMenuData(node, t) {
   const children = node.children || [];
   if (!children.length) return [];
 
   return [
     {
-      title: `View all ${node.name}`,
+      title: t("common.viewAll", { title: node.name }),
       to: `/shop?category=${node.id}`,
       key: `${node.id}-all`,
       children: [],

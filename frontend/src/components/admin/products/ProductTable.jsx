@@ -1,10 +1,6 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Edit3, Trash2 } from "lucide-react";
-
-const formatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "EUR",
-  minimumFractionDigits: 2,
-});
 
 export default function ProductTable({
   products = [],
@@ -12,6 +8,18 @@ export default function ProductTable({
   onEdit,
   onDelete,
 }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language || navigator.language || "tr-TR";
+  const currency = useMemo(
+    () =>
+      new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: 2,
+      }),
+    [locale]
+  );
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -29,7 +37,7 @@ export default function ProductTable({
     return (
       <div className="grid place-items-center rounded-2xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-6 py-12 text-center">
         <p className="max-w-sm text-sm text-[var(--color-text-admin-muted)]">
-          No products yet. Add your first item to populate the catalog.
+          {t("admin.products.table.empty")}
         </p>
       </div>
     );
@@ -40,12 +48,24 @@ export default function ProductTable({
       <table className="min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
         <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
           <tr>
-            <th className="px-4 py-3 text-left font-medium">Product</th>
-            <th className="px-4 py-3 text-left font-medium">Category</th>
-            <th className="px-4 py-3 text-left font-medium">Price</th>
-            <th className="px-4 py-3 text-left font-medium">Status</th>
-            <th className="px-4 py-3 text-left font-medium">Updated</th>
-            <th className="px-4 py-3 text-right font-medium">Actions</th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("admin.products.table.product")}
+            </th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("admin.products.table.category")}
+            </th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("admin.products.table.price")}
+            </th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("admin.products.table.status")}
+            </th>
+            <th className="px-4 py-3 text-left font-medium">
+              {t("admin.products.table.updated")}
+            </th>
+            <th className="px-4 py-3 text-right font-medium">
+              {t("admin.products.table.actions")}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[var(--color-border-admin)]/60 text-[var(--color-text-admin)]">
@@ -78,13 +98,15 @@ export default function ProductTable({
                 </span>
               </td>
               <td className="px-4 py-3">
-                {formatter.format(product.price ?? 0)}
+                {currency.format(product.price ?? 0)}
               </td>
               <td className="px-4 py-3">
-                <StatusBadge active={product.isActive} />
+                <StatusBadge active={product.isActive} t={t} />
               </td>
               <td className="px-4 py-3 text-[var(--color-text-admin-muted)]">
-                {new Date(product.updatedAt || product.createdAt).toLocaleDateString()}
+                {new Date(product.updatedAt || product.createdAt).toLocaleDateString(
+                  locale
+                )}
               </td>
               <td className="px-4 py-3 text-right">
                 <div className="flex items-center justify-end gap-2">
@@ -92,13 +114,13 @@ export default function ProductTable({
                     onClick={() => onEdit?.(product)}
                     className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
                   >
-                    <Edit3 className="h-4 w-4" /> Edit
+                    <Edit3 className="h-4 w-4" /> {t("admin.common.edit")}
                   </button>
                   <button
                     onClick={() => onDelete?.(product)}
                     className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
                   >
-                    <Trash2 className="h-4 w-4" /> Delete
+                    <Trash2 className="h-4 w-4" /> {t("admin.common.delete")}
                   </button>
                 </div>
               </td>
@@ -110,7 +132,7 @@ export default function ProductTable({
   );
 }
 
-function StatusBadge({ active }) {
+function StatusBadge({ active, t }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
@@ -119,7 +141,9 @@ function StatusBadge({ active }) {
           : "bg-amber-50 text-amber-700"
       }`}
     >
-      {active ? "Active" : "Hidden"}
+      {active
+        ? t("admin.products.table.statusVisible")
+        : t("admin.products.table.statusHidden")}
     </span>
   );
 }

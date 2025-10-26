@@ -1,0 +1,612 @@
+{
+  "common": {
+    "language": {
+      "turkish": "Turkish",
+      "english": "English",
+      "german": "German"
+    },
+    "loading": "Loading...",
+    "categoriesUnavailable": "Categories unavailable",
+    "noData": "No data found.",
+    "sale": "Sale",
+    "search": "Search",
+    "searchPlaceholder": "Search products",
+    "viewAll": "View all {{title}}",
+    "genericError": "Something went wrong.",
+    "breadcrumb": {
+      "home": "Home"
+    }
+  },
+  "hero": {
+    "noMedia": "No media",
+    "gotoSlide": "Go to slide {{index}}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "header": {
+    "searchAria": "Search",
+    "cartAria": "Cart",
+    "wishlistAria": "Wishlist",
+    "accountAria": "Account"
+  },
+  "megaMenu": {
+    "noSubcategories": "No subcategories"
+  },
+  "footer": {
+    "about": "About Us",
+    "contact": "Contact",
+    "faq": "FAQ",
+    "shippingReturns": "Shipping & Returns",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "rights": "© {{year}} Ayyıldız İç Giyim. All rights reserved."
+  },
+  "authPage": {
+    "loginTitle": "Welcome back",
+    "registerTitle": "Create an account",
+    "loginSubtitle": "Log in to manage orders and wishlist.",
+    "registerSubtitle": "Join us for faster checkout and curated picks.",
+    "switchToRegister": "Not a member? ",
+    "switchToLogin": "Already have an account? ",
+    "createAccount": "Create an account",
+    "loginAccount": "Log in"
+  },
+  "authForm": {
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full Name",
+    "phone": "Phone",
+    "agree": "I agree to the Terms & Privacy Policy.",
+    "forgot": "Forgot password?",
+    "loginButton": "Log in",
+    "registerButton": "Create account",
+    "loading": "Loading...",
+    "loginLoading": "Signing in...",
+    "registerLoading": "Creating account...",
+    "emailPlaceholder": "you@example.com",
+    "phonePlaceholder": "+90 5xx xxx xx xx",
+    "passwordPlaceholder": "Minimum 8 characters",
+    "namePlaceholder": "Ayla Yılmaz"
+  },
+  "account": {
+    "tabs": {
+      "overview": "Overview",
+      "orders": "Orders",
+      "addresses": "Addresses",
+      "wishlist": "Wishlist"
+    },
+    "sidebar": {
+      "logout": "Log out",
+      "loading": "Loading..."
+    },
+    "overview": {
+      "title": "Account Overview",
+      "description": "Update your personal info and profile photo.",
+      "success": "Profile updated",
+      "fields": {
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "email": "Email",
+        "emailHelp": "Changing the email may require verification.",
+        "phone": "Phone"
+      },
+      "avatar": {
+        "title": "Profile photo",
+        "help": "JPG or PNG. Large files are compressed before upload.",
+        "remove": "Remove",
+        "removeActive": "Will remove",
+        "upload": "Upload",
+        "removeFile": "Remove file"
+      },
+      "save": "Save changes",
+      "fallbackName": "Customer"
+    },
+    "orders": {
+      "title": "Orders",
+      "empty": "You don't have any orders yet.",
+      "status": {
+        "created": "Created",
+        "pending": "Pending",
+        "paid": "Paid",
+        "processing": "Processing",
+        "shipped": "Shipped",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "orderNumber": "Order #{{number}}",
+      "shipping": "Shipping: {{name}} ({{price}})",
+      "total": "Total: {{total}}",
+      "viewDetails": "View details"
+    },
+    "addresses": {
+      "title": "Addresses",
+      "add": "Add new",
+      "empty": "No saved addresses.",
+      "default": "Default",
+      "edit": "Edit",
+      "delete": "Delete",
+      "added": "Address added",
+      "updated": "Address updated",
+      "removed": "Address removed",
+      "form": {
+        "fullName": "Full Name",
+        "phone": "Phone",
+        "line1": "Address Line 1",
+        "line2": "Address Line 2",
+        "city": "City",
+        "state": "State / District",
+        "postalCode": "Postal Code",
+        "country": "Country",
+        "cancel": "Cancel",
+        "save": "Save address",
+        "saving": "Saving..."
+      }
+    },
+    "wishlist": {
+      "title": "Wishlist",
+      "empty": "Your wishlist is empty for now.",
+      "remove": "Remove from wishlist",
+      "price": "{{price}} €",
+      "noImage": "No image"
+    }
+  },
+  "pages": {
+    "about": {
+      "title": "About",
+      "noData": "No about data found."
+    }
+  },
+  "cart": {
+    "itemCount": "{{count}} items"
+  },
+  "languageSwitcher": {
+    "label": "Language",
+    "aria": "Change language"
+  },
+  "auth": {
+    "login": "Log In",
+    "logout": "Log Out"
+  },
+  "admin": {
+    "common": {
+      "refresh": "Refresh",
+      "createNew": "Create new",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "delete": "Delete",
+      "edit": "Edit",
+      "previous": "Previous",
+      "next": "Next",
+      "remove": "Remove",
+      "actions": "Actions",
+      "search": "Search",
+      "loadMore": "Load more",
+      "warning": "Warning",
+      "success": "Success",
+      "error": "Error"
+    },
+    "categories": {
+      "pageTitle": "Categories",
+      "pageSubtitle": "Manage the three-level catalog tree and thumbnails.",
+      "formTitleCreate": "Create Category",
+      "formTitleEdit": "Edit Category",
+      "formSubtitleCreate": "Add a new category at any level.",
+      "formSubtitleEdit": "Update the category name, hierarchy or thumbnail.",
+      "name": "Category name",
+      "namePlaceholder": "e.g. Lingerie",
+      "parent": "Parent category",
+      "parentHelperNone": "Choose where this category will live (optional).",
+      "parentHelperRoot": "This is a root category. You can nest it under another root.",
+      "parentHelperSecond": "This is a second level category. You can promote or demote it.",
+      "parentHelperLeaf": "Leaf categories cannot have children.",
+      "noParent": "No parent (root)",
+      "thumbnail": "Thumbnail image",
+      "thumbnailHelp": "Optional 1:1 cover used in menus. PNG/JPG up to 2MB.",
+      "upload": "Upload image",
+      "removeImage": "Image will be removed",
+      "noImage": "No image",
+      "deleteConfirmTitle": "Delete \"{{name}}\"?",
+      "deleteConfirmText": "This action cannot be undone.",
+      "listEmpty": "No categories yet.",
+      "addTranslation": "Translations",
+      "translationHelper": "Add localized names. Empty fields fallback to {{base}}.",
+      "imageError": "Please upload an image file.",
+      "created": "Category created",
+      "updated": "Category updated",
+      "deleted": "Category deleted",
+      "errors": {
+        "nameRequired": "Category name is required."
+      },
+      "tree": {
+        "title": "Category Tree",
+        "total": "{{count}} entry",
+        "total_plural": "{{count}} entries",
+        "newRoot": "New root",
+        "imageBadge": "image",
+        "children": "{{count}} child",
+        "children_plural": "{{count}} children",
+        "empty": "No categories yet. Create your first root category to get started.",
+        "addRoot": "Add root category",
+        "collapse": "Collapse",
+        "expand": "Expand"
+      }
+    },
+    "media": {
+      "title": "Media Library",
+      "subtitle": "Track Cloudinary usage and manage uploaded assets.",
+      "refresh": "Refresh usage",
+      "searchPlaceholder": "Filter by public ID or folder",
+      "showing": "Showing {{count}} assets",
+      "deleteTitle": "Delete asset “{{id}}”",
+      "deleteDescription": "This action cannot be undone. Are you sure you want to delete this asset?",
+      "removed": "Asset removed",
+      "noAssets": "You haven’t uploaded any assets yet or your filters returned no results.",
+      "folderRoot": "root",
+      "table": {
+        "asset": "Asset",
+        "folder": "Folder",
+        "size": "Size",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "usage": {
+        "title": "Cloudinary usage",
+        "summary": "Plan: {{plan}} • Updated {{date}}",
+        "refreshing": "Refreshing...",
+        "storage": "Storage",
+        "bandwidth": "Bandwidth",
+        "noLimit": "Unlimited",
+        "notAvailable": "N/A",
+        "progress": "{{used}} / {{limit}}",
+        "unknownPlan": "Unknown",
+        "unknownDate": "Not provided"
+      }
+    },
+    "products": {
+      "pageTitle": "Products",
+      "pageSubtitle": "Manage items across the store catalog.",
+      "newProduct": "New product",
+      "editProduct": "Edit product",
+      "createProduct": "Create product",
+      "name": "Product name",
+      "namePlaceholder": "e.g. Luxury Silk Pajamas",
+      "price": "Price (EUR)",
+      "category": "Category",
+      "visibility": "Visibility",
+      "visible": "Visible in storefront",
+      "hidden": "Hidden",
+      "description": "Description",
+      "descriptionPlaceholder": "Short marketing copy shown on the product page.",
+      "care": "Care instructions",
+      "carePlaceholder": "e.g. Hand wash cold, do not tumble dry",
+      "details": "Key details",
+      "detailsPlaceholder": "Write one detail per line",
+      "detailsHelper": "Write one detail per line.",
+      "colors": "Colors",
+      "colorsDescription": "Add optional colour swatches.",
+      "colorsHelper": "Select from curated swatches or add custom HEX colours.",
+      "sizes": "Sizes",
+      "sizesDescription": "Manage available sizes.",
+      "sizesLabel": "Size options",
+      "sizesPlaceholder": "Add a size and press Enter",
+      "sizesHelper": "Example: XS, S, M, L, XL",
+      "attribute": "Product attribute",
+      "attributeDescription": "Add a custom option such as length or material.",
+      "attributeTitle": "Attribute title",
+      "attributeTitlePlaceholder": "e.g. Fabric",
+      "attributeValues": "Attribute values",
+      "attributeValuesPlaceholder": "One value per line",
+      "attributeOptionsLabel": "Attribute options",
+      "attributeOptionsPlaceholder": "Add an option and press Enter",
+      "attributeOptionsHelper": "Displayed beneath the attribute title.",
+      "inventory": "Inventory",
+      "inventorySectionTitle": "Inventory management",
+      "inventorySectionDescription": "Set stock per variant. Missing values default to zero.",
+      "inventoryShow": "Manage inventory",
+      "inventoryHide": "Hide inventory",
+      "inventoryStock": "Stock",
+      "translations": "Translations",
+      "translationsHelper": "Provide content for other languages. Empty fields fallback to {{base}}.",
+      "translationClears": "Clears translation",
+      "save": "Save",
+      "saving": "Saving...",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete?",
+      "searchPlaceholder": "Search products",
+      "allCategories": "All categories",
+      "totalCount": "{{total}} products • page {{page}} of {{pages}}",
+      "created": "Product created",
+      "updated": "Product updated",
+      "deleted": "Product deleted",
+      "deleteConfirmTitle": "Delete \"{{name}}\"?",
+      "deleteConfirmDescription": "This action cannot be undone.",
+      "variant": "Variant",
+      "variantDefault": "Default",
+      "mediaTitle": "Media gallery",
+      "mediaCount": "{{count}} / {{limit}} images",
+      "mediaHelp": "Upload high-quality square images. Drag to reorder after saving.",
+      "mediaAdd": "Add images",
+      "mediaNewAlt": "New upload",
+      "saveError": "Unable to save product",
+      "errors": {
+        "nameRequired": "Product name is required.",
+        "priceInvalid": "Enter a valid product price.",
+        "maxImages": "You can upload up to 8 images."
+      },
+      "pricePlaceholder": "129.90",
+      "noCategory": "No category assigned",
+      "modalTitleEdit": "Edit Product",
+      "modalTitleCreate": "Create Product",
+      "modalDescription": "Manage catalog entries, pricing and media assets.",
+      "modalSaving": "Saving...",
+      "modalUpdate": "Update product",
+      "modalCreate": "Create product",
+      "selectionShow": "Show",
+      "table": {
+        "empty": "No products yet. Add your first item to populate the catalog.",
+        "product": "Product",
+        "category": "Category",
+        "price": "Price",
+        "status": "Status",
+        "updated": "Updated",
+        "actions": "Actions",
+        "statusVisible": "Active",
+        "statusHidden": "Hidden"
+      }
+    },
+    "sets": {
+      "pageTitle": "Sets",
+      "pageSubtitle": "Manage the product bundles available in your catalog.",
+      "refresh": "Refresh",
+      "new": "New set",
+      "deleteTitle": "Delete \"{{name}}\"?",
+      "deleteDescription": "Are you sure you want to delete the set \"{{name}}\"? This action cannot be undone.",
+      "deleted": "Set deleted",
+      "updated": "Set updated",
+      "created": "Set created",
+      "empty": "No sets yet. Create your first set to get started.",
+      "table": {
+        "set": "Set",
+        "price": "Price",
+        "stock": "Stock",
+        "visibility": "Visibility",
+        "actions": "Actions",
+        "items": "{{count}} item",
+        "items_plural": "{{count}} items"
+      },
+      "button": {
+        "inspect": "Inspect stock",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "visibility": {
+        "visible": "Visible",
+        "hidden": "Hidden"
+      },
+      "inspect": {
+        "title": "Set \"{{name}}\"",
+        "subtitle": "Stock breakdown for each product in the set.",
+        "close": "Close",
+        "product": "Product",
+        "variant": "Variant",
+        "qty": "Qty in set",
+        "stockCatalog": "Catalog stock",
+        "stockSet": "Set stock",
+        "stockLegacy": "Legacy stock",
+        "unnamed": "Unnamed product",
+        "default": "Default variant"
+      },
+      "form": {
+        "titleCreate": "Create Set",
+        "titleEdit": "Edit Set",
+        "description": "Compose a bundle from existing products and highlight it in the store.",
+        "nameLabel": "Set name",
+        "namePlaceholder": "e.g. Premium Wedding Package",
+        "priceLabel": "Price ({{currency}})",
+        "pricePlaceholder": "499.00",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Describe what makes this set special.",
+        "visibleLabel": "Show in storefront",
+        "imagesTitle": "Images",
+        "upload": "Upload",
+        "newImageAlt": "New upload",
+        "productsTitle": "Set products",
+        "productsHelp": "Choose items from your catalog to include in the set.",
+        "addProduct": "Add product",
+        "productCardTitle": "Product",
+        "productLabel": "Product",
+        "quantityLabel": "Quantity",
+        "saving": "Saving...",
+        "saveChanges": "Save changes",
+        "create": "Create set"
+      },
+      "errors": {
+        "nameRequired": "Set name is required.",
+        "priceInvalid": "Enter a valid price.",
+        "productRequired": "Add at least one product to the set.",
+        "saveFailed": "Failed to save set."
+      }
+    },
+    "contact": {
+      "badge": "Contact Page",
+      "headerTitle": "Contact Page Content",
+      "headerDescription": "Edit the hero copy, sidebar blocks and form behaviour for the public contact page.",
+      "messages": {
+        "saved": "Contact page settings saved."
+      },
+      "defaults": {
+        "heroTitle": "We're here to help",
+        "heroSubtitle": "Our customer care team is available Monday to Friday, 09:00–18:00 CET. Send us a note and we'll respond within one business day.",
+        "addressBlock": {
+          "title": "Visit our European studio",
+          "lines": [
+            "Kurfürstendamm 45, 10719 Berlin",
+            "Showroom & click-and-collect (appointment recommended)"
+          ]
+        },
+        "hoursBlock": {
+          "title": "Opening hours (CET)",
+          "lines": [
+            "Mon – Fri: 09:00 – 18:00",
+            "Sat: 10:00 – 16:00 (showroom only)",
+            "Sun & public holidays: closed"
+          ]
+        },
+        "emailBlock": {
+          "title": "Customer service",
+          "lines": [
+            "support@evimstil.com",
+            "Average response time: < 24 h"
+          ]
+        },
+        "phoneBlock": {
+          "title": "Phone",
+          "lines": [
+            "+49 (0) 30 234 567 89",
+            "WhatsApp & Signal available on the same number"
+          ]
+        },
+        "successMessage": "Thank you for your message. We have received your enquiry and will reply via e-mail shortly. If you need immediate assistance, call us on the number below."
+      },
+      "hero": {
+        "title": "Hero Section",
+        "subtitle": "Headline, intro copy and optional hero image.",
+        "fields": {
+          "title": "Hero title",
+          "titlePlaceholder": "We're here to help",
+          "subtitle": "Hero subtitle",
+          "subtitlePlaceholder": "Short paragraph describing your contact policy."
+        }
+      },
+      "address": {
+        "title": "Address & Opening Hours",
+        "subtitle": "Configure the sidebar blocks for visitors.",
+        "blockTitle": "Address block title",
+        "blockTitlePlaceholder": "Visit our European studio",
+        "lines": "Address lines",
+        "linesPlaceholder": "Street, city, extra note…"
+      },
+      "hours": {
+        "blockTitle": "Opening hours title",
+        "blockTitlePlaceholder": "Opening hours (CET)",
+        "lines": "Opening hours lines",
+        "linesPlaceholder": "Mon – Fri: 09:00 – 18:00"
+      },
+      "channels": {
+        "title": "Contact Channels",
+        "subtitle": "Emails and phone numbers shown in the sidebar.",
+        "emailTitle": "Email block title",
+        "emailTitlePlaceholder": "Customer service",
+        "emailLines": "Email lines",
+        "emailLinesPlaceholder": "support@domain.com",
+        "phoneTitle": "Phone block title",
+        "phoneTitlePlaceholder": "Phone",
+        "phoneLines": "Phone lines",
+        "phoneLinesPlaceholder": "+49 30 123 456 78"
+      },
+      "repeater": {
+        "add": "Add line",
+        "remove": "Remove",
+        "empty": "No items yet"
+      },
+      "form": {
+        "title": "Form Behaviour",
+        "subtitle": "Toggle the contact form and edit the confirmation copy.",
+        "enableLabel": "Enable contact form",
+        "successLabel": "Success message",
+        "successPlaceholder": "Shown after a successful form submission."
+      },
+      "preview": {
+        "title": "Quick Preview",
+        "subtitle": "Live snapshot of the right sidebar.",
+        "empty": "—"
+      },
+      "buttons": {
+        "reset": "Reset",
+        "saving": "Saving...",
+        "save": "Save changes"
+      },
+      "tips": {
+        "title": "Content tips",
+        "items": [
+          "Keep the hero copy under 140 characters for easy scanning.",
+          "Combine address lines logically and avoid duplicates.",
+          "Highlight the fastest support channel in the first line.",
+          "The success message should set clear response expectations."
+        ]
+      }
+    },
+    "privacy": {
+      "badge": "Content • Privacy Policy",
+      "headerTitle": "Privacy Policy Page",
+      "headerDescription": {
+        "before": "Manage the privacy policy headline, sections, footer, and SEO metadata. This controls ",
+        "after": " page."
+      },
+      "messages": {
+        "loadError": "Failed to load privacy content.",
+        "saveSuccess": "Privacy policy saved successfully.",
+        "saveError": "Failed to save content."
+      },
+      "buttons": {
+        "save": "Save changes",
+        "saving": "Saving...",
+        "preview": "Preview",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "hero": {
+        "cardTitle": "Hero",
+        "fields": {
+          "titleLabel": "Page title",
+          "titlePlaceholder": "Privacy Policy",
+          "subtitleLabel": "Subtitle",
+          "subtitlePlaceholder": "Your privacy matters..."
+        }
+      },
+      "sections": {
+        "title": "Sections",
+        "add": "Add section",
+        "empty": "No sections yet. Click “Add section” to begin.",
+        "itemLabel": "Section {{index}}",
+        "idLabel": "Section ID (anchor)",
+        "idPlaceholder": "controller, data-processed...",
+        "titleLabel": "Title",
+        "titlePlaceholder": "1. Data Controller",
+        "contentLabel": "Content paragraphs",
+        "paragraphPlaceholder": "Enter a paragraph...",
+        "actions": {
+          "moveUp": "Move up",
+          "moveDown": "Move down",
+          "remove": "Remove section"
+        },
+        "addParagraph": "Add paragraph"
+      },
+      "footer": {
+        "title": "Footer notice (HTML)",
+        "placeholder": "If you have questions, contact us at <a href=\"mailto:privacy@...\">privacy@...</a>"
+      },
+      "seo": {
+        "title": "SEO metadata",
+        "metaTitle": "Meta title",
+        "metaTitlePlaceholder": "Privacy Policy — Evim & Stil",
+        "metaDescription": "Meta description",
+        "metaDescriptionPlaceholder": "How we process and protect your data...",
+        "keywords": "Keywords",
+        "keywordPlaceholder": "Add keyword",
+        "addKeyword": "Add",
+        "removeKeyword": "Remove keyword"
+      },
+      "tips": {
+        "title": "Tips",
+        "items": [
+          "Keep sections concise and numbered clearly.",
+          "Use anchors for quick navigation.",
+          "Footer can contain contact or compliance text.",
+          "SEO metadata improves visibility."
+        ]
+      }
+    }
+  }
+}

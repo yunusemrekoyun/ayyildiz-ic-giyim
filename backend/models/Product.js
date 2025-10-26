@@ -56,6 +56,7 @@ const ProductSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     listedInCatalog: { type: Boolean, default: true },
+    localized: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   },
   { timestamps: true }
 );

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { categoryApi } from "../../api/categories";
 import CategoryTree from "../../components/admin/categories/CategoryTree";
 import CategoryForm from "../../components/admin/categories/CategoryForm";
@@ -9,9 +10,11 @@ import {
   collectDescendantIds,
   flattenCategoryTree,
 } from "../../utils/catalog.js";
+import i18n from "../../i18n/config.js";
 
 export default function AdminCategories() {
   const confirm = useConfirm();
+  const { t } = useTranslation();
   const [tree, setTree] = useState([]);
   const [loadingTree, setLoadingTree] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -19,10 +22,6 @@ export default function AdminCategories() {
   const [saving, setSaving] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [banner, setBanner] = useState(null);
-
-  useEffect(() => {
-    refreshTree();
-  }, []);
 
   const parentOptions = useMemo(() => {
     const flat = flattenCategoryTree(tree);
@@ -45,12 +44,14 @@ export default function AdminCategories() {
     }));
   }, [tree, selectedCategory]);
 
-  const handleSelect = async (node) => {
+  const handleSelect = useCallback(async (node) => {
     if (!node?.id) return;
     setSelectedId(node.id);
     setLoadingCategory(true);
     try {
-      const detail = await categoryApi.get(node.id);
+      const detail = await categoryApi.get(node.id, {
+        includeLocalized: true,
+      });
       setSelectedCategory(detail);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -58,12 +59,12 @@ export default function AdminCategories() {
     } finally {
       setLoadingCategory(false);
     }
-  };
+  }, []);
 
-  const refreshTree = async (nextSelectId) => {
+  const loadTree = useCallback(async (nextSelectId) => {
     setLoadingTree(true);
     try {
-      const data = await categoryApi.tree();
+      const data = await categoryApi.tree({ includeLocalized: true });
       setTree(data);
       if (nextSelectId) {
         await handleSelect({ id: nextSelectId });
@@ -73,20 +74,30 @@ export default function AdminCategories() {
     } finally {
       setLoadingTree(false);
     }
-  };
+  }, [handleSelect]);
+
+  useEffect(() => {
+    loadTree();
+  }, [loadTree]);
 
   const handleSubmit = async (payload) => {
     setSaving(true);
     try {
       if (selectedCategory?.id) {
         await categoryApi.update(selectedCategory.id, payload);
-        setBanner({ variant: "success", message: "Category updated" });
-        await refreshTree(selectedCategory.id);
+        setBanner({
+          variant: "success",
+          message: t("admin.categories.updated"),
+        });
+        await loadTree(selectedCategory.id);
       } else {
         const created = await categoryApi.create(payload);
-        setBanner({ variant: "success", message: "Category created" });
+        setBanner({
+          variant: "success",
+          message: t("admin.categories.created"),
+        });
         setSelectedCategory(null);
-        await refreshTree(created.id);
+        await loadTree(created.id);
       }
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -98,9 +109,11 @@ export default function AdminCategories() {
   const handleDelete = async () => {
     if (!selectedCategory?.id) return;
     const ok = await confirm({
-      title: "Delete category",
-      description: `Deleting “${selectedCategory.name}” is permanent. Continue?`,
-      confirmText: "Delete",
+      title: t("admin.categories.deleteConfirmTitle", {
+        name: selectedCategory.name,
+      }),
+      description: t("admin.categories.deleteConfirmText"),
+      confirmText: t("admin.common.delete"),
       tone: "danger",
     });
     if (!ok) return;
@@ -108,10 +121,13 @@ export default function AdminCategories() {
     setSaving(true);
     try {
       await categoryApi.remove(selectedCategory.id);
-      setBanner({ variant: "warning", message: "Category deleted" });
+      setBanner({
+        variant: "warning",
+        message: t("admin.categories.deleted"),
+      });
       setSelectedCategory(null);
       setSelectedId(null);
-      await refreshTree();
+      await loadTree();
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
     } finally {
@@ -123,10 +139,10 @@ export default function AdminCategories() {
     <section className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-          Categories
+          {t("admin.categories.pageTitle")}
         </h1>
         <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-          Manage the three-level catalog tree and optional thumbnails.
+          {t("admin.categories.pageSubtitle")}
         </p>
       </header>
 
@@ -174,7 +190,7 @@ export default function AdminCategories() {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return i18n.t("common.genericError");
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);
@@ -185,5 +201,5 @@ function extractMessage(error) {
     }
     return error.message;
   }
-  return String(error);
+  return String(error || "") || i18n.t("common.genericError");
 }

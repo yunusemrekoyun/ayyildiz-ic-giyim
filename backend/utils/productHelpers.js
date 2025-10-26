@@ -1,4 +1,10 @@
 import slugify from "slugify";
+import {
+  DEFAULT_LANGUAGE,
+  normalizeLocale,
+  pickLocalizedField,
+  toLocalizedObject,
+} from "./i18n.js";
 
 export function normalizeArray(value) {
   if (!value) return [];
@@ -18,6 +24,11 @@ export function normalizeArray(value) {
       .filter(Boolean);
   }
   return [];
+}
+
+export function normalizeDetails(value) {
+  const arr = normalizeArray(value);
+  return arr.map((item) => String(item));
 }
 
 export function parseBoolean(value, fallback = false) {
@@ -122,6 +133,49 @@ export function parseInventory(value) {
   return Array.from(map.values());
 }
 
+export function sanitizeProductLocalizedPayload(payload) {
+  if (!payload || typeof payload !== "object") return {};
+  const result = {};
+
+  Object.entries(payload).forEach(([lang, values]) => {
+    const code = normalizeLocale(lang);
+    if (!code) return;
+    if (!values || typeof values !== "object") return;
+
+    const entry = {};
+    if (Object.prototype.hasOwnProperty.call(values, "name")) {
+      entry.name = values.name != null ? String(values.name) : "";
+    }
+    if (Object.prototype.hasOwnProperty.call(values, "description")) {
+      entry.description =
+        values.description != null ? String(values.description) : "";
+    }
+    if (Object.prototype.hasOwnProperty.call(values, "careInstructions")) {
+      entry.careInstructions =
+        values.careInstructions != null
+          ? String(values.careInstructions)
+          : "";
+    }
+    if (Object.prototype.hasOwnProperty.call(values, "details")) {
+      entry.details = normalizeDetails(values.details);
+    }
+    if (Object.prototype.hasOwnProperty.call(values, "customAttribute")) {
+      const attr = parseAttribute(values.customAttribute);
+      const { title = "", values: attrValues = [] } = attr;
+      entry.customAttribute = {
+        title,
+        values: attrValues,
+      };
+    }
+
+    if (Object.keys(entry).length > 0) {
+      result[code] = entry;
+    }
+  });
+
+  return result;
+}
+
 export function ensureSlug(doc, sourceField = "name") {
   if (!doc[sourceField]) return;
   if (!doc.slug || doc.isModified?.(sourceField)) {
@@ -132,13 +186,19 @@ export function ensureSlug(doc, sourceField = "name") {
 
 export function shapeProduct(
   doc,
-  { discount = null, finalPrice = undefined } = {}
+  {
+    discount = null,
+    finalPrice = undefined,
+    lang = DEFAULT_LANGUAGE,
+    includeLocalized = false,
+  } = {}
 ) {
   if (!doc) return null;
 
   const id =
     doc._id?.toString?.() || doc.id?.toString?.() || String(doc._id || doc.id);
   const basePrice = Number(doc.price) || 0;
+  const language = normalizeLocale(lang) || DEFAULT_LANGUAGE;
 
   const normalizedDiscount = discount
     ? {
@@ -179,9 +239,31 @@ export function shapeProduct(
       })
     : [];
 
-  return {
+  const localizedAttribute = pickLocalizedField(
+    doc,
+    "customAttribute",
+    language,
+    DEFAULT_LANGUAGE
+  ) || { title: "", values: [] };
+  const baseAttribute = doc.customAttribute || { title: "", values: [] };
+  const customAttribute = {
+    title: localizedAttribute?.title ?? baseAttribute.title ?? "",
+    values: Array.isArray(localizedAttribute?.values)
+      ? localizedAttribute.values
+      : Array.isArray(baseAttribute?.values)
+      ? baseAttribute.values
+      : [],
+    show: !!baseAttribute.show,
+  };
+
+  let details = pickLocalizedField(doc, "details", language, DEFAULT_LANGUAGE);
+  if (!Array.isArray(details)) {
+    details = Array.isArray(doc.details) ? doc.details : [];
+  }
+
+  const result = {
     id,
-    name: doc.name,
+    name: pickLocalizedField(doc, "name", language, DEFAULT_LANGUAGE) || "",
     slug: doc.slug,
     price: basePrice,
     finalPrice: Math.max(0, Number(computedFinal) || 0),
@@ -192,17 +274,19 @@ export function shapeProduct(
     sizes: doc.sizes,
     showColors: doc.showColors !== undefined ? doc.showColors : true,
     showSizes: doc.showSizes !== undefined ? doc.showSizes : true,
-    customAttribute: doc.customAttribute
-      ? {
-          title: doc.customAttribute.title || "",
-          values: doc.customAttribute.values || [],
-          show: !!doc.customAttribute.show,
-        }
-      : { title: "", values: [], show: false },
+    customAttribute,
     inventory,
-    description: doc.description,
-    careInstructions: doc.careInstructions,
-    details: doc.details,
+    description:
+      pickLocalizedField(doc, "description", language, DEFAULT_LANGUAGE) ||
+      "",
+    careInstructions:
+      pickLocalizedField(
+        doc,
+        "careInstructions",
+        language,
+        DEFAULT_LANGUAGE
+      ) || "",
+    details,
     category: doc.category,
     isActive: doc.isActive,
     listedInCatalog:
@@ -210,6 +294,12 @@ export function shapeProduct(
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
+
+  if (includeLocalized) {
+    result.localized = toLocalizedObject(doc.localized);
+  }
+
+  return result;
 }
 
 /**

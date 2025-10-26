@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 /* eslint-disable no-unused-vars */
 import { Gauge, HardDrive, Wifi } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 function formatBytes(bytes) {
   if (!bytes && bytes !== 0) return "—";
@@ -15,23 +16,29 @@ function formatBytes(bytes) {
 }
 
 export default function MediaUsageCard({ usage, refreshing }) {
+  const { t, i18n } = useTranslation();
   const storage = usage?.storage || {};
   const bandwidth = usage?.bandwidth || {};
+  const planLabel = usage?.plan || t("admin.media.usage.unknownPlan");
+  const updatedLabel = usage?.lastUpdated || t("admin.media.usage.unknownDate");
 
   return (
     <div className="rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-[var(--color-text-admin)]">
-            Cloudinary Usage
+            {t("admin.media.usage.title")}
           </h2>
           <p className="text-sm text-[var(--color-text-admin-muted)]">
-            Plan: {usage?.plan || "—"} • Updated {usage?.lastUpdated || "—"}
+            {t("admin.media.usage.summary", {
+              plan: planLabel,
+              date: updatedLabel,
+            })}
           </p>
         </div>
         {refreshing && (
           <span className="text-xs text-[var(--color-text-admin-muted)]">
-            Refreshing…
+            {t("admin.media.usage.refreshing")}
           </span>
         )}
       </div>
@@ -39,7 +46,7 @@ export default function MediaUsageCard({ usage, refreshing }) {
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <UsageMetric
           icon={HardDrive}
-          title="Storage"
+          title={t("admin.media.usage.storage")}
           used={storage.usedBytes}
           limit={storage.limitBytes}
           percent={storage.usedPercent}
@@ -47,7 +54,7 @@ export default function MediaUsageCard({ usage, refreshing }) {
         />
         <UsageMetric
           icon={Wifi}
-          title="Bandwidth"
+          title={t("admin.media.usage.bandwidth")}
           used={bandwidth.usedBytes}
           limit={bandwidth.limitBytes}
           percent={bandwidth.usedPercent}
@@ -59,7 +66,13 @@ export default function MediaUsageCard({ usage, refreshing }) {
 }
 
 function UsageMetric({ icon: Icon, title, used, limit, percent, accent }) {
+  const { t } = useTranslation();
   const valuePercent = percent != null ? Math.min(percent, 100) : null;
+  const usedLabel = formatBytes(used);
+  const limitLabel =
+    limit || limit === 0
+      ? formatBytes(limit)
+      : t("admin.media.usage.noLimit");
   return (
     <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]/60 p-4">
       <div className="flex items-center gap-3">
@@ -74,7 +87,10 @@ function UsageMetric({ icon: Icon, title, used, limit, percent, accent }) {
             {title}
           </h3>
           <p className="text-xs text-[var(--color-text-admin-muted)]">
-            {formatBytes(used)} / {limit ? formatBytes(limit) : "∞"}
+            {t("admin.media.usage.progress", {
+              used: usedLabel,
+              limit: limitLabel,
+            })}
           </p>
         </div>
       </div>
@@ -90,8 +106,12 @@ function UsageMetric({ icon: Icon, title, used, limit, percent, accent }) {
           />
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-[var(--color-text-admin-muted)]">
-          <span>{formatBytes(used)}</span>
-          <span>{valuePercent != null ? `${valuePercent.toFixed(1)}%` : "N/A"}</span>
+          <span>{usedLabel}</span>
+          <span>
+            {valuePercent != null
+              ? `${valuePercent.toFixed(1)}%`
+              : t("admin.media.usage.notAvailable")}
+          </span>
         </div>
       </div>
     </div>

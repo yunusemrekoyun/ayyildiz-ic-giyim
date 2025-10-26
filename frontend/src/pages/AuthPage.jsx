@@ -1,6 +1,7 @@
 // src/pages/AuthPage.jsx
 import { useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import LoginForm from "../components/auth/LoginForm";
 import RegisterForm from "../components/auth/RegisterForm";
 import { authApi } from "../api/auth";
@@ -10,6 +11,7 @@ export default function AuthPage({ initialView = "register", onAuthSuccess }) {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   // /account?view=login&redirect=/admin/xyz gibi geldiğinde
   const redirectTarget = useMemo(() => {
@@ -40,7 +42,7 @@ export default function AuthPage({ initialView = "register", onAuthSuccess }) {
         onAuthSuccess?.();
       }
     } catch (e) {
-      setError(parseErr(e));
+      setError(parseErr(e, t("common.genericError")));
     }
   };
 
@@ -59,7 +61,7 @@ export default function AuthPage({ initialView = "register", onAuthSuccess }) {
         onAuthSuccess?.();
       }
     } catch (e) {
-      setError(parseErr(e));
+      setError(parseErr(e, t("common.genericError")));
     }
   };
 
@@ -68,12 +70,14 @@ export default function AuthPage({ initialView = "register", onAuthSuccess }) {
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-12">
         <div className="mx-auto max-w-md rounded-2xl border border-border bg-white p-6 shadow-sm">
           <h1 className="text-center font-serif text-3xl font-extrabold text-primary">
-            {view === "login" ? "Welcome Back" : "Create Account"}
+            {view === "login"
+              ? t("authPage.loginTitle")
+              : t("authPage.registerTitle")}
           </h1>
           <p className="mt-2 text-center text-secondary">
             {view === "login"
-              ? "Log in to manage your orders and wishlist."
-              : "Join us to enjoy a faster checkout and curated picks."}
+              ? t("authPage.loginSubtitle")
+              : t("authPage.registerSubtitle")}
           </p>
 
           {error && (
@@ -84,11 +88,14 @@ export default function AuthPage({ initialView = "register", onAuthSuccess }) {
 
           <div className="mt-6">
             {view === "login" ? (
-              <LoginForm onSubmit={handleLogin} loadingText="Signing in..." />
+              <LoginForm
+                onSubmit={handleLogin}
+                loadingText={t("authForm.loginLoading")}
+              />
             ) : (
               <RegisterForm
                 onSubmit={handleRegister}
-                loadingText="Creating account..."
+                loadingText={t("authForm.registerLoading")}
               />
             )}
           </div>
@@ -96,22 +103,22 @@ export default function AuthPage({ initialView = "register", onAuthSuccess }) {
           <div className="mt-6 text-center text-sm">
             {view === "login" ? (
               <span className="text-secondary">
-                Not a member?{" "}
+                {t("authPage.switchToRegister")}
                 <button
                   className="text-accent hover:text-accent-hover underline"
                   onClick={() => setView("register")}
                 >
-                  Create an account
+                  {t("authPage.createAccount")}
                 </button>
               </span>
             ) : (
               <span className="text-secondary">
-                Already have an account?{" "}
+                {t("authPage.switchToLogin")}
                 <button
                   className="text-accent hover:text-accent-hover underline"
                   onClick={() => setView("login")}
                 >
-                  Log in
+                  {t("authPage.loginAccount")}
                 </button>
               </span>
             )}
@@ -122,12 +129,12 @@ export default function AuthPage({ initialView = "register", onAuthSuccess }) {
   );
 }
 
-function parseErr(e) {
+function parseErr(e, fallback) {
   try {
     const msg = JSON.parse(e.message)?.message;
     if (msg) return msg;
   } catch {
     // ignore
   }
-  return e.message?.replace(/^Error:\s?/, "") || "Something went wrong";
+  return e.message?.replace(/^Error:\s?/, "") || fallback;
 }

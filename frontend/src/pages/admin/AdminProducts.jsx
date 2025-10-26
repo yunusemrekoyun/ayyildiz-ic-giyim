@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PlusCircle, RefreshCw, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { categoryApi } from "../../api/categories";
 import { productApi } from "../../api/products";
 import ProductTable from "../../components/admin/products/ProductTable";
@@ -7,9 +8,11 @@ import ProductForm from "../../components/admin/products/ProductForm";
 import { flattenCategoryTree } from "../../utils/catalog.js";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
+import i18n from "../../i18n/config.js";
 
 export default function AdminProducts() {
   const confirm = useConfirm();
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [banner, setBanner] = useState(null);
@@ -46,7 +49,7 @@ export default function AdminProducts() {
 
   const loadCategories = async () => {
     try {
-      const data = await categoryApi.tree();
+      const data = await categoryApi.tree({ includeLocalized: true });
       setCategoryTree(data);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -81,7 +84,9 @@ export default function AdminProducts() {
 
   const handleEditProduct = async (product) => {
     try {
-      const full = await productApi.get(product.id || product.slug);
+      const full = await productApi.get(product.id || product.slug, {
+        includeLocalized: true,
+      });
       setEditingProduct(full);
       setModalOpen(true);
     } catch (err) {
@@ -91,15 +96,15 @@ export default function AdminProducts() {
 
   const handleDeleteProduct = async (product) => {
     const ok = await confirm({
-      title: "Delete product",
-      description: `Delete “${product.name}”? This action cannot be undone.`,
-      confirmText: "Delete",
+      title: t("admin.products.deleteConfirmTitle", { name: product.name }),
+      description: t("admin.products.deleteConfirmDescription"),
+      confirmText: t("admin.common.delete"),
       tone: "danger",
     });
     if (!ok) return;
     try {
       await productApi.remove(product.id || product.slug);
-      setBanner({ variant: "warning", message: "Product deleted" });
+      setBanner({ variant: "warning", message: t("admin.products.deleted") });
       await loadProducts(pagination.page);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -109,11 +114,11 @@ export default function AdminProducts() {
   const handleSaveProduct = async (payload) => {
     if (editingProduct?.id) {
       await productApi.update(editingProduct.id, payload);
-      setBanner({ variant: "success", message: "Product updated" });
+      setBanner({ variant: "success", message: t("admin.products.updated") });
       await loadProducts(pagination.page);
     } else {
       await productApi.create(payload);
-      setBanner({ variant: "success", message: "Product created" });
+      setBanner({ variant: "success", message: t("admin.products.created") });
       await loadProducts(1);
     }
   };
@@ -128,10 +133,10 @@ export default function AdminProducts() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-            Products
+            {t("admin.products.pageTitle")}
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-            Add, edit and curate items across the store catalog.
+            {t("admin.products.pageSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -139,13 +144,13 @@ export default function AdminProducts() {
             onClick={() => loadProducts(pagination.page)}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            <RefreshCw className="h-4 w-4" /> Refresh
+            <RefreshCw className="h-4 w-4" /> {t("admin.common.refresh")}
           </button>
           <button
             onClick={handleCreateClick}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
           >
-            <PlusCircle className="h-4 w-4" /> New product
+            <PlusCircle className="h-4 w-4" /> {t("admin.products.newProduct")}
           </button>
         </div>
       </header>
@@ -156,20 +161,20 @@ export default function AdminProducts() {
           <input
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Search products"
+            placeholder={t("admin.products.searchPlaceholder")}
             className="w-full border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
           />
         </label>
         <label className="md:col-span-1 flex items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
           <span className="text-sm text-[var(--color-text-admin-muted)]">
-            Category
+            {t("admin.products.category")}
           </span>
           <select
             value={categoryFilter}
             onChange={(event) => setCategoryFilter(event.target.value)}
             className="flex-1 border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
           >
-            <option value="">All categories</option>
+            <option value="">{t("admin.products.allCategories")}</option>
             {categoryOptions.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.label}
@@ -178,8 +183,11 @@ export default function AdminProducts() {
           </select>
         </label>
         <div className="md:col-span-1 flex items-center justify-end text-xs text-[var(--color-text-admin-muted)]">
-          {pagination.total} products • page {pagination.page} of{" "}
-          {pagination.pages}
+          {t("admin.products.totalCount", {
+            total: pagination.total,
+            page: pagination.page,
+            pages: pagination.pages,
+          })}
         </div>
       </div>
 
@@ -205,14 +213,14 @@ export default function AdminProducts() {
             disabled={pagination.page === 1}
             className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
           >
-            Previous
+            {t("admin.common.previous")}
           </button>
           <button
             onClick={() => goToPage(pagination.page + 1)}
             disabled={pagination.page >= pagination.pages}
             className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
           >
-            Next
+            {t("admin.common.next")}
           </button>
         </div>
       )}
@@ -240,7 +248,7 @@ function useDebounce(value, delay = 400) {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return i18n.t("common.genericError");
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);
@@ -250,5 +258,5 @@ function extractMessage(error) {
     }
     return error.message;
   }
-  return String(error);
+  return String(error || "") || i18n.t("common.genericError");
 }

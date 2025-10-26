@@ -30,6 +30,22 @@ import {
 import { authApi } from "../../api/auth";
 import { getUser as getUserCache } from "../../api/client";
 
+const BREADCRUMB_LABELS = {
+  admin: "Yönetim",
+  dashboard: "Kontrol Paneli",
+  analytics: "Analizler",
+  products: "Ürünler",
+  categories: "Kategoriler",
+  sets: "Setler",
+  media: "Medya",
+  discounts: "İndirimler",
+  coupons: "Kuponlar",
+  orders: "Siparişler",
+  customers: "Müşteriler",
+  settings: "Ayarlar",
+  "color-palette": "Renk Paleti",
+};
+
 export default function AdminLayout({ children, title, subtitle, actions }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -56,45 +72,45 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
     const parts = location.pathname.replace(/^\/+|\/+$/g, "").split("/");
     if (!parts[0]) return [];
     return parts.map((part, index) => ({
-      label: pretty(part),
+      label: translateSegment(part),
       href: "/" + parts.slice(0, index + 1).join("/"),
     }));
   }, [location.pathname]);
 
-  const menu = useMemo(
+const menu = useMemo(
     () => [
       {
-        label: "Overview",
+        label: "Genel",
         items: [
-          { to: "/admin/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-          { to: "/admin/analytics", label: "Analytics", Icon: BarChart3 },
+          { to: "/admin/dashboard", label: "Kontrol Paneli", Icon: LayoutDashboard },
+          { to: "/admin/analytics", label: "Analizler", Icon: BarChart3 },
         ],
       },
       {
-        label: "Catalog",
+        label: "Katalog",
         items: [
-          { to: "/admin/products", label: "Products", Icon: Package },
-          { to: "/admin/categories", label: "Categories", Icon: Tags },
-          { to: "/admin/sets", label: "Sets", Icon: Layers },
-          { to: "/admin/media", label: "Media Library", Icon: Image },
-          { to: "/admin/discounts", label: "Discounts", Icon: Percent },
-          { to: "/admin/coupons", label: "Coupons", Icon: TicketPercent },
+          { to: "/admin/products", label: "Ürünler", Icon: Package },
+          { to: "/admin/categories", label: "Kategoriler", Icon: Tags },
+          { to: "/admin/sets", label: "Setler", Icon: Layers },
+          { to: "/admin/media", label: "Medya Kütüphanesi", Icon: Image },
+          { to: "/admin/discounts", label: "İndirimler", Icon: Percent },
+          { to: "/admin/coupons", label: "Kuponlar", Icon: TicketPercent },
         ],
       },
       {
-        label: "Commerce",
+        label: "Ticaret",
         items: [
-          { to: "/admin/orders", label: "Orders", Icon: ShoppingCart },
-          { to: "/admin/customers", label: "Customers", Icon: Users },
+          { to: "/admin/orders", label: "Siparişler", Icon: ShoppingCart },
+          { to: "/admin/customers", label: "Müşteriler", Icon: Users },
         ],
       },
       {
-        label: "System",
+        label: "Sistem",
         items: [
-          { to: "/admin/settings", label: "Settings", Icon: Settings },
+          { to: "/admin/settings", label: "Ayarlar", Icon: Settings },
           {
             to: "/admin/color-palette",
-            label: "Color Palette",
+            label: "Renk Paleti",
             Icon: Sparkles,
           },
         ],
@@ -153,7 +169,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
         />
 
         <PageHeader
-          title={title || pageTitleFromBreadcrumb(breadcrumbs) || "Overview"}
+          title={title || pageTitleFromBreadcrumb(breadcrumbs) || "Kontrol Paneli"}
           subtitle={subtitle}
           actions={actions}
         />
@@ -183,14 +199,14 @@ function SidebarHeader({ collapsed, onToggle }) {
             <span className="text-base font-semibold tracking-tight">
               Ayyıldız
             </span>
-            <span className="text-xs text-white/70">Admin Console</span>
+            <span className="text-xs text-white/70">Yönetim Paneli</span>
           </div>
         )}
       </Link>
       <button
         onClick={onToggle}
         className="hidden md:inline-flex rounded-lg p-2 text-white/80 -translate-x-5"
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}
       >
         {collapsed ? (
           <ChevronRight className="h-5 w-5" />
@@ -234,7 +250,7 @@ function SidebarFooter({ collapsed, me }) {
             <div className="truncate text-sm font-medium text-white">
               {me?.firstName
                 ? `${me.firstName} ${me.lastName || ""}`.trim()
-                : "Admin"}
+                : "Yönetici"}
             </div>
             <div className="truncate text-xs text-white/70">
               {me?.email || ""}
@@ -245,10 +261,10 @@ function SidebarFooter({ collapsed, me }) {
       <Link
         to="/"
         className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
-        title="Go to storefront"
+        title="Mağazayı görüntüle"
       >
         <Home className="h-4 w-4" />
-        {!collapsed && <span>View store</span>}
+        {!collapsed && <span>Mağazayı Gör</span>}
       </Link>
     </div>
   );
@@ -264,7 +280,7 @@ function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
           <button
             onClick={onMenuToggle}
             className="flex rounded-lg p-2 text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:hidden"
-            aria-label="Open navigation"
+            aria-label="Menüyü aç"
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -275,7 +291,7 @@ function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
           <div className="hidden lg:flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-1.5">
             <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
             <input
-              placeholder="Search in admin…"
+              placeholder="Panelde ara…"
               className="w-48 border-0 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-admin-muted)]"
             />
           </div>
@@ -384,12 +400,12 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
             <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/15 text-white">
               <Sparkles className="h-5 w-5" />
             </div>
-            <span className="text-lg font-semibold">Admin Console</span>
+            <span className="text-lg font-semibold">Yönetim Paneli</span>
           </Link>
           <button
             onClick={onClose}
             className="rounded-lg p-2 text-white hover:bg-white/10"
-            aria-label="Close navigation"
+            aria-label="Menüyü kapat"
           >
             <X className="h-6 w-6" />
           </button>
@@ -416,7 +432,7 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
                 <div className="truncate text-sm font-medium">
                   {me?.firstName
                     ? `${me.firstName} ${me.lastName || ""}`.trim()
-                    : "Admin"}
+                    : "Yönetici"}
                 </div>
                 <div className="truncate text-xs text-white/70">
                   {me?.email || ""}
@@ -431,7 +447,7 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
               className="flex w-full items-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
             >
               <LogOut className="h-4 w-4" />
-              <span>Logout</span>
+              <span>Çıkış Yap</span>
             </button>
             <Link
               to="/"
@@ -439,7 +455,7 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
               className="flex items-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
             >
               <Home className="h-4 w-4" />
-              <span>View store</span>
+              <span>Mağazayı Gör</span>
             </Link>
           </div>
         </div>
@@ -475,7 +491,7 @@ function UserMenu({ me, onLogout }) {
           {getInitials(me)}
         </div>
         <span className="hidden sm:block text-[var(--color-text-admin)]">
-          {me?.firstName || "Admin"}
+          {me?.firstName || "Yönetici"}
         </span>
         <ChevronDown className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
       </button>
@@ -483,24 +499,24 @@ function UserMenu({ me, onLogout }) {
       {open && (
         <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-xl">
           <div className="px-4 py-3">
-            <div className="text-sm font-semibold text-[var(--color-text-admin)]">
-              {me?.firstName
-                ? `${me.firstName} ${me.lastName || ""}`.trim()
-                : "Admin"}
+          <div className="text-sm font-semibold text-[var(--color-text-admin)]">
+            {me?.firstName
+              ? `${me.firstName} ${me.lastName || ""}`.trim()
+              : "Yönetici"}
             </div>
             <div className="truncate text-xs text-[var(--color-text-admin-muted)]">
               {me?.email || ""}
             </div>
           </div>
           <div className="h-px bg-[var(--color-border-admin)]/60" />
-          <MenuLink to="/admin/settings">Profile & Settings</MenuLink>
-          <MenuLink to="/admin/dashboard">Dashboard</MenuLink>
+          <MenuLink to="/admin/settings">Profil ve Ayarlar</MenuLink>
+          <MenuLink to="/admin/dashboard">Kontrol Paneli</MenuLink>
           <button
             onClick={onLogout}
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-[var(--color-bg-hover)]"
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            Çıkış Yap
           </button>
         </div>
       )}
@@ -559,6 +575,11 @@ function pretty(segment) {
   return segment
     .replace(/[-_]+/g, " ")
     .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function translateSegment(segment) {
+  const key = String(segment || "").toLowerCase();
+  return BREADCRUMB_LABELS[key] || pretty(segment);
 }
 
 function pageTitleFromBreadcrumb(items = []) {

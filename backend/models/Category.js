@@ -29,6 +29,7 @@ const CategorySchema = new mongoose.Schema(
       },
     ],
     image: { type: ImageSchema, default: null },
+    localized: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   },
   { timestamps: true }
 );

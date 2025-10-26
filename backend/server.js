@@ -8,6 +8,7 @@ import multer from "multer";
 import { connectDB } from "./config/db.js";
 import apiRoutes from "./routes/index.js";
 import { configureCloudinary } from "./config/cloudinary.js";
+import { attachLocale } from "./middleware/locale.js";
 
 const app = express();
 
@@ -16,7 +17,11 @@ app.use(
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Accept-Language",
+    ],
   })
 );
 
@@ -25,6 +30,7 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
+app.use(attachLocale);
 
 configureCloudinary();
 

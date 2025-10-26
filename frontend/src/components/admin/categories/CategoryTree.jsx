@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
   ChevronRight,
@@ -13,6 +14,7 @@ export default function CategoryTree({
   onSelect,
   onCreateRoot,
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(() => new Set());
 
   useEffect(() => {
@@ -50,10 +52,10 @@ export default function CategoryTree({
       <div className="flex items-center justify-between border-b border-[var(--color-border-admin)] px-4 py-4">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-admin)]">
-            Category Tree
+            {t("admin.categories.tree.title")}
           </h3>
           <p className="text-xs text-[var(--color-text-admin-muted)]">
-            {totalCount} {totalCount === 1 ? "entry" : "entries"}
+            {t("admin.categories.tree.total", { count: totalCount })}
           </p>
         </div>
         <button
@@ -61,12 +63,12 @@ export default function CategoryTree({
           className="inline-flex items-center gap-1 rounded-full bg-[var(--color-bg-hover)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]/70"
         >
           <PlusCircle className="h-4 w-4" />
-          New root
+          {t("admin.categories.tree.newRoot")}
         </button>
       </div>
 
       {items.length === 0 ? (
-        <EmptyState onCreateRoot={onCreateRoot} />
+        <EmptyState onCreateRoot={onCreateRoot} t={t} />
       ) : (
         <ul className="space-y-1 px-2 py-3">
           {items.map((item) => (
@@ -78,6 +80,7 @@ export default function CategoryTree({
               onToggle={toggle}
               onSelect={onSelect}
               selectedId={selectedId}
+              t={t}
             />
           ))}
         </ul>
@@ -86,7 +89,7 @@ export default function CategoryTree({
   );
 }
 
-function TreeNode({ node, depth, expanded, onToggle, selectedId, onSelect }) {
+function TreeNode({ node, depth, expanded, onToggle, selectedId, onSelect, t }) {
   const hasChildren = node.children && node.children.length > 0;
   const isExpanded = expanded.has(node.id);
   const isSelected = selectedId === node.id;
@@ -113,7 +116,13 @@ function TreeNode({ node, depth, expanded, onToggle, selectedId, onSelect }) {
               ? "hover:border-[var(--color-text-admin)]"
               : "pointer-events-none opacity-0"
           }`}
-          aria-label={isExpanded ? "Collapse" : "Expand"}
+          aria-label={
+            hasChildren
+              ? isExpanded
+                ? t("admin.categories.tree.collapse")
+                : t("admin.categories.tree.expand")
+              : undefined
+          }
         >
           {hasChildren ? (
             isExpanded ? (
@@ -135,13 +144,15 @@ function TreeNode({ node, depth, expanded, onToggle, selectedId, onSelect }) {
             {node.image?.url && (
               <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--color-text-admin-muted)]">
                 <ImageIcon className="h-3 w-3" />
-                image
+                {t("admin.categories.tree.imageBadge")}
               </span>
             )}
           </span>
           {hasChildren && (
             <span className="text-xs text-[var(--color-text-admin-muted)]">
-              {node.children.length}
+              {t("admin.categories.tree.children", {
+                count: node.children.length,
+              })}
             </span>
           )}
         </button>
@@ -157,6 +168,7 @@ function TreeNode({ node, depth, expanded, onToggle, selectedId, onSelect }) {
               onToggle={onToggle}
               onSelect={onSelect}
               selectedId={selectedId}
+              t={t}
             />
           ))}
         </ul>
@@ -165,21 +177,21 @@ function TreeNode({ node, depth, expanded, onToggle, selectedId, onSelect }) {
   );
 }
 
-function EmptyState({ onCreateRoot }) {
+function EmptyState({ onCreateRoot, t }) {
   return (
     <div className="grid place-items-center gap-3 px-6 py-12 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-bg-hover)] text-[var(--color-text-admin)]">
         <FolderTree className="h-6 w-6" />
       </div>
       <p className="text-sm text-[var(--color-text-admin-muted)]">
-        No categories yet. Create your first root category to get started.
+        {t("admin.categories.tree.empty")}
       </p>
       <button
         onClick={onCreateRoot}
         className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
       >
         <PlusCircle className="h-4 w-4" />
-        Add root category
+        {t("admin.categories.tree.addRoot")}
       </button>
     </div>
   );

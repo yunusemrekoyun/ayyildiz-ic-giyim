@@ -1,12 +1,14 @@
-export const ACCOUNT_TABS = ["Overview", "Orders", "Addresses", "Wishlist"];
+import i18n from "../../i18n/config.js";
+
+export const ACCOUNT_TABS = ["overview", "orders", "addresses", "wishlist"];
 
 export const normalizeTab = (raw) => {
   if (!raw) return null;
   const t = String(raw).toLowerCase();
-  if (["wishlist", "favorites", "favoriler"].includes(t)) return "Wishlist";
-  if (["addresses", "address", "adresler"].includes(t)) return "Addresses";
-  if (["orders", "siparisler"].includes(t)) return "Orders";
-  if (["overview", "profil"].includes(t)) return "Overview";
+  if (["wishlist", "favorites", "favoriler"].includes(t)) return "wishlist";
+  if (["addresses", "address", "adresler"].includes(t)) return "addresses";
+  if (["orders", "siparisler"].includes(t)) return "orders";
+  if (["overview", "profil"].includes(t)) return "overview";
   return null;
 };
 
@@ -49,6 +51,6 @@ export function extractErrorMessage(error) {
     const parsed = JSON.parse(text);
     return parsed?.message || text;
   } catch {
-    return error?.message || "Unexpected error";
+    return error?.message || i18n.t("common.genericError");
   }
 }

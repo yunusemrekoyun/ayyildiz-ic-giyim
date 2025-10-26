@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { RefreshCw, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { mediaApi } from "../../api/media";
 import MediaUsageCard, {
   MediaUsageSkeleton,
@@ -7,9 +8,11 @@ import MediaUsageCard, {
 import MediaResourceTable from "../../components/admin/media/MediaResourceTable";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
+import i18n from "../../i18n/config.js";
 
 export default function AdminMedia() {
   const confirm = useConfirm();
+  const { t } = useTranslation();
   const [usage, setUsage] = useState(null);
   const [usageLoading, setUsageLoading] = useState(true);
   const [refreshingUsage, setRefreshingUsage] = useState(false);
@@ -33,12 +36,13 @@ export default function AdminMedia() {
     if (isManual) setRefreshingUsage(true);
     else setUsageLoading(true);
     try {
+      const locale = i18n.language || navigator.language || "en";
       const data = await mediaApi.usage();
       setUsage({
         ...data,
         lastUpdated: data?.lastUpdated
-          ? new Date(data.lastUpdated).toLocaleDateString()
-          : "—",
+          ? new Date(data.lastUpdated).toLocaleString(locale)
+          : null,
       });
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -69,9 +73,9 @@ export default function AdminMedia() {
 
   const handleDelete = async (resource) => {
     const ok = await confirm({
-      title: "Delete asset",
-      description: `Delete asset “${resource.publicId}”? This cannot be undone.`,
-      confirmText: "Delete",
+      title: t("admin.media.deleteTitle", { id: resource.publicId }),
+      description: t("admin.media.deleteDescription", { id: resource.publicId }),
+      confirmText: t("admin.common.delete"),
       tone: "danger",
     });
     if (!ok) return;
@@ -81,7 +85,7 @@ export default function AdminMedia() {
         prev.filter((item) => item.publicId !== resource.publicId)
       );
       await fetchUsage(true);
-      setBanner({ variant: "warning", message: "Asset removed" });
+      setBanner({ variant: "warning", message: t("admin.media.removed") });
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
     }
@@ -92,17 +96,17 @@ export default function AdminMedia() {
       <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-            Media Library
+            {t("admin.media.title")}
           </h1>
           <p className="text-sm text-[var(--color-text-admin-muted)]">
-            Track Cloudinary usage and curate uploaded assets.
+            {t("admin.media.subtitle")}
           </p>
         </div>
         <button
           onClick={() => fetchUsage(true)}
           className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
         >
-          <RefreshCw className="h-4 w-4" /> Refresh usage
+          <RefreshCw className="h-4 w-4" /> {t("admin.media.refresh")}
         </button>
       </header>
 
@@ -118,12 +122,12 @@ export default function AdminMedia() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Filter by public ID or folder"
+            placeholder={t("admin.media.searchPlaceholder")}
             className="w-full border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
           />
         </label>
         <div className="md:col-span-2 flex items-center justify-end text-xs text-[var(--color-text-admin-muted)]">
-          Showing {resources.length} assets
+          {t("admin.media.showing", { count: resources.length })}
         </div>
       </div>
 
@@ -158,7 +162,7 @@ function useDebounce(value, delay = 400) {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return i18n.t("common.genericError");
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);
@@ -169,5 +173,5 @@ function extractMessage(error) {
     }
     return error.message;
   }
-  return String(error);
+  return String(error || "") || i18n.t("common.genericError");
 }
