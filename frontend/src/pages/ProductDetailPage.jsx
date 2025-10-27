@@ -5,13 +5,20 @@ import BreadCrumb from "../components/shop/BreadCrumb";
 import ProductDetail from "../components/product-detail/ProductDetail";
 import SimilarProducts from "../components/product-detail/SimilarProducts";
 import { productApi } from "../api/products";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
 
 export default function ProductDetailPage() {
-  const { slug } = useParams();
+  const { slug, lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const [product, setProduct] = useState(null);
   const [similar, setSimilar] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { buildPath } = useLocalizedPath();
 
   useEffect(() => {
     if (!slug) return;
@@ -22,15 +29,19 @@ export default function ProductDetailPage() {
 
     (async () => {
       try {
-        const detail = await productApi.get(slug);
+        const detail = await productApi.get(slug, { siteCode });
         if (!mounted) return;
         setProduct(detail);
 
         if (detail?.category) {
-          const related = await productApi.list({
-            category: detail.category?.id || detail.category?._id || detail.category,
-            limit: 8,
-          });
+          const related = await productApi.list(
+            {
+              category:
+                detail.category?.id || detail.category?._id || detail.category,
+              limit: 8,
+            },
+            { siteCode }
+          );
           if (mounted && related?.products) {
             setSimilar(
               related.products
@@ -49,7 +60,7 @@ export default function ProductDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [slug]);
+  }, [slug, siteCode]);
 
   if (loading) {
     return (
@@ -91,11 +102,13 @@ export default function ProductDetailPage() {
   }
 
   const breadcrumbItems = [
-    { label: "Home", to: "/" },
+    { label: "Home", to: `/${siteCode}` },
     product.category?.name
       ? {
           label: product.category.name,
-          to: `/shop?category=${product.category.id || product.category._id}`,
+          to: `/${siteCode}/shop?category=${
+            product.category.id || product.category._id
+          }`,
         }
       : null,
     { label: product.name || product.title || "Product" },
@@ -121,7 +134,9 @@ export default function ProductDetailPage() {
               price: item.price,
               finalPrice: item.finalPrice ?? item.price,
               discount: item.discount?.percentage,
-              slug: item.slug,
+              slug: item.slug
+                ? buildPath(`/product/${item.slug}`)
+                : undefined,
             }))}
           />
         </div>

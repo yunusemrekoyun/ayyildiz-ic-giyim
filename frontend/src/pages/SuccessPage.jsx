@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { orderApi } from "../api/orders";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
 
 export default function SuccessPage() {
   const location = useLocation();
   const orderId = new URLSearchParams(location.search).get("order");
   const [order, setOrder] = useState(null);
+  const { buildPath } = useLocalizedPath();
 
   useEffect(() => {
     let mounted = true;
@@ -28,7 +30,7 @@ export default function SuccessPage() {
     <section className="bg-surface-light/60">
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-6">
         <BreadCrumb
-          items={[{ label: "Home", to: "/" }, { label: "Success" }]}
+          items={[{ label: "Home", to: buildPath("") }, { label: "Success" }]}
         />
       </div>
 
@@ -73,13 +75,13 @@ export default function SuccessPage() {
 
           <div className="mt-6 flex justify-center gap-3">
             <Link
-              to="/"
+              to={buildPath("")}
               className="rounded-full border border-border px-4 py-2 text-sm text-primary hover:bg-surface-hover"
             >
               Continue Shopping
             </Link>
             <Link
-              to="/account?tab=Orders"
+              to={buildPath("/account?tab=Orders")}
               className="rounded-full bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover"
             >
               View Orders

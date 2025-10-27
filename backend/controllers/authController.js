@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import UserDetails from "../models/UserDetails.js";
 import { shapeUser } from "../utils/userPresenter.js";
+import { SITE_CODES } from "../constants/sites.js";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
@@ -31,7 +32,8 @@ function setRefreshCookie(res, token) {
 
 /** POST /api/auth/register */
 export const register = async (req, res) => {
-  const { firstName, lastName, email, phone, password, role } = req.body;
+  const { firstName, lastName, email, phone, password, role, roles, allowedSites } =
+    req.body;
   if (!firstName || !lastName || !email || !password)
     return res.status(400).json({ message: "Missing required fields" });
 
@@ -39,18 +41,38 @@ export const register = async (req, res) => {
   if (exists) return res.status(409).json({ message: "Email already in use" });
 
   const passwordHash = await bcrypt.hash(password, 10);
+
+  const normalizedRoles = Array.isArray(roles)
+    ? roles.map((r) => String(r).toLowerCase())
+    : role
+    ? [String(role).toLowerCase()]
+    : ["user"];
+
+  const resolvedRoles = normalizedRoles.includes("admin")
+    ? ["admin"]
+    : ["user"];
+
+  const normalizedAllowedSites = Array.isArray(allowedSites)
+    ? allowedSites
+        .map((code) => String(code).toLowerCase())
+        .filter((code) => SITE_CODES.includes(code))
+    : undefined;
+
   const user = await User.create({
     firstName,
     lastName,
     email,
     phone,
     passwordHash,
-    role: role && ["user", "admin"].includes(role) ? role : "user",
+    roles: resolvedRoles,
+    allowedSites: normalizedAllowedSites && normalizedAllowedSites.length
+      ? normalizedAllowedSites
+      : undefined,
   });
   await UserDetails.create({ user: user._id });
 
-  const accessToken = signAccessToken({ sub: user._id, role: user.role });
-  const refreshToken = signRefreshToken({ sub: user._id, role: user.role });
+  const accessToken = signAccessToken({ sub: user._id, roles: user.roles });
+  const refreshToken = signRefreshToken({ sub: user._id, roles: user.roles });
 
   user.refreshToken = refreshToken;
   await user.save();
@@ -84,8 +106,8 @@ export const login = async (req, res) => {
   if (!ok)
     return res.status(401).json({ message: "Invalid email or password" });
 
-  const accessToken = signAccessToken({ sub: user._id, role: user.role });
-  const refreshToken = signRefreshToken({ sub: user._id, role: user.role });
+  const accessToken = signAccessToken({ sub: user._id, roles: user.roles });
+  const refreshToken = signRefreshToken({ sub: user._id, roles: user.roles });
 
   user.refreshToken = refreshToken; // rotate
   await user.save();
@@ -111,8 +133,8 @@ export const refresh = async (req, res) => {
       return res.status(403).json({ message: "Account is deactivated" });
     }
 
-    const newAccess = signAccessToken({ sub: user._id, role: user.role });
-    const newRefresh = signRefreshToken({ sub: user._id, role: user.role });
+    const newAccess = signAccessToken({ sub: user._id, roles: user.roles });
+    const newRefresh = signRefreshToken({ sub: user._id, roles: user.roles });
 
     user.refreshToken = newRefresh; // rotate
     await user.save();

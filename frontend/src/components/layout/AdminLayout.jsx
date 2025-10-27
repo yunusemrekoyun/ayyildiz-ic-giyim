@@ -1,6 +1,6 @@
 // src/components/layout/AdminLayout.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Menu,
   X,
@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { authApi } from "../../api/auth";
 import { getUser as getUserCache } from "../../api/client";
+import { SITE_CODES } from "../../constants/sites.js";
 
 export default function AdminLayout({ children, title, subtitle, actions }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -36,6 +37,9 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
   const [me, setMe] = useState(getUserCache());
   const navigate = useNavigate();
   const location = useLocation();
+  const { lng } = useParams();
+  const pathSegments = location.pathname.split("/").filter(Boolean);
+  const restPathSegments = pathSegments.slice(1);
 
   useEffect(() => {
     let mounted = true;
@@ -55,57 +59,84 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
   const breadcrumbs = useMemo(() => {
     const parts = location.pathname.replace(/^\/+|\/+$/g, "").split("/");
     if (!parts[0]) return [];
-    return parts.map((part, index) => ({
+    const [, ...rest] = parts;
+    return rest.map((part, index) => ({
       label: pretty(part),
-      href: "/" + parts.slice(0, index + 1).join("/"),
+      href: "/" + [parts[0], ...rest.slice(0, index + 1)].join("/"),
     }));
   }, [location.pathname]);
+
+  const withSite = (path) => `/${lng}${path}`;
 
   const menu = useMemo(
     () => [
       {
         label: "Overview",
         items: [
-          { to: "/admin/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-          { to: "/admin/analytics", label: "Analytics", Icon: BarChart3 },
+          {
+            to: withSite("/admin/dashboard"),
+            label: "Dashboard",
+            Icon: LayoutDashboard,
+          },
+          {
+            to: withSite("/admin/analytics"),
+            label: "Analytics",
+            Icon: BarChart3,
+          },
         ],
       },
       {
         label: "Catalog",
         items: [
-          { to: "/admin/products", label: "Products", Icon: Package },
-          { to: "/admin/categories", label: "Categories", Icon: Tags },
-          { to: "/admin/sets", label: "Sets", Icon: Layers },
-          { to: "/admin/media", label: "Media Library", Icon: Image },
-          { to: "/admin/discounts", label: "Discounts", Icon: Percent },
-          { to: "/admin/coupons", label: "Coupons", Icon: TicketPercent },
+          { to: withSite("/admin/products"), label: "Products", Icon: Package },
+          { to: withSite("/admin/categories"), label: "Categories", Icon: Tags },
+          { to: withSite("/admin/sets"), label: "Sets", Icon: Layers },
+          {
+            to: withSite("/admin/media"),
+            label: "Media Library",
+            Icon: Image,
+          },
+          { to: withSite("/admin/discounts"), label: "Discounts", Icon: Percent },
+          { to: withSite("/admin/coupons"), label: "Coupons", Icon: TicketPercent },
         ],
       },
       {
         label: "Commerce",
         items: [
-          { to: "/admin/orders", label: "Orders", Icon: ShoppingCart },
-          { to: "/admin/customers", label: "Customers", Icon: Users },
+          { to: withSite("/admin/orders"), label: "Orders", Icon: ShoppingCart },
+          { to: withSite("/admin/customers"), label: "Customers", Icon: Users },
         ],
       },
       {
         label: "System",
         items: [
-          { to: "/admin/settings", label: "Settings", Icon: Settings },
+          { to: withSite("/admin/settings"), label: "Settings", Icon: Settings },
           {
-            to: "/admin/color-palette",
+            to: withSite("/admin/color-palette"),
             label: "Color Palette",
             Icon: Sparkles,
           },
         ],
       },
     ],
-    []
+    [lng]
   );
+
+  const allowedSiteOptions = useMemo(() => SITE_CODES, []);
+
+  const handleSiteChange = (nextSite) => {
+    if (!nextSite || nextSite === lng) return;
+    const normalized = nextSite.toLowerCase();
+    if (!SITE_CODES.includes(normalized)) return;
+    const suffix = restPathSegments.length
+      ? `/${restPathSegments.join("/")}`
+      : "";
+    navigate(`/${normalized}${suffix}${location.search}`, { replace: false });
+  };
 
   async function handleLogout() {
     await authApi.logout();
-    navigate("/account?view=login", { replace: true });
+    navigate(`/${lng}/account?view=login`, { replace: true });
   }
 
   return (
@@ -120,6 +151,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
         <SidebarHeader
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((prev) => !prev)}
+          homePath={withSite("/admin/dashboard")}
         />
 
         {/* nav kendi içinde scrollable */}
@@ -133,7 +165,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
           ))}
         </nav>
 
-        <SidebarFooter collapsed={sidebarCollapsed} me={me} />
+        <SidebarFooter collapsed={sidebarCollapsed} me={me} lng={lng} />
       </aside>
 
       <MobileDrawer
@@ -142,6 +174,8 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
         menu={menu}
         me={me}
         onLogout={handleLogout}
+        homePath={withSite("/admin/dashboard")}
+        lng={lng}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -150,6 +184,9 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
           onMenuToggle={() => setSidebarOpen(true)}
           me={me}
           onLogout={handleLogout}
+          lng={lng}
+          siteOptions={allowedSiteOptions}
+          onSiteChange={handleSiteChange}
         />
 
         <PageHeader
@@ -171,10 +208,10 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
 
 /* ---------------- Sidebar ---------------- */
 
-function SidebarHeader({ collapsed, onToggle }) {
+function SidebarHeader({ collapsed, onToggle, homePath }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border-admin)]/30 px-4 py-4">
-      <Link to="/admin/dashboard" className="flex items-center gap-3">
+      <Link to={homePath} className="flex items-center gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/15 text-white">
           <Sparkles className="h-5 w-5" />
         </div>
@@ -222,7 +259,7 @@ function SidebarSection({ section, collapsed, onNavigate }) {
   );
 }
 
-function SidebarFooter({ collapsed, me }) {
+function SidebarFooter({ collapsed, me, lng }) {
   return (
     <div className="border-t border-[var(--color-border-admin)]/30 px-3 py-4">
       <div className="flex items-center gap-3 rounded-2xl bg-white/10 p-3">
@@ -243,7 +280,7 @@ function SidebarFooter({ collapsed, me }) {
         )}
       </div>
       <Link
-        to="/"
+        to={`/${lng}`}
         className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
         title="Go to storefront"
       >
@@ -256,7 +293,19 @@ function SidebarFooter({ collapsed, me }) {
 
 /* ---------------- Main content ---------------- */
 
-function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
+function TopBar({
+  breadcrumbs,
+  onMenuToggle,
+  me,
+  onLogout,
+  lng,
+  siteOptions,
+  onSiteChange,
+}) {
+  const allowedList =
+    Array.isArray(me?.allowedSites) && me.allowedSites.length
+      ? me.allowedSites
+      : null;
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--color-border-admin)]/40 bg-[var(--color-bg-card)]/95 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
@@ -272,6 +321,12 @@ function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <SiteSelector
+            selected={lng}
+            options={siteOptions}
+            allowed={allowedList}
+            onChange={onSiteChange}
+          />
           <div className="hidden lg:flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-1.5">
             <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
             <input
@@ -282,7 +337,7 @@ function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
           <button className="rounded-full p-2 text-[var(--color-text-admin-muted)] hover:bg-[var(--color-bg-hover)]">
             <Bell className="h-5 w-5" />
           </button>
-          <UserMenu me={me} onLogout={onLogout} />
+          <UserMenu me={me} onLogout={onLogout} lng={lng} />
         </div>
       </div>
     </header>
@@ -357,7 +412,7 @@ function NavItem({ to, label, Icon, collapsed, onNavigate }) {
 
 /* ---------------- Mobile drawer ---------------- */
 
-function MobileDrawer({ open, onClose, menu, me, onLogout }) {
+function MobileDrawer({ open, onClose, menu, me, onLogout, homePath, lng }) {
   return (
     <div
       className={`md:hidden fixed inset-0 z-50 ${
@@ -377,7 +432,7 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
       >
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
           <Link
-            to="/admin/dashboard"
+            to={homePath}
             className="flex items-center gap-3"
             onClick={onClose}
           >
@@ -434,7 +489,7 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
               <span>Logout</span>
             </button>
             <Link
-              to="/"
+              to={`/${lng}`}
               onClick={onClose}
               className="flex items-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
             >
@@ -448,9 +503,40 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
   );
 }
 
+const SITE_LABELS = {
+  tr: "Türkçe",
+  en: "English",
+  de: "Deutsch",
+};
+
+function SiteSelector({ selected, options = SITE_CODES, allowed, onChange }) {
+  const allowedSet =
+    Array.isArray(allowed) && allowed.length ? new Set(allowed) : null;
+
+  return (
+    <div className="relative">
+      <select
+        value={selected}
+        onChange={(event) => onChange && onChange(event.target.value)}
+        className="rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-1.5 text-sm text-[var(--color-text-admin)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-admin)]"
+      >
+        {options.map((code) => (
+          <option
+            key={code}
+            value={code}
+            disabled={allowedSet ? !allowedSet.has(code) : false}
+          >
+            {SITE_LABELS[code] || code.toUpperCase()}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 /* ---------------- User menu ---------------- */
 
-function UserMenu({ me, onLogout }) {
+function UserMenu({ me, onLogout, lng }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -461,6 +547,9 @@ function UserMenu({ me, onLogout }) {
     if (open) document.addEventListener("click", close, { once: true });
     return () => document.removeEventListener("click", close);
   }, [open]);
+
+  const activeSite = SITE_CODES.includes(lng) ? lng : SITE_CODES[0];
+  const withSite = (path) => `/${activeSite}${path}`;
 
   return (
     <div className="relative">
@@ -493,8 +582,8 @@ function UserMenu({ me, onLogout }) {
             </div>
           </div>
           <div className="h-px bg-[var(--color-border-admin)]/60" />
-          <MenuLink to="/admin/settings">Profile & Settings</MenuLink>
-          <MenuLink to="/admin/dashboard">Dashboard</MenuLink>
+          <MenuLink to={withSite("/admin/settings")}>Profile & Settings</MenuLink>
+          <MenuLink to={withSite("/admin/dashboard")}>Dashboard</MenuLink>
           <button
             onClick={onLogout}
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-[var(--color-bg-hover)]"
@@ -577,3 +666,4 @@ function getInitials(user) {
     .slice(0, 2)
     .toUpperCase();
 }
+  const withSite = (path) => `/${lng}${path}`;

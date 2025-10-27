@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { categoryApi } from "../../api/categories";
 import CategoryTree from "../../components/admin/categories/CategoryTree";
 import CategoryForm from "../../components/admin/categories/CategoryForm";
@@ -9,8 +10,14 @@ import {
   collectDescendantIds,
   flattenCategoryTree,
 } from "../../utils/catalog.js";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 export default function AdminCategories() {
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const confirm = useConfirm();
   const [tree, setTree] = useState([]);
   const [loadingTree, setLoadingTree] = useState(true);
@@ -50,7 +57,7 @@ export default function AdminCategories() {
     setSelectedId(node.id);
     setLoadingCategory(true);
     try {
-      const detail = await categoryApi.get(node.id);
+      const detail = await categoryApi.get(node.id, { siteCode, auth: true });
       setSelectedCategory(detail);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -63,7 +70,7 @@ export default function AdminCategories() {
   const refreshTree = async (nextSelectId) => {
     setLoadingTree(true);
     try {
-      const data = await categoryApi.tree();
+      const data = await categoryApi.tree({}, { siteCode, auth: true });
       setTree(data);
       if (nextSelectId) {
         await handleSelect({ id: nextSelectId });
@@ -79,11 +86,17 @@ export default function AdminCategories() {
     setSaving(true);
     try {
       if (selectedCategory?.id) {
-        await categoryApi.update(selectedCategory.id, payload);
+        await categoryApi.update(selectedCategory.id, payload, {
+          siteCode,
+          auth: true,
+        });
         setBanner({ variant: "success", message: "Category updated" });
         await refreshTree(selectedCategory.id);
       } else {
-        const created = await categoryApi.create(payload);
+        const created = await categoryApi.create(payload, {
+          siteCode,
+          auth: true,
+        });
         setBanner({ variant: "success", message: "Category created" });
         setSelectedCategory(null);
         await refreshTree(created.id);
@@ -107,7 +120,7 @@ export default function AdminCategories() {
 
     setSaving(true);
     try {
-      await categoryApi.remove(selectedCategory.id);
+      await categoryApi.remove(selectedCategory.id, { siteCode, auth: true });
       setBanner({ variant: "warning", message: "Category deleted" });
       setSelectedCategory(null);
       setSelectedId(null);

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Mail, Phone, MapPin, Clock, Send, Loader2, AlertCircle } from "lucide-react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { contactPageApi, contactMessageApi } from "../api/contact";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
 
 const makeBlock = (title = "", lines = []) => ({
   title,
@@ -103,6 +106,10 @@ const getErrorMessage = (err) => {
 };
 
 export default function ContactPage() {
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite) ? normalizedSite : DEFAULT_SITE_CODE;
+  const { buildPath } = useLocalizedPath();
   const [config, setConfig] = useState(() => mergeConfig(null));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -116,7 +123,7 @@ export default function ContactPage() {
     (async () => {
       try {
         setLoading(true);
-        const response = await contactPageApi.get();
+        const response = await contactPageApi.get(siteCode);
         if (!active) return;
         setConfig(mergeConfig(response));
         setLoadError(null);
@@ -131,7 +138,7 @@ export default function ContactPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [siteCode]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -146,7 +153,7 @@ export default function ContactPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await contactMessageApi.submit({
+      await contactMessageApi.submit(siteCode, {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
@@ -179,7 +186,7 @@ export default function ContactPage() {
       <section className="mx-auto max-w-[1400px] px-4 pt-6 sm:px-6">
         <BreadCrumb
           items={[
-            { label: "Home", to: "/" },
+            { label: "Home", to: buildPath("") },
             { label: "Contact" },
           ]}
         />
@@ -339,7 +346,10 @@ export default function ContactPage() {
               <p className="mt-6 text-xs text-secondary">
                 By submitting this form you acknowledge that we will process your data to
                 answer your enquiry in line with our {" "}
-                <a href="/privacy" className="text-accent underline">
+                <a
+                  href={buildPath("/privacy")}
+                  className="text-accent underline"
+                >
                   Privacy Policy
                 </a>
                 .

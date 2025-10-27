@@ -1,6 +1,7 @@
 // src/components/home-sets/HomeSets.jsx
 import { useMemo, useState } from "react";
 import HomeSetItem from "./HomeSetItem";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 const pillBase =
   "inline-flex items-center rounded-full border px-4 py-2 text-sm transition";
@@ -16,7 +17,15 @@ export default function HomeSets({
   viewAllHref = "/sets",
   loading = false, // <<< NEW
 }) {
+  const { buildPath } = useLocalizedPath();
   const [active, setActive] = useState(tabs[0] ?? "All");
+  const resolvedViewAll = useMemo(() => {
+    if (!viewAllHref) return null;
+    if (typeof viewAllHref === "string" && viewAllHref.startsWith("#")) {
+      return viewAllHref;
+    }
+    return buildPath(viewAllHref);
+  }, [buildPath, viewAllHref]);
 
   const shown = useMemo(() => {
     if (active === "All") return items;
@@ -66,7 +75,7 @@ export default function HomeSets({
           {/* View all (compact’te üst sağda) */}
           {isCompact && !loading && (
             <a
-              href={viewAllHref}
+              href={resolvedViewAll || "#"}
               className="inline-flex items-center rounded-full border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface-hover"
             >
               View all
@@ -153,7 +162,7 @@ export default function HomeSets({
         {!isCompact && !loading && (
           <div className="mt-8 text-center">
             <a
-              href={viewAllHref}
+              href={resolvedViewAll || "#"}
               className="inline-flex items-center rounded-full border border-border px-4 py-2 text-sm text-primary hover:bg-surface-hover"
             >
               View all packages

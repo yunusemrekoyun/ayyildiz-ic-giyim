@@ -2,12 +2,13 @@
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import { buildUserFilter, shapeUser } from "../utils/userPresenter.js";
+import { SITE_CODES } from "../constants/sites.js";
 
 const SORT_MAP = {
   recent: { createdAt: -1 },
   oldest: { createdAt: 1 },
   name: { firstName: 1, lastName: 1 },
-  role: { role: 1, createdAt: -1 },
+  role: { roles: 1, createdAt: -1 },
 };
 
 const MIN_LIMIT = 5;
@@ -89,7 +90,7 @@ export async function updateUser(req, res) {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const { firstName, lastName, phone, role } = req.body;
+    const { firstName, lastName, phone, role, roles, allowedSites } = req.body;
 
     if (firstName !== undefined) {
       const v = String(firstName).trim();
@@ -109,25 +110,46 @@ export async function updateUser(req, res) {
       user.phone = String(phone).trim();
     }
 
-    if (role !== undefined) {
-      const normalized = String(role).toLowerCase();
-      if (!["user", "admin"].includes(normalized)) {
-        return res.status(400).json({ message: "Invalid role" });
+    if (roles !== undefined || role !== undefined) {
+      const incomingRoles = Array.isArray(roles)
+        ? roles
+        : role !== undefined
+        ? [role]
+        : [];
+      const normalized = incomingRoles
+        .map((val) => String(val).toLowerCase())
+        .filter((val) => ["user", "admin"].includes(val));
+
+      if (!normalized.length) {
+        return res.status(400).json({ message: "Invalid roles" });
       }
-      if (user.role !== normalized) {
-        if (user.role === "admin" && normalized !== "admin") {
-          const otherAdmins = await User.countDocuments({
-            role: "admin",
-            _id: { $ne: user._id },
-            isDeleted: false,
-          });
-          if (otherAdmins === 0) {
-            return res
-              .status(400)
-              .json({ message: "At least one admin must remain" });
-          }
+
+      const nextRoles = normalized.includes("admin") ? ["admin"] : ["user"];
+
+      if (user.hasRole("admin") && !nextRoles.includes("admin")) {
+        const otherAdmins = await User.countDocuments({
+          roles: "admin",
+          _id: { $ne: user._id },
+          isDeleted: false,
+        });
+        if (otherAdmins === 0) {
+          return res
+            .status(400)
+            .json({ message: "At least one admin must remain" });
         }
-        user.role = normalized;
+      }
+
+      user.roles = nextRoles;
+    }
+
+    if (allowedSites !== undefined) {
+      if (allowedSites === null) {
+        user.allowedSites = undefined;
+      } else if (Array.isArray(allowedSites)) {
+        const filtered = allowedSites
+          .map((code) => String(code).toLowerCase())
+          .filter((code) => SITE_CODES.includes(code));
+        user.allowedSites = filtered.length ? filtered : undefined;
       }
     }
 
@@ -155,9 +177,9 @@ export async function softDeleteUser(req, res) {
     }
 
     // En son kalan admin kendini silemesin
-    if (user.role === "admin") {
+    if (user.hasRole("admin")) {
       const otherAdmins = await User.countDocuments({
-        role: "admin",
+        roles: "admin",
         _id: { $ne: user._id },
         isDeleted: false,
       });
@@ -228,7 +250,7 @@ async function collectUserMetrics() {
   ] = await Promise.all([
     User.countDocuments({ isDeleted: false }),
     User.countDocuments({ isDeleted: true }),
-    User.countDocuments({ role: "admin", isDeleted: false }),
+    User.countDocuments({ roles: "admin", isDeleted: false }),
     User.countDocuments({
       createdAt: { $gte: currentWindowStart },
       isDeleted: false,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import ShopPageFilter from "../components/shop/ShopPageFilter";
 import ShopPageProducts from "../components/shop/ShopPageProducts";
@@ -7,12 +7,20 @@ import { categoryApi } from "../api/categories";
 import { productApi } from "../api/products";
 import { campaignApi } from "../api/campaigns";
 import { mapCategoryTree } from "../utils/catalog";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
 
 const isObjectId = (v) => typeof v === "string" && /^[0-9a-fA-F]{24}$/.test(v);
 
 export default function ShopPage() {
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { buildPath } = useLocalizedPath();
 
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -46,7 +54,7 @@ export default function ShopPage() {
         const data = await campaignApi.resolve(campaignId);
         if (!mounted) return;
         if (data.targetType === "SETS") {
-          navigate(`/sets?campaign=${campaignId}`, { replace: true });
+          navigate(buildPath(`/sets?campaign=${campaignId}`), { replace: true });
           return;
         }
         setCampaignContext(data);
@@ -59,14 +67,14 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignId, navigate]);
+  }, [campaignId, navigate, buildPath]);
 
   // Kategori ağacı
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const treeRes = await categoryApi.tree();
+        const treeRes = await categoryApi.tree({}, { siteCode });
         if (!mounted) return;
         setCategoryTree(mapCategoryTree(treeRes));
       } catch (err) {
@@ -77,7 +85,7 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   // Ürünler
   useEffect(() => {
@@ -89,9 +97,10 @@ export default function ShopPage() {
           if (!mounted) return;
           setProducts(campaignContext.items || []);
         } else {
-          const { products: productList } = await productApi.list({
-            limit: 200,
-          });
+          const { products: productList } = await productApi.list(
+            { limit: 200 },
+            { siteCode }
+          );
           if (!mounted) return;
           setProducts(productList || []);
         }
@@ -105,7 +114,7 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignContext]);
+  }, [campaignContext, siteCode]);
 
   // Fiyat aralığı (ürünlere göre)
   const priceRange = useMemo(() => {
@@ -132,7 +141,7 @@ export default function ShopPage() {
       } else {
         // slug -> id çöz
         try {
-          const cat = await categoryApi.get(categoryParam); // id veya slug kabul ediyor
+          const cat = await categoryApi.get(categoryParam, { siteCode }); // id veya slug kabul ediyor
           if (!mounted) return;
           const resolvedId = cat?.id || cat?._id || "";
           setSelectedCategory(resolvedId || "all");
@@ -156,7 +165,7 @@ export default function ShopPage() {
       mounted = false;
     };
     // priceRange.max değiştiğinde de başlangıç değeri ayarlansın
-  }, [searchParams, priceRange.max]);
+  }, [searchParams, priceRange.max, siteCode]);
 
   // Renk/S beden seçenekleri
   const availableColors = useMemo(() => {
@@ -265,7 +274,12 @@ export default function ShopPage() {
 
   return (
     <section className="mx-auto max-w-[1400px] px-4 sm:px-6 py-8">
-      <BreadCrumb items={[{ label: "Home", to: "/" }, { label: "Shop" }]} />
+      <BreadCrumb
+        items={[
+          { label: "Home", to: buildPath("") },
+          { label: "Shop" },
+        ]}
+      />
 
       <div className="mt-4 text-center">
         <h1 className="text-4xl font-serif font-extrabold tracking-tight text-primary">

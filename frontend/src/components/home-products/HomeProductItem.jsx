@@ -1,6 +1,8 @@
 // src/components/home-products/HomeProductItem.jsx
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 export default function HomeProductItem({
   to = "#",
@@ -11,13 +13,20 @@ export default function HomeProductItem({
   finalPrice,
   discount,
 }) {
+  const { buildPath } = useLocalizedPath();
+  const target = useMemo(() => {
+    if (!to || to === "#") return "#";
+    if (typeof to === "string" && to.startsWith("#")) return to;
+    return buildPath(to);
+  }, [buildPath, to]);
+
   const basePrice = Number(price ?? 0);
   const computedFinal = Number(finalPrice ?? basePrice);
   const showStrike = Number.isFinite(basePrice) && computedFinal < basePrice;
 
   return (
     <Link
-      to={to}
+      to={target}
       className="group block overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:shadow-md"
     >
       {/* Görsel */}

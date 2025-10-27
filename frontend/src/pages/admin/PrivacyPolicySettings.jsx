@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import privacyApi from "../../api/privacy.js";
 import {
   Loader2,
@@ -18,20 +19,28 @@ import {
   Eye,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 /* -------------------- PAGE -------------------- */
 
 export default function PrivacySettings() {
+  const { lng } = useParams();
+  const { buildPath } = useLocalizedPath();
   const [form, setForm] = useState(EMPTY_MODEL);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await privacyApi.manage();
+        const data = await privacyApi.manage({ siteCode });
         if (!mounted) return;
         setForm(normalizeIncoming(data));
       } catch (err) {
@@ -44,7 +53,7 @@ export default function PrivacySettings() {
       }
     })();
     return () => (mounted = false);
-  }, []);
+  }, [siteCode]);
 
   const canSave = useMemo(() => !!form.heroTitle.trim(), [form.heroTitle]);
 
@@ -52,7 +61,7 @@ export default function PrivacySettings() {
     setSaving(true);
     try {
       const payload = normalizeOutgoing(form);
-      const updated = await privacyApi.upsert(payload);
+      const updated = await privacyApi.upsert(payload, { siteCode });
       setForm(normalizeIncoming(updated));
       setBanner({
         variant: "success",
@@ -123,7 +132,7 @@ export default function PrivacySettings() {
             </button>
 
             <Link
-              to="/privacy"
+              to={buildPath("/privacy")}
               target="_blank"
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             >

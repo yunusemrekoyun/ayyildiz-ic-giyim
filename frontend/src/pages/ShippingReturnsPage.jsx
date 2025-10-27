@@ -1,18 +1,27 @@
 // src/pages/ShippingReturnsPage.jsx
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { shippingReturnsApi } from "../api/shippingReturns";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
 
 export default function ShippingReturnsPage() {
+  const { lng } = useParams();
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
+  const { buildPath } = useLocalizedPath();
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await shippingReturnsApi.get();
+        const data = await shippingReturnsApi.get({ siteCode });
         if (!mounted) return;
         setPage(normalize(data));
       } catch (e) {
@@ -25,7 +34,7 @@ export default function ShippingReturnsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   const heroTitle = useMemo(
     () => page?.heroTitle || "Shipping & Returns",
@@ -42,7 +51,10 @@ export default function ShippingReturnsPage() {
     <main className="bg-surface-light/60">
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
         <BreadCrumb
-          items={[{ label: "Home", to: "/" }, { label: "Shipping & Returns" }]}
+          items={[
+            { label: "Home", to: buildPath("") },
+            { label: "Shipping & Returns" },
+          ]}
         />
       </section>
 

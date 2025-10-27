@@ -8,6 +8,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { reviewApi } from "../../../api/reviews";
+import { useLocalizedPath } from "../../../hooks/useLocalizedPath.js";
 
 const formatPreviewText = (review) => {
   if (!review) return "";
@@ -17,6 +18,7 @@ const formatPreviewText = (review) => {
 };
 
 export default function ReviewSettingsCard() {
+  const { buildPath } = useLocalizedPath();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [summary, setSummary] = useState({ pending: 0, approved: 0, total: 0 });
@@ -71,7 +73,7 @@ export default function ReviewSettingsCard() {
 
   return (
     <Link
-      to="/admin/settings/reviews"
+      to={buildPath("/admin/settings/reviews")}
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] transition-colors hover:border-[var(--color-text-admin)]/50"
     >
       <div className="flex items-center gap-3 border-b border-[var(--color-border-admin)]/60 px-4 py-3">

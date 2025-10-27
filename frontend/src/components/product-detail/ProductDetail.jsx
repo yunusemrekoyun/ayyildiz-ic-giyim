@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
 import { getColorInfo } from "../../utils/colors.js";
 import ReviewSectionCard from "../reviews/ReviewSectionCard.jsx";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -18,6 +19,7 @@ const pillIdle = "border-border bg-white text-primary hover:bg-surface-hover";
 
 export default function ProductDetail({ product = {} }) {
   const navigate = useNavigate();
+  const { buildPath } = useLocalizedPath();
   const [isFav, setIsFav] = useState(false);
 
   const gallery = useMemo(() => {
@@ -137,7 +139,7 @@ export default function ProductDetail({ product = {} }) {
     if (!product?.id) return;
     if (!getAccessToken()) {
       // login sayfasına yönlendir (istersen ?next= ekleyebilirsin)
-      navigate("/auth");
+      navigate(buildPath("/account?view=login"));
       return;
     }
     try {

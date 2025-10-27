@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import { shippingReturnsApi } from "../../api/shippingReturns";
-import { Link } from "react-router-dom";
 import {
   Loader2,
   Save,
@@ -20,6 +20,8 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 // Varsayılan boş model
 const EMPTY_MODEL = {
@@ -32,11 +34,17 @@ const EMPTY_MODEL = {
 };
 
 export default function ShippingReturnsSettings() {
+  const { buildPath } = useLocalizedPath();
+  const { lng } = useParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
 
   const [form, setForm] = useState(EMPTY_MODEL);
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
 
   function deepMergeKeepDraft(prev, srv) {
     // Basit alanlar
@@ -125,7 +133,7 @@ export default function ShippingReturnsSettings() {
     let mounted = true;
     (async () => {
       try {
-        const data = await shippingReturnsApi.manage();
+        const data = await shippingReturnsApi.manage({ siteCode });
         if (!mounted) return;
         setForm(normalizeIncoming(data));
       } catch (e) {
@@ -141,7 +149,7 @@ export default function ShippingReturnsSettings() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   const canSave = useMemo(() => {
     if (!form.heroTitle?.trim()) return false;
@@ -152,7 +160,7 @@ export default function ShippingReturnsSettings() {
     setSaving(true);
     try {
       const payload = normalizeOutgoing(form);
-      const updated = await shippingReturnsApi.upsert(payload);
+      const updated = await shippingReturnsApi.upsert(payload, { siteCode });
       if (updated) {
         const srv = normalizeIncoming(updated);
         setForm((prev) => deepMergeKeepDraft(prev, srv));
@@ -227,7 +235,7 @@ export default function ShippingReturnsSettings() {
             </button>
 
             <Link
-              to="/shipping-returns"
+              to={buildPath("/shipping-returns")}
               target="_blank"
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             >

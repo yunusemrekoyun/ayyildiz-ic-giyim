@@ -1,5 +1,7 @@
 // src/pages/admin/settings/AdminFaqSettingsPageInner.jsx
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 import {
   FileQuestion,
   ChevronDown,
@@ -18,18 +20,24 @@ import {
 import { faqApi } from "../../api/faq";
 
 export default function AdminFaqSettingsPageInner() {
+  const { lng } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
   const [expanded, setExpanded] = useState({}); // section index -> open?
 
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
+
   // initial load
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await faqApi.manage();
+        const res = await faqApi.manage({ siteCode });
         if (mounted) {
           // sort güvenliği
           const sorted = {
@@ -52,7 +60,7 @@ export default function AdminFaqSettingsPageInner() {
       }
     })();
     return () => (mounted = false);
-  }, []);
+  }, [siteCode]);
 
   const updateRoot = (patch) => setData((p) => ({ ...p, ...patch }));
 
@@ -126,7 +134,7 @@ export default function AdminFaqSettingsPageInner() {
           })),
         })),
       };
-      const saved = await faqApi.upsert(normalized);
+      const saved = await faqApi.upsert(normalized, { siteCode });
       setData(saved);
       setBanner({ ok: true, msg: "FAQ content saved successfully." });
     } catch (e) {
@@ -141,7 +149,7 @@ export default function AdminFaqSettingsPageInner() {
     if (!confirm("Discard changes and reload?")) return;
     setLoading(true);
     try {
-      const fresh = await faqApi.manage();
+      const fresh = await faqApi.manage({ siteCode });
       setData(fresh);
       setBanner(null);
     } finally {

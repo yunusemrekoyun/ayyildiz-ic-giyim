@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { PlusCircle, RefreshCw, Search } from "lucide-react";
 import { categoryApi } from "../../api/categories";
 import { productApi } from "../../api/products";
@@ -7,8 +8,14 @@ import ProductForm from "../../components/admin/products/ProductForm";
 import { flattenCategoryTree } from "../../utils/catalog.js";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 export default function AdminProducts() {
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const confirm = useConfirm();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +53,7 @@ export default function AdminProducts() {
 
   const loadCategories = async () => {
     try {
-      const data = await categoryApi.tree();
+      const data = await categoryApi.tree({}, { siteCode, auth: true });
       setCategoryTree(data);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -56,13 +63,16 @@ export default function AdminProducts() {
   const loadProducts = async (page = 1) => {
     setLoading(true);
     try {
-      const data = await productApi.list({
-        page,
-        limit: pagination.limit,
-        search: debouncedSearch,
-        category: categoryFilter,
-        includeHidden: true,
-      });
+      const data = await productApi.list(
+        {
+          page,
+          limit: pagination.limit,
+          search: debouncedSearch,
+          category: categoryFilter,
+          includeHidden: true,
+        },
+        { siteCode, auth: true }
+      );
       setProducts(data.products || []);
       setPagination(
         data.pagination || { page: 1, pages: 1, limit: 20, total: 0 }
@@ -81,7 +91,10 @@ export default function AdminProducts() {
 
   const handleEditProduct = async (product) => {
     try {
-      const full = await productApi.get(product.id || product.slug);
+      const full = await productApi.get(product.id || product.slug, {
+        siteCode,
+        auth: true,
+      });
       setEditingProduct(full);
       setModalOpen(true);
     } catch (err) {
@@ -98,7 +111,10 @@ export default function AdminProducts() {
     });
     if (!ok) return;
     try {
-      await productApi.remove(product.id || product.slug);
+      await productApi.remove(product.id || product.slug, {
+        siteCode,
+        auth: true,
+      });
       setBanner({ variant: "warning", message: "Product deleted" });
       await loadProducts(pagination.page);
     } catch (error) {
@@ -108,11 +124,14 @@ export default function AdminProducts() {
 
   const handleSaveProduct = async (payload) => {
     if (editingProduct?.id) {
-      await productApi.update(editingProduct.id, payload);
+      await productApi.update(editingProduct.id, payload, {
+        siteCode,
+        auth: true,
+      });
       setBanner({ variant: "success", message: "Product updated" });
       await loadProducts(pagination.page);
     } else {
-      await productApi.create(payload);
+      await productApi.create(payload, { siteCode, auth: true });
       setBanner({ variant: "success", message: "Product created" });
       await loadProducts(1);
     }

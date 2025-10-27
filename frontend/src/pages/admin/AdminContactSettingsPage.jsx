@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { contactPageApi } from "../../api/contact";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 import {
   MapPin,
   Mail,
@@ -147,6 +149,11 @@ function getMessage(err) {
 }
 
 export default function AdminContactSettingsPageInner() {
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const [data, setData] = useState(() => deepClone(emptyConfig));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -156,8 +163,9 @@ export default function AdminContactSettingsPageInner() {
     let active = true;
     (async () => {
       setLoading(true);
+      setBanner(null);
       try {
-        const conf = await contactPageApi.get();
+        const conf = await contactPageApi.get(siteCode);
         if (!active) return;
         setData(normalizeState(conf));
       } catch (err) {
@@ -171,7 +179,7 @@ export default function AdminContactSettingsPageInner() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [siteCode]);
 
   const canSave = useMemo(() => !saving && !loading, [saving, loading]);
   const disabled = loading || saving;
@@ -217,7 +225,10 @@ export default function AdminContactSettingsPageInner() {
     setBanner(null);
     try {
       const payload = sanitizePayload(data);
-      const saved = await contactPageApi.upsert(payload);
+      const saved = await contactPageApi.upsert(siteCode, payload, {
+        title: "Contact",
+        slug: "contact",
+      });
       setData(normalizeState(saved || payload));
       setBanner({
         variant: "success",
@@ -235,7 +246,7 @@ export default function AdminContactSettingsPageInner() {
     setLoading(true);
     setBanner(null);
     try {
-      const conf = await contactPageApi.get();
+      const conf = await contactPageApi.get(siteCode);
       setData(normalizeState(conf));
     } catch (err) {
       setBanner({ variant: "danger", message: getMessage(err) });

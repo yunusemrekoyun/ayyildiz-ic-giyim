@@ -1,3 +1,5 @@
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const ACCESS_KEY = "accessToken";
@@ -110,3 +112,37 @@ export const toQueryString = (params = {}) => {
   const qs = search.toString();
   return qs ? `?${qs}` : "";
 };
+
+const ensureLeadingSlash = (path) =>
+  path ? (path.startsWith("/") ? path : `/${path}`) : "";
+
+function extractSiteCodeFromPath() {
+  if (typeof window === "undefined") return null;
+  const segments = window.location.pathname.split("/").filter(Boolean);
+  if (!segments.length) return null;
+  const candidate = segments[0].toLowerCase();
+  return SITE_CODES.includes(candidate) ? candidate : null;
+}
+
+export function resolveSiteCode(siteCode) {
+  const input = typeof siteCode === "string" ? siteCode.trim().toLowerCase() : "";
+  if (input && SITE_CODES.includes(input)) {
+    return input;
+  }
+  const inferred = extractSiteCodeFromPath();
+  if (inferred) return inferred;
+  const envDefault = (import.meta.env.VITE_DEFAULT_SITE_CODE || DEFAULT_SITE_CODE || "de").toLowerCase();
+  return SITE_CODES.includes(envDefault) ? envDefault : DEFAULT_SITE_CODE;
+}
+
+export const buildTenantPath = (siteCode, path = "") =>
+  `/${siteCode}${ensureLeadingSlash(path)}`;
+
+export const buildGlobalPath = (path = "") =>
+  `/global${ensureLeadingSlash(path)}`;
+
+export const tenantHttp = (siteCode, path, options) =>
+  http(buildTenantPath(siteCode, path), options);
+
+export const globalHttp = (path, options) =>
+  http(buildGlobalPath(path), options);

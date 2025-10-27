@@ -1,19 +1,28 @@
 // src/pages/FAQPage.jsx
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { ChevronDown, HelpCircle } from "lucide-react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { faqApi } from "../api/faq";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
 
 export default function FAQPage() {
+  const { lng } = useParams();
   const [data, setData] = useState(null); // { heroTitle, heroIntro, sections: [...], isActive }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { buildPath } = useLocalizedPath();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await faqApi.public(); // GET /faq
+        const res = await faqApi.public({ siteCode });
         if (!mounted) return;
         setData(res || null);
       } catch (e) {
@@ -26,7 +35,7 @@ export default function FAQPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   const title = data?.heroTitle?.trim() || "Frequently Asked Questions";
   const intro = data?.heroIntro?.trim() || "";
@@ -36,7 +45,9 @@ export default function FAQPage() {
   return (
     <main className="bg-surface-light/60">
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
-        <BreadCrumb items={[{ label: "Home", to: "/" }, { label: "FAQ" }]} />
+        <BreadCrumb
+          items={[{ label: "Home", to: buildPath("") }, { label: "FAQ" }]}
+        />
       </section>
 
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-14">
@@ -68,7 +79,10 @@ export default function FAQPage() {
                   <p className="mt-3 max-w-3xl text-secondary">
                     Find quick answers about orders, shipping, returns and
                     product care. Need more help?{" "}
-                    <a href="/contact" className="text-accent underline">
+                    <a
+                      href={buildPath("/contact")}
+                      className="text-accent underline"
+                    >
                       our contact page
                     </a>
                     .

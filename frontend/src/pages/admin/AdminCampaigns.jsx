@@ -11,6 +11,7 @@ import CampaignCard from "../../components/admin/campaigns/CampaignCard.jsx";
 import CampaignForm from "../../components/admin/campaigns/CampaignForm.jsx";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -19,6 +20,7 @@ const currency = new Intl.NumberFormat("en-US", {
 });
 
 export default function AdminCampaigns() {
+  const { siteCode, buildPath } = useLocalizedPath();
   const confirm = useConfirm();
   const [campaigns, setCampaigns] = useState([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
@@ -37,7 +39,7 @@ export default function AdminCampaigns() {
   useEffect(() => {
     loadCampaigns();
     loadOptions();
-  }, []);
+  }, [siteCode]);
 
   const sortedCampaigns = useMemo(
     () =>
@@ -71,9 +73,12 @@ export default function AdminCampaigns() {
     setLoadingOptions(true);
     try {
       const [productRes, setRes, categoryRes, discountRes] = await Promise.all([
-        productApi.list({ limit: 500, includeHidden: true }),
-        setApi.list({ includeHidden: true }),
-        categoryApi.tree(),
+        productApi.list(
+          { limit: 500, includeHidden: true },
+          { siteCode, auth: true }
+        ),
+        setApi.list({ includeHidden: true, siteCode }),
+        categoryApi.tree({}, { siteCode, auth: true }),
         discountApi.list(),
       ]);
 
@@ -263,7 +268,7 @@ export default function AdminCampaigns() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            to="/admin/campaigns/layout"
+            to={buildPath("/admin/campaigns/layout")}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
             Layout

@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -18,10 +20,16 @@ export default function SimilarProductItem({
   const basePrice = Number(price ?? 0);
   const computedFinal = Number(finalPrice ?? basePrice);
   const showStrike = Number.isFinite(basePrice) && computedFinal < basePrice;
+  const { buildPath } = useLocalizedPath();
+  const href = useMemo(() => {
+    if (!slug) return "#";
+    if (slug.startsWith("/")) return buildPath(slug);
+    return buildPath(`/product/${slug}`);
+  }, [buildPath, slug]);
 
   return (
     <Link
-      to={slug ? `/product/${slug}` : "#"}
+      to={href}
       className="block overflow-hidden rounded-xl bg-white ring-1 ring-border transition hover:shadow-sm"
     >
       <div className="relative">

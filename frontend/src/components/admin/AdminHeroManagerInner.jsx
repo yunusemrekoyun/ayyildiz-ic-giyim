@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { heroApi } from "../../api/heroes";
 import { categoryApi } from "../../api/categories";
 import { Link } from "react-router-dom";
@@ -18,10 +19,16 @@ import {
 } from "lucide-react";
 import AlertBanner from "../ui/AlertBanner.jsx";
 import { useConfirm } from "../ui/ConfirmDialog.jsx";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 /* ----- Liste + Modal tetik ----- */
 export default function AdminHeroManagerInner() {
   const confirm = useConfirm();
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null); // item | "new" | null
   const [cats, setCats] = useState([]);
@@ -32,7 +39,7 @@ export default function AdminHeroManagerInner() {
     (async () => {
       const [list, catList] = await Promise.all([
         heroApi.list({ includeInactive: true }),
-        categoryApi.list({}), // admin tarafı; backend auth zaten var
+        categoryApi.list({}, { siteCode, auth: true }),
       ]);
       if (!mounted) return;
       setItems(list);
@@ -117,7 +124,7 @@ export default function AdminHeroManagerInner() {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            to="/admin/settings"
+            to={`/${siteCode}/admin/settings`}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm hover:bg-[var(--color-bg-hover)]"
           >
             <ChevronLeft className="h-4 w-4" />

@@ -1,8 +1,11 @@
 // src/components/footer/Footer.jsx
 import { Link } from "react-router-dom";
 import { Mail, Phone } from "lucide-react";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 export default function Footer() {
+  const { buildPath } = useLocalizedPath();
+
   return (
     <footer className="border-t border-border bg-white">
       <div className="mx-auto max-w-7xl px-6 py-10">
@@ -18,22 +21,22 @@ export default function Footer() {
 
         {/* Linkler */}
         <nav className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-[15px] font-medium text-primary">
-          <Link to="/about" className="hover:text-accent">
+          <Link to={buildPath("/about")} className="hover:text-accent">
             About Us
           </Link>
-          <Link to="/contact" className="hover:text-accent">
+          <Link to={buildPath("/contact")} className="hover:text-accent">
             Contact
           </Link>
-          <Link to="/faq" className="hover:text-accent">
+          <Link to={buildPath("/faq")} className="hover:text-accent">
             FAQ
           </Link>
-          <Link to="/shipping-returns" className="hover:text-accent">
+          <Link to={buildPath("/shipping-returns")} className="hover:text-accent">
             Shipping &amp; Returns
           </Link>
-          <Link to="/privacy" className="hover:text-accent">
+          <Link to={buildPath("/privacy")} className="hover:text-accent">
             Privacy Policy
           </Link>
-          <Link to="/terms" className="hover:text-accent">
+          <Link to={buildPath("/terms")} className="hover:text-accent">
             Terms of Service
           </Link>
         </nav>

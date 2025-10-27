@@ -4,10 +4,12 @@ import BreadCrumb from "../components/shop/BreadCrumb";
 import SetsSets from "../components/sets-sets/SetsSets";
 import { setApi } from "../api/sets";
 import { campaignApi } from "../api/campaigns";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
 
 export default function SetsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { siteCode, buildPath } = useLocalizedPath();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [campaignContext, setCampaignContext] = useState(null);
@@ -25,11 +27,11 @@ export default function SetsPage() {
           const mapped = mapSetsToCards(campaignContext.items);
           if (mounted) setItems(mapped);
         } else {
-          let res = await setApi.list();
+          let res = await setApi.list({ siteCode });
           let sets = normalizeSetsResponse(res);
 
           if (!sets.length) {
-            const res2 = await setApi.list({ includeHidden: true });
+            const res2 = await setApi.list({ includeHidden: true, siteCode });
             sets = normalizeSetsResponse(res2);
           }
 
@@ -46,7 +48,7 @@ export default function SetsPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignContext]);
+  }, [campaignContext, siteCode]);
 
   useEffect(() => {
     if (!campaignId) {
@@ -62,7 +64,9 @@ export default function SetsPage() {
         const data = await campaignApi.resolve(campaignId);
         if (!mounted) return;
         if (data.targetType === "PRODUCTS") {
-          navigate(`/shop?campaign=${campaignId}`, { replace: true });
+          navigate(buildPath(`/shop?campaign=${campaignId}`), {
+            replace: true,
+          });
           return;
         }
         setCampaignContext(data);
@@ -98,7 +102,7 @@ export default function SetsPage() {
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-8">
           <BreadCrumb
             items={[
-              { label: "Home", to: "/" },
+              { label: "Home", to: buildPath("") },
               { label: "Trousseau Packages" },
             ]}
           />
@@ -168,7 +172,7 @@ export default function SetsPage() {
           </p>
           <div className="mt-4">
             <a
-              href="/contact"
+              href={buildPath("/contact")}
               className="inline-flex items-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
             >
               Talk to a Stylist

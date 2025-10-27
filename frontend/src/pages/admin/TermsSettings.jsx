@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import { termsApi } from "../../api/terms";
-import { Link } from "react-router-dom";
 import {
   Loader2,
   Save,
@@ -18,6 +18,8 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 /** ------- Empty Model (UI state) ------- */
 const EMPTY_MODEL = {
@@ -30,16 +32,22 @@ const EMPTY_MODEL = {
 };
 
 export default function TermsSettings() {
+  const { buildPath } = useLocalizedPath();
+  const { lng } = useParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
   const [form, setForm] = useState(EMPTY_MODEL);
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await termsApi.manage();
+        const data = await termsApi.manage({ siteCode });
         if (!mounted) return;
         setForm(normalizeIncoming(data));
       } catch (e) {
@@ -55,7 +63,7 @@ export default function TermsSettings() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   const canSave = useMemo(() => {
     if (!form.heroTitle?.trim()) return false;
@@ -67,7 +75,7 @@ export default function TermsSettings() {
     setSaving(true);
     try {
       const payload = normalizeOutgoing(form);
-      const updated = await termsApi.upsert(payload);
+      const updated = await termsApi.upsert(payload, { siteCode });
 
       if (updated) {
         const srv = normalizeIncoming(updated);
@@ -140,7 +148,7 @@ export default function TermsSettings() {
             </button>
 
             <Link
-              to="/terms"
+              to={buildPath("/terms")}
               target="_blank"
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             >

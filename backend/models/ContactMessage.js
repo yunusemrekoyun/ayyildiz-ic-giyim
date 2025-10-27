@@ -1,7 +1,14 @@
 import mongoose from "mongoose";
+import { SITE_CODES } from "../constants/sites.js";
 
 const ContactMessageSchema = new mongoose.Schema(
   {
+    siteCode: {
+      type: String,
+      required: true,
+      enum: SITE_CODES,
+      index: true,
+    },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },

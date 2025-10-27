@@ -1,5 +1,5 @@
 // src/api/privacy.js
-import { http } from "./client";
+import { http, tenantHttp, resolveSiteCode } from "./client";
 
 const EMPTY = {
   heroTitle: "",
@@ -10,18 +10,60 @@ const EMPTY = {
   isActive: true,
 };
 
+const withSite = (siteCode) => resolveSiteCode(siteCode);
+
+async function fetchTenantPrivacy(siteCode, options = {}) {
+  if (!siteCode) return null;
+  try {
+    const response = await tenantHttp(siteCode, "/pages/privacy", {
+      auth: options.auth ?? false,
+    });
+    return response?.page || null;
+  } catch {
+    return null;
+  }
+}
+
 export const privacyApi = {
-  async public() {
+  async public(options = {}) {
+    const siteCode = withSite(options.siteCode);
+    const tenantPage = await fetchTenantPrivacy(siteCode);
+    if (tenantPage?.content) {
+      return tenantPage.content;
+    }
     const data = await http("/privacy");
     return data?.privacy || EMPTY;
   },
 
-  async manage() {
+  async manage(options = {}) {
+    const siteCode = withSite(options.siteCode);
+    const tenantPage = await fetchTenantPrivacy(siteCode, { auth: true });
+    if (tenantPage?.content) {
+      return tenantPage.content;
+    }
     const data = await http("/privacy/manage", { auth: true });
     return data?.privacy || EMPTY;
   },
 
-  async upsert(payload) {
+  async upsert(payload, options = {}) {
+    const siteCode = withSite(options.siteCode);
+
+    try {
+      const response = await tenantHttp(siteCode, "/pages/privacy", {
+        method: "PUT",
+        body: {
+          title: payload?.heroTitle || "Privacy Policy",
+          slug: "privacy",
+          content: payload,
+          seo: payload?.seo || {},
+        },
+        auth: true,
+      });
+      return response?.page?.content || payload;
+    } catch {
+      /* fall back */
+    }
+
     const data = await http("/privacy", {
       method: "PUT",
       body: payload,

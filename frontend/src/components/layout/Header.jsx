@@ -1,14 +1,21 @@
 // src/components/Header.jsx
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Search, ShoppingBag, Heart, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import MegaMenu from "./MegaMenu";
 import { categoryApi } from "../../api/categories";
 import { mapCategoryTree } from "../../utils/catalog";
 import { useCart } from "../../hooks/useCart";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 export default function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const [q, setQ] = useState("");
   const [categoryTree, setCategoryTree] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -16,9 +23,10 @@ export default function Header() {
 
   useEffect(() => {
     let mounted = true;
+    setLoadingCategories(true);
     (async () => {
       try {
-        const tree = await categoryApi.tree();
+        const tree = await categoryApi.tree({}, { siteCode });
         if (!mounted) return;
         setCategoryTree(mapCategoryTree(tree));
       } catch (error) {
@@ -30,21 +38,36 @@ export default function Header() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   const navigationItems = useMemo(() => {
     return (categoryTree || []).map((node) => ({
       id: node.id,
       label: node.name,
       hasChildren: node.children && node.children.length > 0,
-      menu: buildMegaMenuData(node),
+      menu: buildMegaMenuData(node, siteCode),
     }));
-  }, [categoryTree]);
+  }, [categoryTree, siteCode]);
 
   const onSearchSubmit = (e) => {
     e.preventDefault();
     const query = q.trim();
-    navigate(query ? `/shop?q=${encodeURIComponent(query)}` : "/shop");
+    navigate(
+      query
+        ? `/${siteCode}/shop?q=${encodeURIComponent(query)}`
+        : `/${siteCode}/shop`
+    );
+  };
+
+  const handleLanguageChange = (event) => {
+    const next = event.target.value;
+    if (!next || next === siteCode) return;
+    const segments = location.pathname.split("/").filter(Boolean);
+    const remainder = segments.slice(1).join("/");
+    const targetPath = remainder ? `/${next}/${remainder}` : `/${next}`;
+    navigate(`${targetPath}${location.search}${location.hash}`, {
+      replace: true,
+    });
   };
 
   const { totalItems } = useCart();
@@ -59,7 +82,10 @@ export default function Header() {
           <div className="grid grid-cols-[auto_1fr_auto] items-center h-20 gap-4">
             {/* SOL: Logo + Marka */}
             <div className="flex items-center justify-start">
-              <Link to="/" className="group inline-flex items-center gap-3">
+              <Link
+                to={`/${siteCode}`}
+                className="group inline-flex items-center gap-3"
+              >
                 <img
                   src="/logo.png"
                   alt="Ayyıldız İç Giyim"
@@ -92,9 +118,11 @@ export default function Header() {
               <button
                 onClick={() => {
                   const query = q.trim();
-                  navigate(
-                    query ? `/shop?q=${encodeURIComponent(query)}` : "/shop"
-                  );
+                navigate(
+                  query
+                    ? `/${siteCode}/shop?q=${encodeURIComponent(query)}`
+                    : `/${siteCode}/shop`
+                );
                 }}
                 className="md:hidden inline-flex rounded-full p-2 hover:bg-surface-hover"
                 aria-label="Search"
@@ -106,8 +134,36 @@ export default function Header() {
 
             {/* SAĞ: İkonlar */}
             <div className="flex items-center justify-end gap-2 sm:gap-3">
+              <label className="hidden items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-secondary sm:inline-flex">
+                <span className="uppercase text-secondary/70">Lng</span>
+                <select
+                  value={siteCode}
+                  onChange={handleLanguageChange}
+                  className="bg-transparent text-xs font-semibold uppercase text-primary outline-none"
+                >
+                  {SITE_CODES.map((code) => (
+                    <option key={code} value={code} className="text-primary">
+                      {code}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="inline-flex items-center gap-1 rounded-full border border-border bg-white px-2 py-1 text-[11px] font-medium text-secondary sm:hidden">
+                <span className="uppercase text-secondary/70">Lng</span>
+                <select
+                  value={siteCode}
+                  onChange={handleLanguageChange}
+                  className="bg-transparent text-[11px] font-semibold uppercase text-primary outline-none"
+                >
+                  {SITE_CODES.map((code) => (
+                    <option key={code} value={code} className="text-primary">
+                      {code}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <Link
-                to="/cart"
+                to={`/${siteCode}/cart`}
                 className="relative inline-flex rounded-full p-2 hover:bg-surface-hover"
               >
                 <ShoppingBag className="h-6 w-6 text-secondary" />
@@ -118,13 +174,13 @@ export default function Header() {
                 )}
               </Link>
               <Link
-                to="/account?tab=Wishlist"
+                to={`/${siteCode}/account?tab=Wishlist`}
                 className="inline-flex rounded-full p-2 hover:bg-surface-hover"
               >
                 <Heart className="h-6 w-6 text-secondary" />
               </Link>
               <Link
-                to="/account"
+                to={`/${siteCode}/account`}
                 className="inline-flex rounded-full p-2 hover:bg-surface-hover"
               >
                 <User className="h-6 w-6 text-secondary" />
@@ -159,12 +215,14 @@ export default function Header() {
                       key={item.id}
                       label={item.label}
                       data={item.menu}
-                      onRootClick={() => navigate(`/shop?category=${item.id}`)}
+                      onRootClick={() =>
+                        navigate(`/${siteCode}/shop?category=${item.id}`)
+                      }
                     />
                   ) : (
                     <Link
                       key={item.id}
-                      to={`/shop?category=${item.id}`}
+                      to={`/${siteCode}/shop?category=${item.id}`}
                       className="shrink-0 hover:text-accent"
                     >
                       {item.label}
@@ -172,7 +230,7 @@ export default function Header() {
                   )
                 )}
               <Link
-                to="/sale"
+                to={`/${siteCode}/sale`}
                 className="shrink-0 text-accent hover:text-accent-hover"
               >
                 Sale
@@ -185,25 +243,25 @@ export default function Header() {
   );
 }
 
-function buildMegaMenuData(node) {
+function buildMegaMenuData(node, siteCode) {
   const children = node.children || [];
   if (!children.length) return [];
 
   return [
     {
       title: `View all ${node.name}`,
-      to: `/shop?category=${node.id}`,
+      to: `/${siteCode}/shop?category=${node.id}`,
       key: `${node.id}-all`,
       children: [],
     },
     ...children.map((child) => ({
       title: child.name,
-      to: `/shop?category=${child.id}`,
+      to: `/${siteCode}/shop?category=${child.id}`,
       key: child.id,
       image: child.image,
       children: (child.children || []).map((grand) => ({
         title: grand.name,
-        to: `/shop?category=${grand.id}`,
+        to: `/${siteCode}/shop?category=${grand.id}`,
         key: grand.id,
         image: grand.image,
       })),

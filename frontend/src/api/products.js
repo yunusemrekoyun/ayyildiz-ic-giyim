@@ -1,4 +1,6 @@
-import { http, toQueryString } from "./client.js";
+import { tenantHttp, toQueryString, resolveSiteCode } from "./client.js";
+
+const withSite = (siteCode) => resolveSiteCode(siteCode);
 
 const toJsonArray = (value) => {
   if (!value) return "[]";
@@ -13,16 +15,25 @@ const toJsonArray = (value) => {
 };
 
 export const productApi = {
-  async list(params = {}) {
-    const qs = toQueryString(params);
-    const data = await http(`/products${qs}`, { auth: true });
+  async list(params = {}, options = {}) {
+    const { siteCode: siteOverride, ...query } = params;
+    const siteCode = withSite(siteOverride || options.siteCode);
+    const qs = toQueryString(query);
+    const data = await tenantHttp(siteCode, `/products${qs}`, {
+      auth: options.auth ?? false,
+    });
     return data;
   },
-  async get(idOrSlug) {
-    const data = await http(`/products/${idOrSlug}`, { auth: true });
+  async get(idOrSlug, options = {}) {
+    const siteCode = withSite(options.siteCode);
+    const data = await tenantHttp(siteCode, `/products/${idOrSlug}`, {
+      auth: options.auth ?? false,
+    });
     return data.product;
   },
-  async create(payload) {
+  // TODO: Split admin base vs locale management in upcoming steps
+  async create(payload, options = {}) {
+    const siteCode = withSite(options.siteCode);
     const form = new FormData();
     form.append("name", payload.name.trim());
     form.append("price", String(payload.price));
@@ -47,18 +58,20 @@ export const productApi = {
       );
     if (payload.customAttribute)
       form.append("customAttribute", JSON.stringify(payload.customAttribute));
-    if (Array.isArray(payload.inventory) && payload.inventory.length > 0)
-      form.append("inventory", JSON.stringify(payload.inventory));
+    if (payload.inventory !== undefined) {
+      form.append("inventory", JSON.stringify(payload.inventory || []));
+    }
     (payload.images || []).forEach((file) => form.append("images", file));
 
-    const data = await http("/products", {
+    const data = await tenantHttp(siteCode, "/products", {
       method: "POST",
       body: form,
-      auth: true,
+      auth: options.auth ?? true,
     });
     return data.product;
   },
-  async update(idOrSlug, payload) {
+  async update(idOrSlug, payload, options = {}) {
+    const siteCode = withSite(options.siteCode);
     const form = new FormData();
     if (payload.name !== undefined) form.append("name", payload.name.trim());
     if (payload.price !== undefined)
@@ -95,20 +108,22 @@ export const productApi = {
         toJsonArray(payload.removeImagePublicIds)
       );
     // ✅ STOK BOŞ GİTMESİN
-    if (Array.isArray(payload.inventory) && payload.inventory.length > 0)
-      form.append("inventory", JSON.stringify(payload.inventory));
+    if (payload.inventory !== undefined) {
+      form.append("inventory", JSON.stringify(payload.inventory || []));
+    }
 
-    const data = await http(`/products/${idOrSlug}`, {
+    const data = await tenantHttp(siteCode, `/products/${idOrSlug}`, {
       method: "PUT",
       body: form,
-      auth: true,
+      auth: options.auth ?? true,
     });
     return data.product;
   },
-  async remove(idOrSlug) {
-    return http(`/products/${idOrSlug}`, {
+  async remove(idOrSlug, options = {}) {
+    const siteCode = withSite(options.siteCode);
+    return tenantHttp(siteCode, `/products/${idOrSlug}`, {
       method: "DELETE",
-      auth: true,
+      auth: options.auth ?? true,
     });
   },
 };

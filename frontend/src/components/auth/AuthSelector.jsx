@@ -5,23 +5,25 @@ import UserAccountPage from "../../pages/UserAccountPage";
 import AuthPage from "../../pages/AuthPage";
 import { authApi } from "../../api/auth";
 import { getAccessToken, refreshAccessToken } from "../../api/client";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 export default function AuthSelector() {
   const [ready, setReady] = useState(false);
   const [isLogged, setIsLogged] = useState(false);
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { buildPath } = useLocalizedPath();
 
   // logout query
   useEffect(() => {
     (async () => {
       if (params.get("view") === "logout") {
         await authApi.logout();
-        navigate("/account?view=login", { replace: true });
+        navigate(buildPath("/account?view=login"), { replace: true });
         setIsLogged(false);
       }
     })();
-  }, [params, navigate]);
+  }, [buildPath, params, navigate]);
 
   // açılışta doğrula
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function AuthSelector() {
       <UserAccountPage
         onLogout={async () => {
           await authApi.logout();
-          navigate("/account?view=login", { replace: true });
+          navigate(buildPath("/account?view=login"), { replace: true });
           setIsLogged(false);
         }}
       />
@@ -66,7 +68,7 @@ export default function AuthSelector() {
       initialView={initialView}
       onAuthSuccess={() => {
         setIsLogged(true);
-        navigate("/account", { replace: true });
+        navigate(buildPath("/account"), { replace: true });
       }}
     />
   );

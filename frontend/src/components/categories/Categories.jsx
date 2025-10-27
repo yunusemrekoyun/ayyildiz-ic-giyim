@@ -1,8 +1,10 @@
 // src/components/categories/Categories.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import CategoryItem from "./CategoryItem";
 import { categoryApi } from "../../api/categories";
 import { mapCategoryTree } from "../../utils/catalog";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 const DESKTOP_VISIBLE = 4;
 
@@ -10,6 +12,11 @@ export default function Categories({
   title = "Featured Categories",
   items,
 }) {
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const [categories, setCategories] = useState(items || []);
   const [loading, setLoading] = useState(!items);
   const scrollRef = useRef(null);
@@ -19,13 +26,13 @@ export default function Categories({
     let mounted = true;
     (async () => {
       try {
-        const tree = await categoryApi.tree();
+        const tree = await categoryApi.tree({}, { siteCode });
         if (!mounted) return;
         const mapped = mapCategoryTree(tree).map((node) => ({
           id: node.id,
           title: node.name,
           image: node.image,
-          to: `/shop?category=${node.id}`,
+          to: `/${siteCode}/shop?category=${node.id}`,
         }));
         setCategories(mapped);
       } catch (error) {

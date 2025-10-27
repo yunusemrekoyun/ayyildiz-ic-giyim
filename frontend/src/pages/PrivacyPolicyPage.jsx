@@ -1,18 +1,27 @@
 // src/pages/PrivacyPolicyPage.jsx
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { privacyApi } from "../api/privacy";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
 
 export default function PrivacyPolicyPage() {
+  const { lng } = useParams();
   const [data, setData] = useState(null); // { heroTitle, heroIntro, sections, footerHtml, seo, isActive }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { buildPath } = useLocalizedPath();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await privacyApi.public(); // GET /privacy
+        const res = await privacyApi.public({ siteCode });
         if (!mounted) return;
         setData(normalizeIncoming(res));
       } catch (e) {
@@ -25,7 +34,7 @@ export default function PrivacyPolicyPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   const title = data?.heroTitle || "Privacy Policy";
   const intro =
@@ -41,7 +50,10 @@ export default function PrivacyPolicyPage() {
     <main className="bg-surface-light/60">
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
         <BreadCrumb
-          items={[{ label: "Home", to: "/" }, { label: "Privacy Policy" }]}
+          items={[
+            { label: "Home", to: buildPath("") },
+            { label: "Privacy Policy" },
+          ]}
         />
       </section>
 

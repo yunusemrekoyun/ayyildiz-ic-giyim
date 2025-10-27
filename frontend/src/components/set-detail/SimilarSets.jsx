@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -8,6 +9,7 @@ const currency = new Intl.NumberFormat("en-US", {
 });
 
 export default function SimilarSets({ items = [] }) {
+  const { buildPath } = useLocalizedPath();
   if (!items.length) return null;
 
   return (
@@ -19,45 +21,54 @@ export default function SimilarSets({ items = [] }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {items.map((it) => (
-          <article
-            key={it.id || it.slug}
-            className="overflow-hidden rounded-xl ring-1 ring-black/5 bg-white hover:shadow-sm transition"
-          >
-            <Link to={`/set/${it.slug || it.id}`}>
-              <div className="relative">
-                <img
-                  src={it.image || "/set-placeholder.jpg"}
-                  alt={it.title}
-                  className="h-40 w-full object-cover"
-                  draggable="false"
-                />
-                {shouldShowStrike(it.price, it.finalPrice) && (
-                  <DiscountBadge
-                    percentage={it.discount}
-                    size="sm"
-                    className="absolute left-3 top-3"
+        {items.map((it) => {
+          const slug = it.slug || it.id;
+          const target = slug
+            ? slug.startsWith("/")
+              ? buildPath(slug)
+              : buildPath(`/set/${slug}`)
+            : "#";
+
+          return (
+            <article
+              key={it.id || it.slug}
+              className="overflow-hidden rounded-xl ring-1 ring-black/5 bg-white hover:shadow-sm transition"
+            >
+              <Link to={target}>
+                <div className="relative">
+                  <img
+                    src={it.image || "/set-placeholder.jpg"}
+                    alt={it.title}
+                    className="h-40 w-full object-cover"
+                    draggable="false"
                   />
-                )}
-              </div>
-              <div className="p-3">
-                <h3 className="line-clamp-1 text-sm font-semibold text-primary">
-                  {it.title}
-                </h3>
-                <div className="mt-1 flex items-baseline gap-2 text-xs text-secondary">
-                  <span className="font-semibold text-accent">
-                    {currency.format(it.finalPrice ?? it.price ?? 0)}
-                  </span>
                   {shouldShowStrike(it.price, it.finalPrice) && (
-                    <span className="text-secondary/60 line-through">
-                      {currency.format(it.price)}
-                    </span>
+                    <DiscountBadge
+                      percentage={it.discount}
+                      size="sm"
+                      className="absolute left-3 top-3"
+                    />
                   )}
                 </div>
-              </div>
-            </Link>
-          </article>
-        ))}
+                <div className="p-3">
+                  <h3 className="line-clamp-1 text-sm font-semibold text-primary">
+                    {it.title}
+                  </h3>
+                  <div className="mt-1 flex items-baseline gap-2 text-xs text-secondary">
+                    <span className="font-semibold text-accent">
+                      {currency.format(it.finalPrice ?? it.price ?? 0)}
+                    </span>
+                    {shouldShowStrike(it.price, it.finalPrice) && (
+                      <span className="text-secondary/60 line-through">
+                        {currency.format(it.price)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            </article>
+          );
+        })}
       </div>
     </div>
   );

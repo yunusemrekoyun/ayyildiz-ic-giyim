@@ -1,6 +1,8 @@
 // src/components/home-sets/HomeSetItem.jsx
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 export default function HomeSetItem({
   image,
   title,
@@ -12,6 +14,12 @@ export default function HomeSetItem({
   finalPrice,
   discount,
 }) {
+  const { buildPath } = useLocalizedPath();
+  const target = useMemo(() => {
+    if (!to || to === "#") return "#";
+    if (typeof to === "string" && to.startsWith("#")) return to;
+    return buildPath(to);
+  }, [buildPath, to]);
   const basePrice = Number(price ?? 0);
   const computedFinal = Number(finalPrice ?? basePrice);
   const showStrike = Number.isFinite(basePrice) && computedFinal < basePrice;
@@ -20,7 +28,7 @@ export default function HomeSetItem({
     // Daha minimal kart
     return (
       <article className="overflow-hidden rounded-xl bg-white ring-1 ring-border hover:shadow-sm transition">
-        <Link to={to || "#"} className="block">
+        <Link to={target} className="block">
           <div className="relative">
             <img
               src={image}
@@ -70,7 +78,7 @@ export default function HomeSetItem({
   // Eski (standard) görünüm
   return (
     <article className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
-      <Link to={to || "#"} className="block">
+      <Link to={target} className="block">
         <div className="relative">
           <img
             src={image}

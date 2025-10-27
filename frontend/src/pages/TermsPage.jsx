@@ -1,18 +1,27 @@
 // src/pages/TermsPage.jsx
 import { useEffect, useState, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { termsApi } from "../api/terms";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
 
 export default function TermsPage() {
+  const { lng } = useParams();
   const [data, setData] = useState(null); // { heroTitle, heroIntro, sections, footerNote, isActive }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { buildPath } = useLocalizedPath();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await termsApi.public(); // GET /terms
+        const res = await termsApi.public({ siteCode });
         if (!mounted) return;
         setData(safeIncoming(res));
       } catch (e) {
@@ -25,7 +34,7 @@ export default function TermsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   // Fallback başlık/intro — stil korunur
   const title = useMemo(
@@ -47,7 +56,10 @@ export default function TermsPage() {
     <main className="bg-surface-light/60">
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
         <BreadCrumb
-          items={[{ label: "Home", to: "/" }, { label: "Terms of Service" }]}
+          items={[
+            { label: "Home", to: buildPath("") },
+            { label: "Terms of Service" },
+          ]}
         />
       </section>
 

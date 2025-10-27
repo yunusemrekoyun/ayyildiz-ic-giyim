@@ -71,8 +71,19 @@ export const reviewApi = {
     return true;
   },
 
-  async homeFeatured(limit = 3) {
-    const qs = limit ? `?limit=${encodeURIComponent(limit)}` : "";
+  async homeFeatured(limit = 3, options = {}) {
+    let finalLimit = limit;
+    let siteCode = options.siteCode;
+
+    if (typeof limit === "object" && limit !== null) {
+      siteCode = limit.siteCode;
+      finalLimit = limit.limit ?? 3;
+    }
+
+    const params = {};
+    if (Number.isFinite(finalLimit)) params.limit = finalLimit;
+    if (siteCode) params.siteCode = siteCode;
+    const qs = toQueryString(params);
     const data = await http(`/reviews/home${qs}`);
     return Array.isArray(data?.reviews) ? data.reviews : [];
   },

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { campaignApi } from "../../api/campaigns";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 const SLOT_CONFIG = [
   {
@@ -48,6 +49,7 @@ const SLOT_CONFIG = [
 ];
 
 export default function AdminCampaignLayout() {
+  const { buildPath } = useLocalizedPath();
   const [campaigns, setCampaigns] = useState([]);
   const [assignments, setAssignments] = useState({});
   const [loading, setLoading] = useState(true);
@@ -268,7 +270,7 @@ export default function AdminCampaignLayout() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
-            to="/admin/campaigns"
+            to={buildPath("/admin/campaigns")}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
             <ArrowLeft className="h-3.5 w-3.5" />

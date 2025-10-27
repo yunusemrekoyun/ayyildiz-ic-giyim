@@ -76,7 +76,8 @@ function buildFormData(
 }
 
 export const campaignApi = {
-  async listHome() {
+  async listHome(options = {}) {
+    void options?.siteCode;
     const data = await http("/campaigns");
     return data.campaigns || [];
   },

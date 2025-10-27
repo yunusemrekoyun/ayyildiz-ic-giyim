@@ -1,78 +1,69 @@
 import mongoose from "mongoose";
 import slugify from "slugify";
-
-const ImageSchema = new mongoose.Schema(
-  {
-    url: { type: String, required: true },
-    publicId: { type: String, required: true },
-    width: Number,
-    height: Number,
-    format: String,
-  },
-  { _id: false }
-);
+import { SITE_CODES } from "../constants/sites.js";
 
 const CategorySchema = new mongoose.Schema(
   {
+    siteCode: {
+      type: String,
+      required: true,
+      enum: SITE_CODES,
+    },
     name: { type: String, required: true, trim: true },
-    slug: { type: String, required: true, unique: true, lowercase: true },
-    parent: {
+    slug: { type: String, required: true, lowercase: true },
+    parentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       default: null,
     },
-    level: { type: Number, default: 0, min: 0, max: 2 },
-    ancestors: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Category",
-      },
-    ],
-    image: { type: ImageSchema, default: null },
+    ancestors: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Category",
+        },
+      ],
+      default: [],
+    },
+    order: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );
 
-CategorySchema.index({ name: 1, parent: 1 }, { unique: true });
+CategorySchema.index({ siteCode: 1, slug: 1 }, { unique: true });
+CategorySchema.index({ siteCode: 1 });
+CategorySchema.index({ siteCode: 1, parentId: 1 });
 
-CategorySchema.pre("validate", async function (next) {
-  if (this.isModified("name") || !this.slug) {
-    const baseSlug = slugify(this.name, { lower: true, strict: true });
-    let slugCandidate = baseSlug;
-    let counter = 1;
-
-    while (
-      await mongoose.models.Category.exists({
-        slug: slugCandidate,
-        _id: { $ne: this._id },
-      })
-    ) {
-      slugCandidate = `${baseSlug}-${counter++}`;
-    }
-    this.slug = slugCandidate;
-  }
-
-  if (!this.parent) {
-    this.level = 0;
-    this.ancestors = [];
+CategorySchema.pre("validate", async function slugifyName(next) {
+  if (!this.isModified("name") && this.slug) {
     return next();
   }
 
-  const parent = await mongoose.models.Category.findById(this.parent);
-  if (!parent) {
-    return next(new Error("Parent category not found"));
-  }
-  if (parent.level >= 2) {
-    return next(new Error("Category tree cannot be deeper than 3 levels"));
+  const baseSlug = slugify(this.name || "", {
+    lower: true,
+    strict: true,
+    trim: true,
+  });
+  if (!baseSlug) {
+    return next(new Error("Category name is required"));
   }
 
-  this.level = parent.level + 1;
-  this.ancestors = [...(parent.ancestors || []), parent._id];
+  let slugCandidate = baseSlug;
+  let counter = 1;
+
+  while (
+    await mongoose.models.Category.exists({
+      siteCode: this.siteCode,
+      slug: slugCandidate,
+      _id: { $ne: this._id },
+    })
+  ) {
+    counter += 1;
+    slugCandidate = `${baseSlug}-${counter}`;
+  }
+
+  this.slug = slugCandidate;
   next();
-});
-
-CategorySchema.virtual("isLeaf").get(function () {
-  return this.level === 2;
 });
 
 export default mongoose.model("Category", CategorySchema);

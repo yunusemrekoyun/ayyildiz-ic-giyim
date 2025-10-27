@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { heroApi } from "../../api/heroes";
 import { campaignApi } from "../../api/campaigns";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 import ShippingSettingsCard from "./settings/ShippingSettingsCard.jsx";
 import ReviewSettingsCard from "./settings/ReviewSettingsCard.jsx";
 import {
@@ -127,6 +128,7 @@ function SettingsCard({
 
 /* ------------------------------------------------------------------ */
 export default function AdminSettingsPageInner() {
+  const { buildPath } = useLocalizedPath();
   const [heroes, setHeroes] = useState([]);
   const [loadingHeroes, setLoadingHeroes] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
@@ -195,7 +197,7 @@ export default function AdminSettingsPageInner() {
             subtitle="Hero ve kampanya içeriklerini yönetin."
           >
             <SettingsCard
-              to="/admin/settings/hero"
+              to={buildPath("/admin/settings/hero")}
               icon={topHero?.video ? Video : ImageIcon}
               mediaImage={
                 !loadingHeroes && topHero?.image?.url
@@ -220,7 +222,7 @@ export default function AdminSettingsPageInner() {
             />
 
             <SettingsCard
-              to="/admin/campaigns"
+              to={buildPath("/admin/campaigns")}
               icon={Megaphone}
               mediaImage={
                 !loadingCampaigns && topCampaign?.image?.url
@@ -250,25 +252,25 @@ export default function AdminSettingsPageInner() {
             subtitle="Statik sayfa içeriklerini düzenleyin."
           >
             <SettingsCard
-              to="/admin/settings/about"
+              to={buildPath("/admin/settings/about")}
               icon={FileText}
               mediaIcon={FileText}
               title="About Page Content"
             />
             <SettingsCard
-              to="/admin/settings/contact"
+              to={buildPath("/admin/settings/contact")}
               icon={Mail}
               mediaIcon={Mail}
               title="Contact Page Content"
             />
             <SettingsCard
-              to="/admin/settings/faq"
+              to={buildPath("/admin/settings/faq")}
               icon={HelpCircle}
               mediaIcon={HelpCircle}
               title="FAQ Page Content"
             />
             <SettingsCard
-              to="/admin/settings/shipping-returns"
+              to={buildPath("/admin/settings/shipping-returns")}
               icon={Truck}
               mediaIcon={Truck}
               title="Shipping & Returns"
@@ -277,13 +279,13 @@ export default function AdminSettingsPageInner() {
 
           <SectionBlock title="Policies" subtitle="Yasal metinleri yönetin.">
             <SettingsCard
-              to="/admin/settings/privacy"
+              to={buildPath("/admin/settings/privacy")}
               icon={ShieldCheck}
               mediaIcon={ShieldCheck}
               title="Privacy Policy"
             />
             <SettingsCard
-              to="/admin/settings/terms"
+              to={buildPath("/admin/settings/terms")}
               icon={FileText}
               mediaIcon={FileText}
               title="Terms of Service"
@@ -307,7 +309,7 @@ export default function AdminSettingsPageInner() {
             subtitle="Tema ve renkler (yakında)."
           >
             <SettingsCard
-              to="/admin/settings/theme"
+              to={buildPath("/admin/settings/theme")}
               icon={Palette}
               mediaIcon={Palette}
               title="Theme & Colors"

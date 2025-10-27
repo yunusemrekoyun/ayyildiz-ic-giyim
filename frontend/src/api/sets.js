@@ -1,5 +1,7 @@
 // frontend/src/api/sets.js
-import { http, toQueryString } from "./client.js";
+import { http, toQueryString, resolveSiteCode } from "./client.js";
+
+const withSite = (siteCode) => resolveSiteCode(siteCode);
 
 function buildSetFormData(payload = {}) {
   const form = new FormData();
@@ -29,24 +31,34 @@ function buildSetFormData(payload = {}) {
 }
 
 export const setApi = {
-  async list(params = {}) {
-    const qs = toQueryString(params);
+  async list(params = {}, options = {}) {
+    const { siteCode: siteOverride, ...query } = params;
+    const siteCode = withSite(siteOverride || options.siteCode);
+    const qs = toQueryString({ ...query, siteCode });
     const data = await http(`/sets${qs}`);
     return data.sets || [];
   },
-  async get(idOrSlug) {
-    const data = await http(`/sets/${idOrSlug}`, { auth: true });
+  async get(idOrSlug, options = {}) {
+    const siteCode = withSite(options.siteCode);
+    const qs = toQueryString({ siteCode });
+    const data = await http(`/sets/${idOrSlug}${qs}`, { auth: options.auth ?? false });
     return data.set;
   },
-  async create(payload) {
+  async create(payload, options = {}) {
     const form = buildSetFormData(payload);
-    return http("/sets", { method: "POST", body: form, auth: true });
+    const siteCode = withSite(options.siteCode);
+    const qs = toQueryString({ siteCode });
+    return http(`/sets${qs}`, { method: "POST", body: form, auth: true });
   },
-  async update(idOrSlug, payload) {
+  async update(idOrSlug, payload, options = {}) {
     const form = buildSetFormData(payload);
-    return http(`/sets/${idOrSlug}`, { method: "PUT", body: form, auth: true });
+    const siteCode = withSite(options.siteCode);
+    const qs = toQueryString({ siteCode });
+    return http(`/sets/${idOrSlug}${qs}`, { method: "PUT", body: form, auth: true });
   },
-  async remove(idOrSlug) {
-    return http(`/sets/${idOrSlug}`, { method: "DELETE", auth: true });
+  async remove(idOrSlug, options = {}) {
+    const siteCode = withSite(options.siteCode);
+    const qs = toQueryString({ siteCode });
+    return http(`/sets/${idOrSlug}${qs}`, { method: "DELETE", auth: true });
   },
 };

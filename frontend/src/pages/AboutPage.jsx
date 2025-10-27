@@ -1,18 +1,26 @@
 import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
-import { Link } from "react-router-dom";
 import { aboutApi } from "../api/about";
 import { Loader2 } from "lucide-react";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
 
 export default function AboutPage() {
+  const { lng } = useParams();
   const [about, setAbout] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { buildPath } = useLocalizedPath();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await aboutApi.get();
+        const res = await aboutApi.get({ siteCode });
         if (mounted) setAbout(res.about);
       } catch (err) {
         console.error("About fetch error:", err);
@@ -21,7 +29,7 @@ export default function AboutPage() {
       }
     })();
     return () => (mounted = false);
-  }, []);
+  }, [siteCode]);
 
   if (loading)
     return (
@@ -57,7 +65,9 @@ export default function AboutPage() {
     <main className="bg-surface-light/60">
       {/* Breadcrumb */}
       <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
-        <BreadCrumb items={[{ label: "Home", to: "/" }, { label: "About" }]} />
+        <BreadCrumb
+          items={[{ label: "Home", to: buildPath("") }, { label: "About" }]}
+        />
       </section>
 
       {/* Hero */}
@@ -176,19 +186,24 @@ export default function AboutPage() {
 
             {ctas.length > 0 && (
               <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                {ctas.map((btn, i) => (
-                  <Link
-                    key={i}
-                    to={btn.to}
-                    className={`inline-flex items-center rounded-full px-5 py-2.5 text-sm font-semibold transition ${
-                      btn.variant === "secondary"
-                        ? "border border-border text-primary hover:bg-surface-hover"
-                        : "bg-accent text-white hover:bg-accent-hover"
-                    }`}
-                  >
-                    {btn.text}
-                  </Link>
-                ))}
+                {ctas.map((btn, i) => {
+                  const target = btn.to?.startsWith("/")
+                    ? buildPath(btn.to)
+                    : btn.to || "#";
+                  return (
+                    <Link
+                      key={i}
+                      to={target}
+                      className={`inline-flex items-center rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+                        btn.variant === "secondary"
+                          ? "border border-border text-primary hover:bg-surface-hover"
+                          : "bg-accent text-white hover:bg-accent-hover"
+                      }`}
+                    >
+                      {btn.text}
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>

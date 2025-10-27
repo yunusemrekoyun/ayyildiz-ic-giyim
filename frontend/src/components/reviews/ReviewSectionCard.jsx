@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { reviewApi } from "../../api/reviews";
 import { getAccessToken } from "../../api/client";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 const dateFormatter = new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium" });
 const PAGE_LIMIT = 4;
@@ -23,6 +24,7 @@ export default function ReviewSectionCard({
   targetName,
 }) {
   const identifier = targetSlug || targetId;
+  const { buildPath } = useLocalizedPath();
   const [stats, setStats] = useState(INITIAL_STATS);
   const [reviews, setReviews] = useState([]);
   const [pagination, setPagination] = useState({
@@ -265,7 +267,7 @@ export default function ReviewSectionCard({
                 <p>
                   Please{" "}
                   <Link
-                    to="/account?view=login"
+                    to={buildPath("/account?view=login")}
                     className="font-semibold text-accent hover:underline"
                   >
                     sign in

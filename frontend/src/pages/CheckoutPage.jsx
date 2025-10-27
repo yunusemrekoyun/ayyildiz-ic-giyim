@@ -8,9 +8,11 @@ import { useCart } from "../hooks/useCart";
 import { userDetailsApi } from "../api/userDetails";
 import { orderApi } from "../api/orders";
 import { loadPayPalSdk } from "../utils/paypal.js";
+import { useLocalizedPath } from "../hooks/useLocalizedPath.js";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const { buildPath } = useLocalizedPath();
 
   // Cart verisini oku
   const cart = useCart() || {};
@@ -189,9 +191,9 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (orderPlacedRef.current) return;
     if (!loading && lines.length === 0) {
-      navigate("/cart", { replace: true });
+      navigate(buildPath("/cart"), { replace: true });
     }
-  }, [lines.length, loading, navigate]);
+  }, [buildPath, lines.length, loading, navigate]);
 
   useEffect(() => {
     if (paymentMethod !== "paypal") {
@@ -298,9 +300,12 @@ export default function CheckoutPage() {
               paypalDraftRef.current = null;
               clearCart();
               clearCoupon();
-              navigate(`/checkout/success?order=${orderData.id}`, {
-                replace: true,
-              });
+              navigate(
+                buildPath(`/checkout/success?order=${orderData.id}`),
+                {
+                  replace: true,
+                }
+              );
             } catch (error) {
               const message = getErrorMessage(
                 error,
@@ -404,12 +409,20 @@ export default function CheckoutPage() {
       orderPlacedRef.current = true;
       clearCart();
       clearCoupon();
-      navigate(`/checkout/success?order=${order.id}`, { replace: true });
+      navigate(buildPath(`/checkout/success?order=${order.id}`), {
+        replace: true,
+      });
     } catch (e) {
       const message = getErrorMessage(e);
       // 401 ise login’e gönder
       if (String(e?.message || "").includes("401")) {
-        navigate(`/account?view=login&redirect=/checkout`, { replace: true });
+        const checkoutPath = buildPath("/checkout");
+        navigate(
+          buildPath(
+            `/account?view=login&redirect=${encodeURIComponent(checkoutPath)}`
+          ),
+          { replace: true }
+        );
         return;
       }
       setBanner({
@@ -425,7 +438,7 @@ export default function CheckoutPage() {
     <section className="bg-surface-light/60">
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-6">
         <BreadCrumb
-          items={[{ label: "Home", to: "/" }, { label: "Checkout" }]}
+          items={[{ label: "Home", to: buildPath("") }, { label: "Checkout" }]}
         />
       </div>
 
@@ -452,7 +465,7 @@ export default function CheckoutPage() {
                 No saved address. Please add one from{" "}
                 <a
                   className="text-accent underline"
-                  href="/account?tab=Addresses"
+                  href={buildPath("/account?tab=Addresses")}
                 >
                   Account &gt; Addresses
                 </a>

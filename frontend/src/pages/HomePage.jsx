@@ -1,5 +1,6 @@
 // src/pages/HomePage.jsx
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import Hero from "../components/Hero";
 import Categories from "../components/categories/Categories";
 import HomeProducts from "../components/home-products/HomeProducts";
@@ -12,6 +13,7 @@ import { setApi } from "../api/sets";
 import { heroApi } from "../api/heroes";
 import { campaignApi } from "../api/campaigns";
 import { reviewApi } from "../api/reviews";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../constants/sites.js";
 
 const FALLBACK_CAMPAIGNS = [
   {
@@ -71,6 +73,11 @@ const FALLBACK_COMMENTS = [
 ];
 
 export default function HomePage() {
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   // HERO (dinamik)
   const [heroes, setHeroes] = useState([]);
   const [loadingHeroes, setLoadingHeroes] = useState(true);
@@ -100,7 +107,7 @@ export default function HomePage() {
     let mounted = true;
     (async () => {
       try {
-        const list = await heroApi.list();
+        const list = await heroApi.list({ siteCode });
         if (!mounted) return;
         setHeroes(list || []);
       } catch (err) {
@@ -112,16 +119,26 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, [setError]);
+  }, [setError, siteCode]);
 
   // Products fetch
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await productApi.list({ limit: 12 });
+        const data = await productApi.list({ limit: 12 }, { siteCode });
         if (!mounted) return;
-        setFeaturedProducts(data.products || []);
+        const mapped = (data.products || []).map((product) => ({
+          id: product.id,
+          to: `/${siteCode}/product/${product.slug}`,
+          image: product.images?.[0]?.url || "/shop-1.jpg",
+          title: product.name,
+          subtitle: product.category?.name || "",
+          price: product.price,
+          finalPrice: product.finalPrice ?? product.price,
+          discount: product.discount?.percentage || product.discount,
+        }));
+        setFeaturedProducts(mapped);
       } catch (err) {
         if (mounted) setError(extractMessage(err));
       } finally {
@@ -131,14 +148,14 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, [setError]);
+  }, [setError, siteCode]);
 
   // Sets fetch
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await setApi.list();
+        const data = await setApi.list({ siteCode });
         const rawSets = Array.isArray(data) ? data : data?.sets || [];
         if (!mounted) return;
         setSets(mapSetsToCards(rawSets));
@@ -151,14 +168,14 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, [setError]);
+  }, [setError, siteCode]);
 
   // Campaign fetch
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const list = await campaignApi.listHome();
+        const list = await campaignApi.listHome({ siteCode });
         if (!mounted) return;
         setCampaigns(list || []);
       } catch (err) {
@@ -172,14 +189,14 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   // Home Reviews fetch
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const list = await reviewApi.homeFeatured(3); // 3 kart
+        const list = await reviewApi.homeFeatured(3, { siteCode }); // 3 kart
         if (!mounted) return;
         setHomeReviews(list || []);
       } catch (err) {
@@ -193,7 +210,7 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [siteCode]);
 
   const commentsToRender = useMemo(() => {
     // API'den geldiyse onu kullan, yoksa FALLBACK

@@ -1,7 +1,7 @@
 import { http } from "./client.js";
 
 export const heroApi = {
-  async list({ includeInactive = false } = {}) {
+  async list({ includeInactive = false, siteCode: _site } = {}) {
     const qs = includeInactive ? `?includeInactive=true` : "";
     const data = await http(`/heroes${qs}`, { auth: includeInactive });
     return data.heroes || [];

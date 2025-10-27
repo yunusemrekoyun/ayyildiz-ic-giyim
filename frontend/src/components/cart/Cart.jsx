@@ -3,6 +3,7 @@ import { useState } from "react";
 import CartItem from "./CartItem";
 import { useCart } from "../../hooks/useCart";
 import { useNavigate } from "react-router-dom";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 const CURRENCY = (n) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(
@@ -11,6 +12,7 @@ const CURRENCY = (n) =>
 
 export default function Cart() {
   const navigate = useNavigate();
+  const { buildPath } = useLocalizedPath();
   const cart = useCart() || {};
   const {
     items = [],
@@ -61,7 +63,7 @@ export default function Cart() {
           Discover our latest arrivals and curated trousseau packages.
         </p>
         <a
-          href="/shop"
+          href={buildPath("/shop")}
           className="mt-5 inline-flex items-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
         >
           Continue Shopping
@@ -185,13 +187,13 @@ export default function Cart() {
           <button
             className="mt-4 w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
             disabled={!items.length}
-            onClick={() => navigate("/checkout")}
+            onClick={() => navigate(buildPath("/checkout"))}
           >
             Proceed to Checkout
           </button>
 
           <a
-            href="/shop"
+            href={buildPath("/shop")}
             className="mt-3 block text-center text-sm text-secondary hover:text-accent"
           >
             Continue Shopping

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Percent, PlusCircle, RefreshCw } from "lucide-react";
 import { productApi } from "../../api/products";
 import { setApi } from "../../api/sets";
@@ -9,6 +10,7 @@ import DiscountForm from "../../components/admin/discounts/DiscountForm.jsx";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { flattenCategoryTree } from "../../utils/catalog.js";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -17,6 +19,11 @@ const currency = new Intl.NumberFormat("en-US", {
 });
 
 export default function AdminDiscounts() {
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const confirm = useConfirm();
   const [discounts, setDiscounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +41,7 @@ export default function AdminDiscounts() {
   useEffect(() => {
     loadDiscounts();
     loadOptions();
-  }, []);
+  }, [siteCode]);
 
   const loadDiscounts = async () => {
     setLoading(true);
@@ -51,9 +58,12 @@ export default function AdminDiscounts() {
   const loadOptions = async () => {
     try {
       const [productRes, setRes, categoryRes] = await Promise.all([
-        productApi.list({ limit: 500, includeHidden: true }),
-        setApi.list({ includeHidden: true }),
-        categoryApi.tree(),
+        productApi.list(
+          { limit: 500, includeHidden: true },
+          { siteCode, auth: true }
+        ),
+        setApi.list({ includeHidden: true, siteCode }),
+        categoryApi.tree({}, { siteCode, auth: true }),
       ]);
 
       const mappedProducts = (productRes.products || []).map((product) => ({

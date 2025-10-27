@@ -1,5 +1,7 @@
 // src/components/home-campaigns/HomeCampaignItem.jsx
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 export default function HomeCampaignItem({
   to = "#",
@@ -11,6 +13,13 @@ export default function HomeCampaignItem({
   variant = "small", // 'big' | 'wide' | 'small'
   className = "",
 }) {
+  const { buildPath } = useLocalizedPath();
+  const target = useMemo(() => {
+    if (!to || to === "#") return "#";
+    if (typeof to === "string" && to.startsWith("#")) return to;
+    return buildPath(to);
+  }, [buildPath, to]);
+
   const span =
     variant === "big"
       ? "md:col-span-2 md:row-span-2"
@@ -20,7 +29,7 @@ export default function HomeCampaignItem({
 
   return (
     <Link
-      to={to}
+      to={target}
       className={`group relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-sm ${span} ${className}`}
     >
       {/* BG image */}

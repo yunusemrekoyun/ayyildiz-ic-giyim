@@ -1,5 +1,6 @@
 /* eslint-disable no-useless-catch */
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { PlusCircle, RefreshCw } from "lucide-react";
 import { setApi } from "../../api/sets";
 import { productApi } from "../../api/products";
@@ -8,8 +9,14 @@ import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
 import SetTable from "../../components/admin/sets/SetTable";
 import SetForm from "../../components/admin/sets/SetForm";
+import { DEFAULT_SITE_CODE, SITE_CODES } from "../../constants/sites.js";
 
 export default function AdminSets() {
+  const { lng } = useParams();
+  const normalizedSite = (lng || DEFAULT_SITE_CODE).toLowerCase();
+  const siteCode = SITE_CODES.includes(normalizedSite)
+    ? normalizedSite
+    : DEFAULT_SITE_CODE;
   const confirm = useConfirm();
   const [sets, setSets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,12 +30,12 @@ export default function AdminSets() {
     loadSets();
     loadProducts();
     loadCategories();
-  }, []);
+  }, [siteCode]);
 
   const loadSets = async () => {
     setLoading(true);
     try {
-      const data = await setApi.list({ includeHidden: true });
+      const data = await setApi.list({ includeHidden: true }, { siteCode });
       setSets(data);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -39,7 +46,10 @@ export default function AdminSets() {
 
   const loadProducts = async () => {
     try {
-      const data = await productApi.list({ limit: 200, includeHidden: true });
+      const data = await productApi.list(
+        { limit: 200, includeHidden: true },
+        { siteCode, auth: true }
+      );
       setProducts(data.products || []);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -48,7 +58,7 @@ export default function AdminSets() {
 
   const loadCategories = async () => {
     try {
-      const tree = await categoryApi.tree();
+      const tree = await categoryApi.tree({}, { siteCode, auth: true });
       const flat = flattenTree(tree);
       setCategories(flat);
     } catch (error) {
@@ -75,7 +85,7 @@ export default function AdminSets() {
     });
     if (!ok) return;
     try {
-      await setApi.remove(set.id || set.slug);
+      await setApi.remove(set.id || set.slug, { siteCode });
       setBanner({ variant: "warning", message: "Set deleted" });
       await loadSets();
     } catch (error) {
@@ -86,10 +96,10 @@ export default function AdminSets() {
   const handleSubmit = async (payload) => {
     try {
       if (editingSet?.id) {
-        await setApi.update(editingSet.id, payload);
+        await setApi.update(editingSet.id, payload, { siteCode });
         setBanner({ variant: "success", message: "Set updated" });
       } else {
-        await setApi.create(payload);
+        await setApi.create(payload, { siteCode });
         setBanner({ variant: "success", message: "Set created" });
       }
       setModalOpen(false);

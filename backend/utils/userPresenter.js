@@ -16,6 +16,10 @@ export function shapeUser(user) {
     .slice(0, 2)
     .toUpperCase();
 
+  const normalizedRoles = Array.isArray(user.roles)
+    ? user.roles.map((role) => String(role).toLowerCase())
+    : [user.role || "user"].map((role) => String(role).toLowerCase());
+
   return {
     id: id?.toString ? id.toString() : String(id),
     firstName,
@@ -23,7 +27,9 @@ export function shapeUser(user) {
     fullName,
     email: user.email || "",
     phone: user.phone || "",
-    role: user.role || "user",
+    role: normalizedRoles[0] || "user",
+    roles: normalizedRoles,
+    allowedSites: Array.isArray(user.allowedSites) ? user.allowedSites : [],
     createdAt: user.createdAt || null,
     updatedAt: user.updatedAt || null,
     initials: initials || "?",
@@ -40,7 +46,7 @@ export function buildUserFilter({ search, role, includeDeleted }) {
 
   // rol filtresi
   if (role && ["user", "admin"].includes(role)) {
-    filter.role = role;
+    filter.roles = role;
   }
 
   // 🔽 default: silinmişleri listeleme

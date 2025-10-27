@@ -1,50 +1,121 @@
-import { http, toQueryString } from "./client.js";
+import { tenantHttp, toQueryString, resolveSiteCode } from "./client.js";
+
+const withSite = (siteCode) => resolveSiteCode(siteCode);
+
+const shapeCategory = (doc) => ({
+  id: doc._id || doc.id,
+  name: doc.name,
+  slug: doc.slug,
+  parentId: doc.parentId || null,
+  parent: doc.parentId || null,
+  order: doc.order ?? 0,
+  level: doc.level ?? 0,
+  ancestors: Array.isArray(doc.ancestors)
+    ? doc.ancestors.map((val) => val?.toString?.() || String(val))
+    : [],
+  createdAt: doc.createdAt,
+  updatedAt: doc.updatedAt,
+});
+
+const buildTree = (items = []) => {
+  const nodes = items.map((item) => ({
+    ...shapeCategory(item),
+    id: String(item._id || item.id),
+    parentId: item.parentId ? String(item.parentId) : null,
+    children: [],
+    level: 0,
+  }));
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const roots = [];
+
+  nodes.forEach((node) => {
+    if (node.parentId && byId.has(node.parentId)) {
+      const parent = byId.get(node.parentId);
+      node.level = parent.level + 1;
+      parent.children.push(node);
+    } else {
+      node.parentId = null;
+      node.level = 0;
+      roots.push(node);
+    }
+  });
+
+  const sortNodes = (arr) => {
+    arr.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+    arr.forEach((child) => sortNodes(child.children));
+  };
+
+  sortNodes(roots);
+  return roots;
+};
 
 export const categoryApi = {
-  async list(params = {}) {
-    const qs = toQueryString(params);
-    const data = await http(`/categories${qs}`, { auth: true });
-    return data.categories || [];
+  async list(params = {}, options = {}) {
+    const { siteCode: siteOverride, ...query } = params;
+    const siteCode = withSite(siteOverride || options.siteCode);
+    const qs = toQueryString(query);
+    const data = await tenantHttp(siteCode, `/categories${qs}`, {
+      auth: options.auth ?? false,
+    });
+    return (data.categories || []).map(shapeCategory);
   },
-  async tree() {
-    const data = await http("/categories/tree", { auth: true });
-    return data.categories || [];
+  async tree(params = {}, options = {}) {
+    const { siteCode: siteOverride, ...query } = params;
+    const siteCode = withSite(siteOverride || options.siteCode);
+    const qs = toQueryString(query);
+    const data = await tenantHttp(siteCode, `/categories${qs}`, {
+      auth: options.auth ?? false,
+    });
+    return buildTree(data.categories || []);
   },
-  async get(idOrSlug) {
-    const data = await http(`/categories/${idOrSlug}`, { auth: true });
-    return data.category;
+  async get(idOrSlug, options = {}) {
+    const siteCode = withSite(options.siteCode);
+    const data = await tenantHttp(siteCode, `/categories/${idOrSlug}`, {
+      auth: options.auth ?? false,
+    });
+    return shapeCategory(data.category);
   },
-  async create(payload) {
-    const form = new FormData();
-    form.append("name", payload.name.trim());
-    if (payload.parent) form.append("parent", payload.parent);
-    if (payload.image) form.append("image", payload.image);
-    const data = await http("/categories", {
+  async create(payload, options = {}) {
+    const siteCode = withSite(options.siteCode);
+    const body = {
+      name: String(payload.name || "").trim(),
+      parentId: payload.parentId ?? payload.parent ?? "",
+    };
+    if (payload.order !== undefined) {
+      body.order = Number(payload.order);
+    }
+    const data = await tenantHttp(siteCode, "/categories", {
       method: "POST",
-      body: form,
-      auth: true,
+      body,
+      auth: options.auth ?? true,
     });
-    return data.category;
+    return shapeCategory(data.category);
   },
-  async update(idOrSlug, payload) {
-    const form = new FormData();
-    if (payload.name !== undefined) form.append("name", payload.name.trim());
-    if (payload.parent !== undefined)
-      form.append("parent", payload.parent || "");
-    if (payload.image) form.append("image", payload.image);
-    if (payload.removeImage !== undefined)
-      form.append("removeImage", payload.removeImage ? "true" : "false");
-    const data = await http(`/categories/${idOrSlug}`, {
-      method: "PATCH",
-      body: form,
-      auth: true,
+  async update(id, payload, options = {}) {
+    const siteCode = withSite(options.siteCode);
+    const body = {};
+    if (payload.name !== undefined) {
+      body.name = String(payload.name || "").trim();
+    }
+    if (payload.parentId !== undefined || payload.parent !== undefined) {
+      const parentId = payload.parentId ?? payload.parent ?? "";
+      body.parentId = parentId || "";
+    }
+    if (payload.order !== undefined) {
+      body.order = Number(payload.order);
+    }
+    const data = await tenantHttp(siteCode, `/categories/${id}`, {
+      method: "PUT",
+      body,
+      auth: options.auth ?? true,
     });
-    return data.category;
+    return shapeCategory(data.category);
   },
-  async remove(idOrSlug) {
-    return http(`/categories/${idOrSlug}`, {
+  async remove(id, options = {}) {
+    const siteCode = withSite(options.siteCode);
+    return tenantHttp(siteCode, `/categories/${id}`, {
       method: "DELETE",
-      auth: true,
+      auth: options.auth ?? true,
     });
   },
 };

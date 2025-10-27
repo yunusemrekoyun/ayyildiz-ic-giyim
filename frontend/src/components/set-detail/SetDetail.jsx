@@ -8,12 +8,14 @@ import { getAccessToken } from "../../api/client";
 import { userDetailsApi } from "../../api/userDetails";
 import { useNavigate } from "react-router-dom";
 import ReviewSectionCard from "../reviews/ReviewSectionCard.jsx";
+import { useLocalizedPath } from "../../hooks/useLocalizedPath.js";
 
 export default function SetDetail({ setDoc }) {
   // Hook'lar her zaman çağrılıyor (ESLint hatası çözümü)
   const [qty, setQty] = useState(1);
   const [isFav, setIsFav] = useState(false);
   const navigate = useNavigate();
+  const { buildPath } = useLocalizedPath();
 
   // setDoc olmasa da güvenli hesaplama
   const maxStock = useMemo(() => {
@@ -60,7 +62,7 @@ export default function SetDetail({ setDoc }) {
   const toggleFav = async () => {
     if (!setDoc?.id) return;
     if (!getAccessToken()) {
-      navigate("/auth");
+      navigate(buildPath("/account?view=login"));
       return;
     }
     try {
