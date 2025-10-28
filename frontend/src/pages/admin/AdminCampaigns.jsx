@@ -12,7 +12,7 @@ import CampaignForm from "../../components/admin/campaigns/CampaignForm.jsx";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
 
-const currency = new Intl.NumberFormat("en-US", {
+const currency = new Intl.NumberFormat("tr-TR", {
   style: "currency",
   currency: "EUR",
   minimumFractionDigits: 0,
@@ -79,7 +79,7 @@ export default function AdminCampaigns() {
 
       const mappedProducts = (productRes.products || []).map((product) => ({
         id: String(product.id || product._id || "").trim(),
-        label: product.name || "Unnamed product",
+        label: product.name || "Adsız ürün",
         hint: currency.format(product.finalPrice ?? product.price ?? 0),
       }));
       setProductOptions(mappedProducts);
@@ -88,7 +88,7 @@ export default function AdminCampaigns() {
         Array.isArray(setRes) ? setRes : setRes?.sets || []
       ).map((set) => ({
         id: String(set.id || set._id || "").trim(),
-        label: set.name || "Untitled set",
+        label: set.name || "Başlıksız set",
         hint: currency.format(set.finalPrice ?? set.price ?? 0),
       }));
       setSetOptions(mappedSets);
@@ -101,10 +101,10 @@ export default function AdminCampaigns() {
           const label =
             (Array.isArray(item.path) && item.path.length
               ? item.path.join(" / ")
-              : item.label || item.name || String(catId)) || "Unnamed";
+              : item.label || item.name || String(catId)) || "Adsız";
           const hint =
             typeof item.level === "number"
-              ? `Level ${item.level + 1}`
+              ? `Seviye ${item.level + 1}`
               : undefined;
           return { id: String(catId), label, hint };
         })
@@ -114,7 +114,7 @@ export default function AdminCampaigns() {
       const mappedDiscounts = (discountRes || []).map((discount) => ({
         id: discount.id,
         label: discount.name,
-        hint: `${discount.percentage}% off`,
+        hint: `${discount.percentage}% indirim`,
         appliesTo: discount.appliesTo || {},
       }));
       setDiscountOptions(mappedDiscounts);
@@ -151,8 +151,8 @@ export default function AdminCampaigns() {
       }
       setBanner({
         variant: "success",
-        message: `Campaign “${updated.name}” is now ${
-          updated.isActive ? "active" : "hidden"
+        message: `Kampanya “${updated.name}” artık ${
+          updated.isActive ? "aktif" : "gizli"
         }.`,
       });
     } catch (error) {
@@ -162,10 +162,10 @@ export default function AdminCampaigns() {
 
   async function handleDelete(campaign) {
     const ok = await confirm({
-      title: "Delete campaign",
-      description: `Delete “${campaign.name}”? This action cannot be undone.`,
+      title: "Kampanyayı sil",
+      description: `“${campaign.name}” kampanyasını silmek istiyor musun? Bu işlem geri alınamaz.`,
       tone: "danger",
-      confirmText: "Delete",
+      confirmText: "Sil",
     });
     if (!ok) return;
     try {
@@ -176,7 +176,7 @@ export default function AdminCampaigns() {
       }
       setBanner({
         variant: "warning",
-        message: `Campaign “${campaign.name}” deleted.`,
+        message: `Kampanya “${campaign.name}” silindi.`,
       });
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -223,7 +223,7 @@ export default function AdminCampaigns() {
         setCampaigns((prev) => [...prev, created]);
         setBanner({
           variant: "success",
-          message: `Campaign “${created.name}” created.`,
+          message: `Kampanya “${created.name}” oluşturuldu.`,
         });
         openCreateForm();
       } else if (editingCampaign?.id) {
@@ -234,7 +234,7 @@ export default function AdminCampaigns() {
         setEditingCampaign(updated);
         setBanner({
           variant: "success",
-          message: `Campaign “${updated.name}” updated.`,
+          message: `Kampanya “${updated.name}” güncellendi.`,
         });
       }
     } catch (error) {
@@ -252,13 +252,13 @@ export default function AdminCampaigns() {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs uppercase tracking-wide text-[var(--color-text-admin-muted)]">
             <Megaphone className="h-4 w-4" />
-            Campaigns
+            Kampanyalar
           </div>
           <h1 className="mt-2 text-2xl font-semibold text-[var(--color-text-admin)]">
-            Home Campaign Manager
+            Anasayfa Kampanya Yöneticisi
           </h1>
           <p className="text-sm text-[var(--color-text-admin-muted)]">
-            Configure home page campaign cards and their destinations.
+            Anasayfa kampanya kartlarını ve yönlendirmelerini yapılandırın.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -266,14 +266,14 @@ export default function AdminCampaigns() {
             to="/admin/campaigns/layout"
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            Layout
+            Yerleşim
           </Link>
           <button
             onClick={openCreateForm}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
-            New campaign
+            Yeni kampanya
           </button>
         </div>
       </header>
@@ -292,10 +292,10 @@ export default function AdminCampaigns() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border-admin)] pb-3">
               <div>
                 <p className="text-sm font-semibold text-[var(--color-text-admin)]">
-                  Campaigns overview
+                  Kampanya özeti
                 </p>
                 <p className="text-xs text-[var(--color-text-admin-muted)]">
-                  {activeCount} active • {campaigns.length} total
+                  {activeCount} aktif • {campaigns.length} toplam
                 </p>
               </div>
               <button
@@ -303,7 +303,7 @@ export default function AdminCampaigns() {
                 onClick={loadCampaigns}
                 className="text-xs text-[var(--color-text-admin-muted)] underline-offset-2 hover:underline"
               >
-                Refresh
+                Yenile
               </button>
             </div>
 
@@ -317,8 +317,7 @@ export default function AdminCampaigns() {
                 ))
               ) : sortedCampaigns.length === 0 ? (
                 <div className="col-span-full rounded-xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6 text-center text-sm text-[var(--color-text-admin-muted)]">
-                  No campaigns yet. Create your first campaign to replace the
-                  placeholder cards on the home page.
+                  Henüz kampanya yok. Anasayfadaki yer tutucu kartları değiştirmek için ilk kampanyanı oluştur.
                 </div>
               ) : (
                 sortedCampaigns.map((campaign, index) => (
@@ -360,7 +359,7 @@ export default function AdminCampaigns() {
 
           {loadingOptions && (
             <div className="mt-3 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-4 py-3 text-xs text-[var(--color-text-admin-muted)]">
-              Loading selection options…
+              Seçim seçenekleri yükleniyor...
             </div>
           )}
         </div>
@@ -370,7 +369,7 @@ export default function AdminCampaigns() {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return "Beklenmeyen hata";
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);

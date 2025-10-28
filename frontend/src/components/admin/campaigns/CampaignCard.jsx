@@ -34,7 +34,7 @@ export default function CampaignCard({
           />
         ) : (
           <div className="grid h-full place-items-center text-sm text-[var(--color-text-admin-muted)]">
-            No image
+            Görsel yok
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
@@ -80,38 +80,38 @@ export default function CampaignCard({
             {isActive ? (
               <>
                 <Eye className="h-3.5 w-3.5" />
-                Active
+                Aktif
               </>
             ) : (
               <>
                 <EyeOff className="h-3.5 w-3.5" />
-                Hidden
+                Gizli
               </>
             )}
           </span>
           <span className="text-xs text-[var(--color-text-admin-muted)]">
-            Sort #{campaign.sortOrder ?? 0}
+            Sıra #{campaign.sortOrder ?? 0}
           </span>
         </div>
 
         <div className="rounded-xl border border-[var(--color-border-admin)]/70 bg-[var(--color-bg-admin)]/60 p-3 text-xs text-[var(--color-text-admin-muted)]">
           <div className="font-semibold text-[var(--color-text-admin)]">
-            Target • {targetSummary.type === "SETS" ? "Sets" : "Products"}
+            Hedef • {targetSummary.type === "SETS" ? "Setler" : "Ürünler"}
           </div>
           <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
             {targetSummary.products > 0 && (
-              <div>Products: {targetSummary.products}</div>
+              <div>Ürünler: {targetSummary.products}</div>
             )}
-            {targetSummary.sets > 0 && <div>Sets: {targetSummary.sets}</div>}
+            {targetSummary.sets > 0 && <div>Setler: {targetSummary.sets}</div>}
             {targetSummary.categories > 0 && (
-              <div>Categories: {targetSummary.categories}</div>
+              <div>Kategoriler: {targetSummary.categories}</div>
             )}
             {targetSummary.discounts > 0 && (
-              <div>Discounts: {targetSummary.discounts}</div>
+              <div>İndirimler: {targetSummary.discounts}</div>
             )}
           </div>
           <div className="mt-2 text-[11px]">
-            Link:{" "}
+            Bağlantı:{" "}
             <span className="font-mono text-[var(--color-text-admin)]">
               {campaign.computedLink}
             </span>
@@ -126,7 +126,7 @@ export default function CampaignCard({
             onClick={onMoveUp}
             disabled={disableMoveUp}
             className="rounded-lg p-2 text-[var(--color-text-admin-muted)] transition hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-admin)] disabled:opacity-40"
-            title="Move up"
+            title="Yukarı taşı"
           >
             <ArrowUp className="h-4 w-4" />
           </button>
@@ -135,7 +135,7 @@ export default function CampaignCard({
             onClick={onMoveDown}
             disabled={disableMoveDown}
             className="rounded-lg p-2 text-[var(--color-text-admin-muted)] transition hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-admin)] disabled:opacity-40"
-            title="Move down"
+            title="Aşağı taşı"
           >
             <ArrowDown className="h-4 w-4" />
           </button>
@@ -146,15 +146,19 @@ export default function CampaignCard({
             type="button"
             onClick={onToggleActive}
             className="rounded-lg p-2 text-[var(--color-text-admin-muted)] transition hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-admin)]"
-            title={isActive ? "Hide campaign" : "Activate campaign"}
+            title={isActive ? "Kampanyayı gizle" : "Kampanyayı etkinleştir"}
           >
-            {isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {isActive ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
           </button>
           <button
             type="button"
             onClick={onEdit}
             className="rounded-lg p-2 text-[var(--color-text-admin-muted)] transition hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-admin)]"
-            title="Edit campaign"
+            title="Kampanyayı düzenle"
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -162,7 +166,7 @@ export default function CampaignCard({
             type="button"
             onClick={onDelete}
             className="rounded-lg p-2 text-rose-400 transition hover:bg-rose-50 hover:text-rose-600"
-            title="Delete campaign"
+            title="Kampanyayı sil"
           >
             <Trash2 className="h-4 w-4" />
           </button>

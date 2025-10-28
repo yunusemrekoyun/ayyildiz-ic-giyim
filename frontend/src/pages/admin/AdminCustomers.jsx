@@ -18,20 +18,20 @@ import AlertBanner from "../../components/ui/AlertBanner.jsx";
 
 const LIMIT_OPTIONS = [10, 20, 50, 100];
 const ROLE_OPTIONS = [
-  { value: "", label: "All roles" },
-  { value: "user", label: "Customers" },
-  { value: "admin", label: "Administrators" },
+  { value: "", label: "Tüm roller" },
+  { value: "user", label: "Müşteriler" },
+  { value: "admin", label: "Yöneticiler" },
 ];
 const SORT_OPTIONS = [
-  { value: "recent", label: "Newest first" },
-  { value: "oldest", label: "Oldest first" },
-  { value: "name", label: "Name A-Z" },
-  { value: "role", label: "Role" },
+  { value: "recent", label: "En yeni önce" },
+  { value: "oldest", label: "En eski önce" },
+  { value: "name", label: "İsim A-Z" },
+  { value: "role", label: "Rol" },
 ];
 const STATUS_OPTIONS = [
-  { value: "all", label: "All statuses" },
-  { value: "active", label: "Active only" },
-  { value: "deleted", label: "Deleted only" },
+  { value: "all", label: "Tüm durumlar" },
+  { value: "active", label: "Sadece aktif" },
+  { value: "deleted", label: "Sadece silinmiş" },
 ];
 
 export default function AdminCustomers() {
@@ -112,8 +112,8 @@ export default function AdminCustomers() {
         type: "success",
         message:
           updated.role === "admin"
-            ? `${updated.fullName || updated.email} is now an administrator`
-            : `${updated.fullName || updated.email} downgraded to customer`,
+            ? `${updated.fullName || updated.email} artık yönetici`
+            : `${updated.fullName || updated.email} müşteri olarak güncellendi`,
       });
       if (selectedUser?.id === updated.id) setSelectedUser(updated);
     } catch (error) {
@@ -155,7 +155,7 @@ export default function AdminCustomers() {
       if (selectedUser?.id === updated.id) setSelectedUser(updated);
       setBanner({
         variant: "warning",
-        message: `${user.fullName || user.email} deactivated`,
+        message: `${user.fullName || user.email} pasifleştirildi`,
       });
     } catch (e) {
       setBanner({ variant: "danger", message: extractMessage(e) });
@@ -172,7 +172,7 @@ export default function AdminCustomers() {
       if (selectedUser?.id === updated.id) setSelectedUser(updated);
       setBanner({
         variant: "success",
-        message: `${user.fullName || user.email} restored`,
+        message: `${user.fullName || user.email} geri yüklendi`,
       });
     } catch (e) {
       setBanner({ variant: "danger", message: extractMessage(e) });
@@ -193,11 +193,10 @@ export default function AdminCustomers() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-            Customers
+            Müşteriler
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-            View your customer base, search, filter, adjust roles and manage
-            account status.
+            Müşteri tabanını görüntüle, ara, filtrele, rolleri düzenle ve hesap durumlarını yönet.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -205,14 +204,14 @@ export default function AdminCustomers() {
             onClick={handleRefresh}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            <RefreshCw className="h-4 w-4" /> Refresh
+            <RefreshCw className="h-4 w-4" /> Yenile
           </button>
           {filtersActive && (
             <button
               onClick={handleClearFilters}
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             >
-              <Filter className="h-4 w-4" /> Clear filters
+              <Filter className="h-4 w-4" /> Filtreleri temizle
             </button>
           )}
         </div>
@@ -229,7 +228,7 @@ export default function AdminCustomers() {
               setSearchValue(event.target.value);
               setPagination((prev) => ({ ...prev, page: 1 }));
             }}
-            placeholder="Search name, email or phone"
+            placeholder="İsim, e-posta veya telefon ara"
             className="w-full border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
           />
         </label>
@@ -290,7 +289,7 @@ export default function AdminCustomers() {
 
         <label className="flex items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
           <span className="text-sm text-[var(--color-text-admin-muted)]">
-            Per page
+            Sayfa başına
           </span>
           <select
             value={limit}
@@ -332,7 +331,7 @@ export default function AdminCustomers() {
       {pagination.pages > 1 && (
         <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-4 py-3 text-sm text-[var(--color-text-admin)] md:flex-row">
           <div>
-            {pagination.total} users • page {pagination.page} of{" "}
+            {pagination.total} kullanıcı • sayfa {pagination.page} /{" "}
             {pagination.pages}
           </div>
           <div className="flex items-center gap-2">
@@ -341,14 +340,14 @@ export default function AdminCustomers() {
               disabled={pagination.page === 1}
               className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
             >
-              Previous
+              Önceki
             </button>
             <button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page >= pagination.pages}
               className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
             >
-              Next
+              Sonraki
             </button>
           </div>
         </div>
@@ -360,7 +359,7 @@ export default function AdminCustomers() {
           setDetailOpen(false);
           setSelectedUser(null);
         }}
-        title="Customer details"
+        title="Müşteri detayları"
         description={selectedUser?.email}
       >
         <UserProfileDetails user={selectedUser} />
@@ -379,7 +378,7 @@ function useDebounce(value, delay = 400) {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return "Beklenmeyen hata";
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);

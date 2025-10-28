@@ -23,7 +23,7 @@ export default function DiscountTable({
   if (!discounts.length) {
     return (
       <div className="rounded-2xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-12 text-center text-[var(--color-text-admin-muted)]">
-        No discounts defined yet.
+        Henüz tanımlı indirim yok.
       </div>
     );
   }
@@ -34,22 +34,22 @@ export default function DiscountTable({
         <thead className="bg-[var(--color-bg-hover)]/60">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Discount
+              İndirim
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Percentage
+              Yüzde
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Coverage
+              Kapsam
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Status
+              Durum
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Updated
+              Güncellenme
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Actions
+              İşlemler
             </th>
           </tr>
         </thead>
@@ -59,12 +59,9 @@ export default function DiscountTable({
             const productCount = discount.appliesTo?.products?.length || 0;
             const setCount = discount.appliesTo?.sets?.length || 0;
             const categoryCount = discount.appliesTo?.categories?.length || 0;
-            if (productCount)
-              summaryParts.push(`${productCount} product${productCount > 1 ? "s" : ""}`);
-            if (setCount)
-              summaryParts.push(`${setCount} set${setCount > 1 ? "s" : ""}`);
-            if (categoryCount)
-              summaryParts.push(`${categoryCount} categor${categoryCount > 1 ? "ies" : "y"}`);
+            if (productCount) summaryParts.push(`${productCount} ürün`);
+            if (setCount) summaryParts.push(`${setCount} set`);
+            if (categoryCount) summaryParts.push(`${categoryCount} kategori`);
 
             const namePreview = buildNamePreview(discount.appliesTo);
 
@@ -101,11 +98,11 @@ export default function DiscountTable({
                         : "bg-[var(--color-border-admin)]/40 text-[var(--color-text-admin-muted)]"
                     }`}
                   >
-                    {discount.active ? "Active" : "Inactive"}
+                    {discount.active ? "Aktif" : "Pasif"}
                   </span>
                 </td>
                 <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin-muted)]">
-                {formatTimestamp(discount.updatedAt)}
+                  {formatTimestamp(discount.updatedAt)}
                 </td>
                 <td className="px-4 py-4 align-top">
                   <div className="flex justify-end gap-2">
@@ -113,7 +110,7 @@ export default function DiscountTable({
                       type="button"
                       onClick={() => onToggleActive?.(discount)}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-                      title={discount.active ? "Deactivate" : "Activate"}
+                      title={discount.active ? "Pasifleştir" : "Aktifleştir"}
                     >
                       <Power className="h-4 w-4" />
                     </button>
@@ -121,7 +118,7 @@ export default function DiscountTable({
                       type="button"
                       onClick={() => onEdit?.(discount)}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-                      title="Edit discount"
+                      title="İndirimi düzenle"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -129,7 +126,7 @@ export default function DiscountTable({
                       type="button"
                       onClick={() => onDelete?.(discount)}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50"
-                      title="Delete discount"
+                      title="İndirimi sil"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -165,7 +162,7 @@ function buildNamePreview(appliesTo = {}) {
     (appliesTo.sets?.length || 0) +
     (appliesTo.categories?.length || 0);
   if (totalCount > names.length) {
-    return `${preview}, … ${totalCount - names.length} more`;
+    return `${preview}, … ${totalCount - names.length} daha`;
   }
   return preview;
 }

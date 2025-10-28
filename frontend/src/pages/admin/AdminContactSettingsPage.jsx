@@ -23,30 +23,30 @@ const makeBlock = (title = "", lines = []) => ({
 });
 
 const emptyConfig = {
-  heroTitle: "We're here to help",
+  heroTitle: "Size yardımcı olmak için buradayız",
   heroSubtitle:
-    "Our customer care team is available Monday to Friday, 09:00–18:00 CET. Send us a note and we'll respond within one business day.",
+    "Müşteri destek ekibimiz Pazartesi-Cuma günleri 09:00-18:00 (CET) saatleri arasında hizmet veriyor. Bize bir mesaj bırakın, en geç bir iş günü içinde yanıtlayalım.",
   heroImage: null,
-  addressBlock: makeBlock("Visit our European studio", [
+  addressBlock: makeBlock("Avrupa stüdyomuzu ziyaret edin", [
     "Kurfürstendamm 45, 10719 Berlin",
-    "Showroom & click-and-collect (appointment recommended)",
+    "Showroom ve click-and-collect (randevu önerilir)",
   ]),
-  hoursBlock: makeBlock("Opening hours (CET)", [
-    "Mon – Fri: 09:00 – 18:00",
-    "Sat: 10:00 – 16:00 (showroom only)",
-    "Sun & public holidays: closed",
+  hoursBlock: makeBlock("Çalışma saatleri (CET)", [
+    "Pzt – Cum: 09:00 – 18:00",
+    "Cmt: 10:00 – 16:00 (sadece showroom)",
+    "Paz ve resmi tatiller: kapalı",
   ]),
-  emailBlock: makeBlock("Customer service", [
+  emailBlock: makeBlock("Müşteri hizmetleri", [
     "support@evimstil.com",
-    "Average response time: < 24 h",
+    "Ortalama yanıt süresi: < 24 saat",
   ]),
-  phoneBlock: makeBlock("Phone", [
+  phoneBlock: makeBlock("Telefon", [
     "+49 (0) 30 234 567 89",
-    "WhatsApp & Signal available on the same number",
+    "WhatsApp ve Signal aynı numaradan kullanılabilir",
   ]),
   formEnabled: true,
   successMessage:
-    "Thank you for your message. We have received your enquiry and will reply via e-mail shortly. If you need immediate assistance, call us on the number below.",
+    "Mesajınız için teşekkür ederiz. Talebinizi aldık ve kısa süre içinde e-posta ile yanıtlayacağız. Hemen destek almak isterseniz aşağıdaki numaradan bizi arayın.",
 };
 
 const deepClone = (value) =>
@@ -132,7 +132,7 @@ const sanitizePayload = (raw) => {
 };
 
 function getMessage(err) {
-  if (!err) return "Unexpected error";
+  if (!err) return "Beklenmeyen hata";
   if (typeof err === "string") return err;
   if (err.message) {
     try {
@@ -221,7 +221,7 @@ export default function AdminContactSettingsPageInner() {
       setData(normalizeState(saved || payload));
       setBanner({
         variant: "success",
-        message: "Contact page settings saved.",
+        message: "İletişim sayfası ayarları kaydedildi.",
       });
     } catch (err) {
       setBanner({ variant: "danger", message: getMessage(err) });
@@ -252,12 +252,11 @@ export default function AdminContactSettingsPageInner() {
           <div className="flex flex-col gap-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
               <ShieldCheck className="h-4 w-4" />
-              Contact Page
+              İletişim Sayfası
             </div>
-            <h2 className="text-2xl font-semibold">Contact Page Content</h2>
+            <h2 className="text-2xl font-semibold">İletişim Sayfası İçeriği</h2>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Edit hero copy, sidebar blocks and form behaviour for the public
-              contact page.
+              Kahraman metnini, kenar çubuğu bloklarını ve form davranışını düzenleyin.
             </p>
           </div>
 
@@ -278,72 +277,72 @@ export default function AdminContactSettingsPageInner() {
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
             <div className="space-y-6 xl:col-span-7">
               <Card
-                title="Hero Section"
-                subtitle="Headline, intro copy and optional hero image."
+                title="Hero Bölümü"
+                subtitle="Başlık, giriş metni ve isteğe bağlı hero görseli."
               >
                 <Field
                   icon={Type}
-                  label="Hero title"
+                  label="Hero başlığı"
                   value={data.heroTitle}
                   onChange={(value) => update({ heroTitle: value })}
-                  placeholder="We're here to help"
+                  placeholder="Size yardımcı olmak için buradayız"
                   disabled={disabled}
                 />
                 <TextArea
                   icon={Quote}
-                  label="Hero subtitle"
+                  label="Hero alt başlığı"
                   rows={3}
                   value={data.heroSubtitle}
                   onChange={(value) => update({ heroSubtitle: value })}
-                  placeholder="Short paragraph describing your contact policy."
+                  placeholder="İletişim politikanızı anlatan kısa paragraf."
                   disabled={disabled}
                 />
                 <div></div>
               </Card>
 
               <Card
-                title="Address & Opening Hours"
-                subtitle="Configure sidebar blocks for visitors."
+                title="Adres ve Çalışma Saatleri"
+                subtitle="Ziyaretçiler için kenar çubuğu bloklarını yapılandırın."
               >
                 <Field
                   icon={MapPin}
-                  label="Address block title"
+                  label="Adres blok başlığı"
                   value={data.addressBlock.title}
                   onChange={(value) => changeBlockTitle("addressBlock", value)}
-                  placeholder="Visit our European studio"
+                  placeholder="Avrupa stüdyomuzu ziyaret edin"
                   disabled={disabled}
                 />
                 <Repeater
                   icon={MapPin}
-                  label="Address lines"
+                  label="Adres satırları"
                   items={data.addressBlock.lines}
                   onAdd={() => addLine("addressBlock")}
                   onRemove={(index) => removeLine("addressBlock", index)}
                   onChange={(index, value) =>
                     changeLine("addressBlock", index, value)
                   }
-                  placeholder="Street, city, extra note…"
+                  placeholder="Sokak, şehir, ek not..."
                   disabled={disabled}
                 />
                 <Separator />
                 <Field
                   icon={Clock3}
-                  label="Opening hours title"
+                  label="Çalışma saatleri başlığı"
                   value={data.hoursBlock.title}
                   onChange={(value) => changeBlockTitle("hoursBlock", value)}
-                  placeholder="Opening hours (CET)"
+                  placeholder="Çalışma saatleri (CET)"
                   disabled={disabled}
                 />
                 <Repeater
                   icon={Clock3}
-                  label="Opening hours lines"
+                  label="Çalışma saatleri satırları"
                   items={data.hoursBlock.lines}
                   onAdd={() => addLine("hoursBlock")}
                   onRemove={(index) => removeLine("hoursBlock", index)}
                   onChange={(index, value) =>
                     changeLine("hoursBlock", index, value)
                   }
-                  placeholder="Mon – Fri: 09:00 – 18:00"
+                  placeholder="Pzt – Cum: 09:00 – 18:00"
                   disabled={disabled}
                 />
               </Card>
@@ -351,41 +350,41 @@ export default function AdminContactSettingsPageInner() {
 
             <div className="space-y-6 xl:col-span-5">
               <Card
-                title="Contact Channels"
-                subtitle="Emails and phone numbers shown in the sidebar."
+                title="İletişim Kanalları"
+                subtitle="Kenar çubuğunda gösterilen e-posta ve telefon numaraları."
               >
                 <Field
                   icon={Mail}
-                  label="Email block title"
+                  label="E-posta blok başlığı"
                   value={data.emailBlock.title}
                   onChange={(value) => changeBlockTitle("emailBlock", value)}
-                  placeholder="Customer service"
+                  placeholder="Müşteri hizmetleri"
                   disabled={disabled}
                 />
                 <Repeater
                   icon={Mail}
-                  label="Email lines"
+                  label="E-posta satırları"
                   items={data.emailBlock.lines}
                   onAdd={() => addLine("emailBlock")}
                   onRemove={(index) => removeLine("emailBlock", index)}
                   onChange={(index, value) =>
                     changeLine("emailBlock", index, value)
                   }
-                  placeholder="support@domain.com"
+                  placeholder="destek@domain.com"
                   disabled={disabled}
                 />
                 <Separator />
                 <Field
                   icon={Phone}
-                  label="Phone block title"
+                  label="Telefon blok başlığı"
                   value={data.phoneBlock.title}
                   onChange={(value) => changeBlockTitle("phoneBlock", value)}
-                  placeholder="Phone"
+                  placeholder="Telefon"
                   disabled={disabled}
                 />
                 <Repeater
                   icon={Phone}
-                  label="Phone lines"
+                  label="Telefon satırları"
                   items={data.phoneBlock.lines}
                   onAdd={() => addLine("phoneBlock")}
                   onRemove={(index) => removeLine("phoneBlock", index)}
@@ -398,29 +397,29 @@ export default function AdminContactSettingsPageInner() {
               </Card>
 
               <Card
-                title="Form Behaviour"
-                subtitle="Toggle the contact form and edit the confirmation copy."
+                title="Form Davranışı"
+                subtitle="İletişim formunu açıp kapatın ve onay metnini düzenleyin."
               >
                 <ToggleRow
-                  label="Enable contact form"
+                  label="İletişim formunu etkinleştir"
                   checked={Boolean(data.formEnabled)}
                   onChange={(value) => update({ formEnabled: value })}
                   disabled={saving}
                 />
                 <TextArea
                   icon={Send}
-                  label="Success message"
+                  label="Başarı mesajı"
                   rows={4}
                   value={data.successMessage}
                   onChange={(value) => update({ successMessage: value })}
-                  placeholder="Shown after a successful form submission."
+                  placeholder="Başarılı form gönderiminden sonra gösterilir."
                   disabled={disabled}
                 />
               </Card>
 
               <Card
-                title="Quick Preview"
-                subtitle="Live snapshot of the right sidebar."
+                title="Hızlı Önizleme"
+                subtitle="Sağ kenar çubuğunun canlı görünümü."
               >
                 <PreviewSidebar data={data} />
               </Card>
@@ -435,7 +434,7 @@ export default function AdminContactSettingsPageInner() {
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
             >
               <RefreshCcw className="h-4 w-4" />
-              Reset
+              Sıfırla
             </button>
             <button
               type="button"
@@ -446,12 +445,12 @@ export default function AdminContactSettingsPageInner() {
               {saving ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving…
+                  Kaydediliyor...
                 </span>
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  Save changes
+                  Değişiklikleri kaydet
                 </>
               )}
             </button>
@@ -462,12 +461,12 @@ export default function AdminContactSettingsPageInner() {
       <aside className="xl:col-span-4">
         <div className="sticky top-20 space-y-6">
           <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-            <h3 className="text-lg font-semibold">Content tips</h3>
+            <h3 className="text-lg font-semibold">İçerik ipuçları</h3>
             <ul className="mt-4 space-y-2 text-sm text-[var(--color-text-admin-muted)]">
-              <li>Keep hero copy under 140 characters for easy scanning.</li>
-              <li>Combine address lines logically and avoid duplicates.</li>
-              <li>Highlight the fastest support channel in the first line.</li>
-              <li>Success message should set clear response expectations.</li>
+              <li>Kolay okunabilirlik için hero metnini 140 karakterin altında tutun.</li>
+              <li>Adres satırlarını mantıklı şekilde birleştirin ve tekrarları önleyin.</li>
+              <li>En hızlı destek kanalını ilk satırda vurgulayın.</li>
+              <li>Başarı mesajı net yanıt beklentisi oluşturmalıdır.</li>
             </ul>
           </div>
         </div>
@@ -611,7 +610,7 @@ function Repeater({
           className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
           disabled={disabled}
         >
-          + Add
+          + Ekle
         </button>
       </div>
 
@@ -633,8 +632,8 @@ function Repeater({
               type="button"
               onClick={() => (disabled ? null : onRemove?.(index))}
               className="rounded-full border border-rose-300 p-1.5 text-rose-600 hover:bg-rose-50 disabled:opacity-60"
-              aria-label="Remove"
-              title="Remove"
+              aria-label="Kaldır"
+              title="Kaldır"
               disabled={disabled}
             >
               <Trash2 className="h-4 w-4" />
@@ -643,7 +642,7 @@ function Repeater({
         ))}
         {!items?.length ? (
           <div className="rounded-xl border border-dashed border-[var(--color-border-admin)] p-3 text-center text-xs text-[var(--color-text-admin-muted)]">
-            No items yet
+            Henüz öğe yok
           </div>
         ) : null}
       </div>

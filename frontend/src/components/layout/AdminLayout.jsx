@@ -44,7 +44,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
         const res = await authApi.me();
         if (mounted && res) setMe(res);
       } catch {
-        /* layout guard will redirect */
+        /* layout guard yönlendirecek */
       }
     })();
     return () => {
@@ -64,40 +64,37 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
   const menu = useMemo(
     () => [
       {
-        label: "Overview",
+        label: "Genel Bakış",
         items: [
-          { to: "/admin/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-          { to: "/admin/analytics", label: "Analytics", Icon: BarChart3 },
-        ],
-      },
-      {
-        label: "Catalog",
-        items: [
-          { to: "/admin/products", label: "Products", Icon: Package },
-          { to: "/admin/categories", label: "Categories", Icon: Tags },
-          { to: "/admin/sets", label: "Sets", Icon: Layers },
-          { to: "/admin/media", label: "Media Library", Icon: Image },
-          { to: "/admin/discounts", label: "Discounts", Icon: Percent },
-          { to: "/admin/coupons", label: "Coupons", Icon: TicketPercent },
-        ],
-      },
-      {
-        label: "Commerce",
-        items: [
-          { to: "/admin/orders", label: "Orders", Icon: ShoppingCart },
-          { to: "/admin/customers", label: "Customers", Icon: Users },
-        ],
-      },
-      {
-        label: "System",
-        items: [
-          { to: "/admin/settings", label: "Settings", Icon: Settings },
           {
-            to: "/admin/color-palette",
-            label: "Color Palette",
-            Icon: Sparkles,
+            to: "/admin/dashboard",
+            label: "Kontrol Paneli",
+            Icon: LayoutDashboard,
           },
+          { to: "/admin/analytics", label: "Analitik", Icon: BarChart3 },
         ],
+      },
+      {
+        label: "Katalog",
+        items: [
+          { to: "/admin/products", label: "Ürünler", Icon: Package },
+          { to: "/admin/categories", label: "Kategoriler", Icon: Tags },
+          { to: "/admin/sets", label: "Setler", Icon: Layers },
+          { to: "/admin/media", label: "Medya Kütüphanesi", Icon: Image },
+          { to: "/admin/discounts", label: "İndirimler", Icon: Percent },
+          { to: "/admin/coupons", label: "Kuponlar", Icon: TicketPercent },
+        ],
+      },
+      {
+        label: "Ticaret",
+        items: [
+          { to: "/admin/orders", label: "Siparişler", Icon: ShoppingCart },
+          { to: "/admin/customers", label: "Müşteriler", Icon: Users },
+        ],
+      },
+      {
+        label: "Sistem",
+        items: [{ to: "/admin/settings", label: "Ayarlar", Icon: Settings }],
       },
     ],
     []
@@ -110,7 +107,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
 
   return (
     <div className="flex min-h-screen bg-[var(--color-bg-admin)] text-[var(--color-text-admin)]">
-      {/* Desktop sidebar */}
+      {/* Masaüstü yan menü */}
       <aside
         className={`hidden md:flex md:flex-col border-r border-[var(--color-border-admin)]/30 bg-[var(--color-bg-sidebar)] text-[var(--color-text-sidebar)] transition-[width] duration-300
         ${
@@ -153,14 +150,14 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
         />
 
         <PageHeader
-          title={title || pageTitleFromBreadcrumb(breadcrumbs) || "Overview"}
+          title={title || pageTitleFromBreadcrumb(breadcrumbs) || "Genel Bakış"}
           subtitle={subtitle}
           actions={actions}
         />
 
         {/* body scroll'u: tüm sayfa scroll, kolonu iç scroll yapmıyoruz */}
         <main className="flex-1">
-          <div className="mx-auto w-full max-w-[1400px] px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-none px-4 pb-8 pt-6 sm:px-6 lg:px-8">
             {children}
           </div>
         </main>
@@ -183,14 +180,14 @@ function SidebarHeader({ collapsed, onToggle }) {
             <span className="text-base font-semibold tracking-tight">
               Ayyıldız
             </span>
-            <span className="text-xs text-white/70">Admin Console</span>
+            <span className="text-xs text-white/70">Yönetim Konsolu</span>
           </div>
         )}
       </Link>
       <button
         onClick={onToggle}
         className="hidden md:inline-flex rounded-lg p-2 text-white/80 -translate-x-5"
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Menüyü genişlet" : "Menüyü daralt"}
       >
         {collapsed ? (
           <ChevronRight className="h-5 w-5" />
@@ -234,7 +231,7 @@ function SidebarFooter({ collapsed, me }) {
             <div className="truncate text-sm font-medium text-white">
               {me?.firstName
                 ? `${me.firstName} ${me.lastName || ""}`.trim()
-                : "Admin"}
+                : "Yönetici"}
             </div>
             <div className="truncate text-xs text-white/70">
               {me?.email || ""}
@@ -245,10 +242,10 @@ function SidebarFooter({ collapsed, me }) {
       <Link
         to="/"
         className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
-        title="Go to storefront"
+        title="Mağazayı Görüntüle"
       >
         <Home className="h-4 w-4" />
-        {!collapsed && <span>View store</span>}
+        {!collapsed && <span>Mağazayı Görüntüle</span>}
       </Link>
     </div>
   );
@@ -259,12 +256,12 @@ function SidebarFooter({ collapsed, me }) {
 function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--color-border-admin)]/40 bg-[var(--color-bg-card)]/95 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-none items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <button
             onClick={onMenuToggle}
             className="flex rounded-lg p-2 text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:hidden"
-            aria-label="Open navigation"
+            aria-label="Menüyü Aç"
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -275,7 +272,7 @@ function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
           <div className="hidden lg:flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-1.5">
             <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
             <input
-              placeholder="Search in admin…"
+              placeholder="Yönetim panelinde ara…"
               className="w-48 border-0 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-admin-muted)]"
             />
           </div>
@@ -292,7 +289,7 @@ function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
 function PageHeader({ title, subtitle, actions }) {
   return (
     <div className="border-b border-[var(--color-border-admin)]/40 bg-[var(--color-bg-admin)]/60">
-      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mx-auto flex w-full max-w-none flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
             {title}
@@ -309,9 +306,7 @@ function PageHeader({ title, subtitle, actions }) {
       </div>
     </div>
   );
-}
-
-/* ---------------- Navigation item ---------------- */
+} /* ---------------- Navigation item ---------------- */
 
 // eslint-disable-next-line no-unused-vars
 function NavItem({ to, label, Icon, collapsed, onNavigate }) {
@@ -384,12 +379,12 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
             <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/15 text-white">
               <Sparkles className="h-5 w-5" />
             </div>
-            <span className="text-lg font-semibold">Admin Console</span>
+            <span className="text-lg font-semibold">Yönetim Konsolu</span>
           </Link>
           <button
             onClick={onClose}
             className="rounded-lg p-2 text-white hover:bg-white/10"
-            aria-label="Close navigation"
+            aria-label="Menüyü Kapat"
           >
             <X className="h-6 w-6" />
           </button>
@@ -416,7 +411,7 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
                 <div className="truncate text-sm font-medium">
                   {me?.firstName
                     ? `${me.firstName} ${me.lastName || ""}`.trim()
-                    : "Admin"}
+                    : "Yönetici"}
                 </div>
                 <div className="truncate text-xs text-white/70">
                   {me?.email || ""}
@@ -431,7 +426,7 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
               className="flex w-full items-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
             >
               <LogOut className="h-4 w-4" />
-              <span>Logout</span>
+              <span>Çıkış Yap</span>
             </button>
             <Link
               to="/"
@@ -439,7 +434,7 @@ function MobileDrawer({ open, onClose, menu, me, onLogout }) {
               className="flex items-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm text-white transition hover:bg-white/10"
             >
               <Home className="h-4 w-4" />
-              <span>View store</span>
+              <span>Mağazayı Görüntüle</span>
             </Link>
           </div>
         </div>
@@ -475,7 +470,7 @@ function UserMenu({ me, onLogout }) {
           {getInitials(me)}
         </div>
         <span className="hidden sm:block text-[var(--color-text-admin)]">
-          {me?.firstName || "Admin"}
+          {me?.firstName || "Yönetici"}
         </span>
         <ChevronDown className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
       </button>
@@ -486,21 +481,21 @@ function UserMenu({ me, onLogout }) {
             <div className="text-sm font-semibold text-[var(--color-text-admin)]">
               {me?.firstName
                 ? `${me.firstName} ${me.lastName || ""}`.trim()
-                : "Admin"}
+                : "Yönetici"}
             </div>
             <div className="truncate text-xs text-[var(--color-text-admin-muted)]">
               {me?.email || ""}
             </div>
           </div>
           <div className="h-px bg-[var(--color-border-admin)]/60" />
-          <MenuLink to="/admin/settings">Profile & Settings</MenuLink>
-          <MenuLink to="/admin/dashboard">Dashboard</MenuLink>
+          <MenuLink to="/admin/settings">Profil ve Ayarlar</MenuLink>
+          <MenuLink to="/admin/dashboard">Kontrol Paneli</MenuLink>
           <button
             onClick={onLogout}
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-[var(--color-bg-hover)]"
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            Çıkış Yap
           </button>
         </div>
       )}

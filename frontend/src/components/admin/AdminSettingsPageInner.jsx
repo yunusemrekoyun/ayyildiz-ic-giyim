@@ -1,4 +1,3 @@
-// src/components/admin/AdminSettingsPageInner.jsx
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { heroApi } from "../../api/heroes";
@@ -91,7 +90,7 @@ function SettingsCard({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-black/5 to-transparent" />
       </div>
 
-      {/* Body */}
+      {/* İçerik */}
       <div className="flex items-center justify-between gap-3 p-4">
         <div className="flex items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--color-accent)]/15 ring-1 ring-[var(--color-accent)]/30">
@@ -171,27 +170,27 @@ export default function AdminSettingsPageInner() {
   }, []);
 
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-      <div className="xl:col-span-8">
-        <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          {/* Header */}
+    <div className="grid min-h-screen grid-cols-1 gap-6 xl:grid-cols-12 auto-rows-fr">
+      <div className="xl:col-span-12 h-full flex flex-col">
+        <div className="flex h-full flex-col rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
+          {/* Başlık */}
           <div className="flex flex-col gap-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
               <Wand2 className="h-4 w-4" />
-              Global Settings
+              Genel Ayarlar
             </div>
             <h2 className="text-2xl font-semibold">
-              Site Settings & Content Blocks
+              Site Ayarları & İçerik Blokları
             </h2>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Manage hero banners, page contents, campaigns, policies and quick
-              settings.
+              Ana sayfa bannerlarını, kampanyaları, sayfa içeriklerini,
+              politikaları ve hızlı ayarları yönetin.
             </p>
           </div>
 
-          {/* --- Categories --- */}
+          {/* --- Kategoriler --- */}
           <SectionBlock
-            title="Home & Marketing"
+            title="Ana Sayfa & Pazarlama"
             subtitle="Hero ve kampanya içeriklerini yönetin."
           >
             <SettingsCard
@@ -209,12 +208,14 @@ export default function AdminSettingsPageInner() {
                     : ImageIcon
                   : undefined
               }
-              mediaAlt={topHero?.title || "Home Hero"}
-              title="Home Hero"
+              mediaAlt={topHero?.title || "Ana Sayfa Hero"}
+              title="Ana Sayfa Hero"
               description={
                 heroes.length
-                  ? `${heroes.length} slide • top: ${topHero?.title || "—"}`
-                  : "Create your first hero"
+                  ? `${heroes.length} slayt • en üstte: ${
+                      topHero?.title || "—"
+                    }`
+                  : "İlk hero slaytını oluştur"
               }
               loading={loadingHeroes}
             />
@@ -232,66 +233,66 @@ export default function AdminSettingsPageInner() {
                   ? Megaphone
                   : undefined
               }
-              mediaAlt={topCampaign?.name || "Home Campaigns"}
-              title="Home Campaigns"
+              mediaAlt={topCampaign?.name || "Ana Sayfa Kampanyaları"}
+              title="Ana Sayfa Kampanyaları"
               description={
                 campaigns.length
-                  ? `${campaigns.length} total • top: ${
+                  ? `${campaigns.length} toplam • en üstte: ${
                       topCampaign?.name || "—"
                     }`
-                  : "Create your first campaign"
+                  : "İlk kampanyayı oluştur"
               }
               loading={loadingCampaigns}
             />
           </SectionBlock>
 
           <SectionBlock
-            title="Pages"
+            title="Sayfalar"
             subtitle="Statik sayfa içeriklerini düzenleyin."
           >
             <SettingsCard
               to="/admin/settings/about"
               icon={FileText}
               mediaIcon={FileText}
-              title="About Page Content"
+              title="Hakkında Sayfası"
             />
             <SettingsCard
               to="/admin/settings/contact"
               icon={Mail}
               mediaIcon={Mail}
-              title="Contact Page Content"
+              title="İletişim Sayfası"
             />
             <SettingsCard
               to="/admin/settings/faq"
               icon={HelpCircle}
               mediaIcon={HelpCircle}
-              title="FAQ Page Content"
+              title="SSS (Sık Sorulan Sorular)"
             />
             <SettingsCard
               to="/admin/settings/shipping-returns"
               icon={Truck}
               mediaIcon={Truck}
-              title="Shipping & Returns"
+              title="Kargo & İade"
             />
           </SectionBlock>
 
-          <SectionBlock title="Policies" subtitle="Yasal metinleri yönetin.">
+          <SectionBlock title="Politikalar" subtitle="Yasal metinleri yönetin.">
             <SettingsCard
               to="/admin/settings/privacy"
               icon={ShieldCheck}
               mediaIcon={ShieldCheck}
-              title="Privacy Policy"
+              title="Gizlilik Politikası"
             />
             <SettingsCard
               to="/admin/settings/terms"
               icon={FileText}
               mediaIcon={FileText}
-              title="Terms of Service"
+              title="Kullanım Şartları"
             />
           </SectionBlock>
 
           <SectionBlock
-            title="Quick & Legacy Settings"
+            title="Hızlı & Eski Ayarlar"
             subtitle="Geçiş dönemine ait küçük ayarlar."
           >
             <div className="col-span-1 md:col-span-2">
@@ -303,33 +304,35 @@ export default function AdminSettingsPageInner() {
           </SectionBlock>
 
           <SectionBlock
-            title="Appearance"
-            subtitle="Tema ve renkler (yakında)."
+            title="Görünüm"
+            subtitle="Tema ve renk ayarları (yakında)."
           >
             <SettingsCard
               to="/admin/settings/theme"
               icon={Palette}
               mediaIcon={Palette}
-              title="Theme & Colors"
-              description="(soon) Adjust palette tokens"
+              title="Tema & Renkler"
+              description="(yakında) Renk paletini düzenle"
             />
           </SectionBlock>
         </div>
       </div>
 
-      {/* Tips Sidebar */}
+      {/* İpuçları
       <aside className="xl:col-span-4">
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          <h3 className="text-lg font-semibold">Tips</h3>
+          <h3 className="text-lg font-semibold">İpuçları</h3>
           <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-admin-muted)]">
-            <li>Prefer short, optimized videos for hero.</li>
-            <li>Button text is optional; keep hero clean.</li>
-            <li>Target can be full shop or specific categories.</li>
-            <li>Use sort order to define slide sequence.</li>
-            <li>Manage About, Contact, FAQ and Shipping pages for clarity.</li>
+            <li>
+              Hero alanı için kısa ve optimize edilmiş videolar tercih edin.
+            </li>
+            <li>Buton metni isteğe bağlıdır; sade tasarım en iyisidir.</li>
+            <li>Hedef tüm mağaza veya belirli kategoriler olabilir.</li>
+            <li>Sıralama numarası slayt sırasını belirler.</li>
+            <li>Hakkında, İletişim, SSS ve Kargo sayfalarını açık tutun.</li>
           </ul>
         </div>
-      </aside>
+      </aside> */}
     </div>
   );
 }

@@ -111,6 +111,7 @@ export default function ProductForm({
       attributeValues.length > 0
     );
   }, [showAttribute, attributeTitle, attributeValues.length]);
+
   useEffect(() => {
     if (!open) return;
     const inv = initialProduct?.inventory || [];
@@ -201,6 +202,7 @@ export default function ProductForm({
     isEditing,
     initialProduct?.inventory,
   ]);
+
   const totalImages = useMemo(
     () => existingImages.length + newImages.length,
     [existingImages.length, newImages.length]
@@ -215,7 +217,7 @@ export default function ProductForm({
       8 - (existingImages.length + newImages.length)
     );
     if (remainingSlots <= 0) {
-      setError("Maximum of 8 images reached");
+      setError("En fazla 8 görsel eklenebilir");
       return;
     }
 
@@ -260,12 +262,12 @@ export default function ProductForm({
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Product name is required");
+      setError("Ürün adı zorunludur");
       return;
     }
     const priceValue = Number(price);
     if (Number.isNaN(priceValue) || priceValue < 0) {
-      setError("Enter a valid product price");
+      setError("Geçerli bir ürün fiyatı girin");
       return;
     }
 
@@ -313,7 +315,7 @@ export default function ProductForm({
       await onSubmit?.(payload);
       onClose?.();
     } catch (err) {
-      const message = extractMessage(err) || "Unable to save product";
+      const message = extractMessage(err) || "Ürün kaydedilemedi";
       setError(message);
     } finally {
       setSubmitting(false);
@@ -323,14 +325,15 @@ export default function ProductForm({
   const variantColumns = useMemo(() => {
     const columns = [];
     if (showColors && colors.length)
-      columns.push({ key: "color", label: "Color" });
-    if (showSizes && sizes.length) columns.push({ key: "size", label: "Size" });
+      columns.push({ key: "color", label: "Renk" });
+    if (showSizes && sizes.length)
+      columns.push({ key: "size", label: "Beden" });
     if (attributeActive)
       columns.push({
         key: "attributeValue",
-        label: attributeTitle || "Option",
+        label: attributeTitle || "Seçenek",
       });
-    if (!columns.length) columns.push({ key: "variant", label: "Variant" });
+    if (!columns.length) columns.push({ key: "variant", label: "Varyant" });
     return columns;
   }, [
     showColors,
@@ -342,7 +345,7 @@ export default function ProductForm({
   ]);
 
   const renderVariantValue = (columnKey, combo) => {
-    if (columnKey === "variant") return "Default";
+    if (columnKey === "variant") return "Varsayılan";
     if (columnKey === "color") {
       return <ColorBadge value={combo.color} />;
     }
@@ -356,8 +359,8 @@ export default function ProductForm({
         if (submitting) return;
         onClose?.();
       }}
-      title={isEditing ? "Edit product" : "Create product"}
-      description="Manage catalog entries, pricing and imagery."
+      title={isEditing ? "Ürünü Düzenle" : "Ürün Oluştur"}
+      description="Katalog kayıtlarını, fiyatları ve görselleri yönetin."
       footer={
         <>
           <button
@@ -366,7 +369,7 @@ export default function ProductForm({
             className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             disabled={submitting}
           >
-            Cancel
+            İptal
           </button>
           <button
             type="submit"
@@ -375,10 +378,10 @@ export default function ProductForm({
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-60"
           >
             {submitting
-              ? "Saving..."
+              ? "Kaydediliyor..."
               : isEditing
-              ? "Update product"
-              : "Create product"}
+              ? "Ürünü Güncelle"
+              : "Ürün Oluştur"}
           </button>
         </>
       }
@@ -392,7 +395,7 @@ export default function ProductForm({
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Product name
+                Ürün adı
                 <span className="text-[var(--color-accent)]">*</span>
               </span>
               <input
@@ -400,13 +403,13 @@ export default function ProductForm({
                 onChange={(event) => setName(event.target.value)}
                 maxLength={160}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="Luxury Silk Pajama Set"
+                placeholder="Lüks İpek Pijama Takımı"
               />
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Price (EUR)<span className="text-[var(--color-accent)]">*</span>
+                Fiyat (EUR)<span className="text-[var(--color-accent)]">*</span>
               </span>
               <input
                 type="number"
@@ -426,14 +429,14 @@ export default function ProductForm({
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Category
+                Kategori
               </span>
               <select
                 value={categoryId || ""}
                 onChange={(event) => setCategoryId(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
               >
-                <option value="">No category assigned</option>
+                <option value="">Kategori atanmadı</option>
                 {categories.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
@@ -444,7 +447,7 @@ export default function ProductForm({
 
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-[var(--color-text-admin)]">
-                Visibility
+                Görünürlük
               </span>
               <label className="inline-flex cursor-pointer items-center gap-2">
                 <input
@@ -454,7 +457,7 @@ export default function ProductForm({
                   className="h-4 w-4 rounded border-[var(--color-border-admin)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                 />
                 <span className="text-sm text-[var(--color-text-admin)]">
-                  {isActive ? "Visible in storefront" : "Hidden"}
+                  {isActive ? "Vitrinde görünür" : "Gizli"}
                 </span>
               </label>
             </div>
@@ -463,52 +466,51 @@ export default function ProductForm({
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Description
+                Açıklama
               </span>
               <textarea
                 rows={4}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="Short marketing copy shown on the product page."
+                placeholder="Ürün sayfasında gösterilen kısa tanıtım yazısı."
               />
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Care instructions
+                Bakım talimatları
               </span>
               <textarea
                 rows={3}
                 value={careInstructions}
                 onChange={(event) => setCareInstructions(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="e.g. Hand wash cold, do not tumble dry"
+                placeholder="Örn. Elde soğuk yıkayın, kurutma makinesi kullanmayın"
               />
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Bullet details
+                Madde madde detaylar
               </span>
               <textarea
                 rows={4}
                 value={detailsInput}
                 onChange={(event) => setDetailsInput(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="One detail per line"
+                placeholder="Her satıra bir detay"
               />
               <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
-                These points appear as bullet items under “Details”.
+                Bu maddeler “Detaylar” bölümünde liste halinde görünür.
               </p>
             </label>
           </div>
         </div>
-
         <div className="grid gap-4 lg:grid-cols-3">
           <SelectionCard
-            title="Colors"
-            description="Add optional colour swatches."
+            title="Renkler"
+            description="İsteğe bağlı renk örnekleri ekleyin."
             checked={showColors}
             onToggle={() => setShowColors((prev) => !prev)}
           >
@@ -518,64 +520,64 @@ export default function ProductForm({
               disabled={!showColors}
             />
             <p className="text-[11px] text-[var(--color-text-admin-muted)]">
-              Choose from curated swatches or add custom HEX colours for this
-              product.
+              Bu ürün için seçili örneklerden yararlanın veya özel HEX renkleri
+              ekleyin.
             </p>
           </SelectionCard>
 
           <SelectionCard
-            title="Sizes"
-            description="Maintain available clothing sizes."
+            title="Bedenler"
+            description="Mevcut kıyafet bedenlerini yönetin."
             checked={showSizes}
             onToggle={() => setShowSizes((prev) => !prev)}
           >
             <TagInput
-              label="Size options"
+              label="Beden seçenekleri"
               values={sizes}
               onChange={setSizes}
-              placeholder="Add size and press Enter"
-              helper="Example: XS, S, M, L, XL"
+              placeholder="Beden ekleyip Enter’a basın"
+              helper="Örnek: XS, S, M, L, XL"
               disabled={!showSizes}
             />
           </SelectionCard>
 
           <SelectionCard
-            title="Product attribute"
-            description="Add a custom option like length or material."
+            title="Ürün özelliği"
+            description="Uzunluk veya materyal gibi özel bir seçenek ekleyin."
             checked={showAttribute}
             onToggle={() => setShowAttribute((prev) => !prev)}
           >
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Attribute title
+                Özellik başlığı
               </span>
               <input
                 value={attributeTitle}
                 onChange={(event) => setAttributeTitle(event.target.value)}
                 disabled={!showAttribute}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] disabled:opacity-60"
-                placeholder="e.g. Cut length"
+                placeholder="Örn. Paça uzunluğu"
               />
             </label>
             <TagInput
-              label="Attribute options"
+              label="Özellik seçenekleri"
               values={attributeValues}
               onChange={setAttributeValues}
-              placeholder="Add option and press Enter"
-              helper="Shown beneath the attribute title."
+              placeholder="Seçenek ekleyip Enter’a basın"
+              helper="Özellik başlığının altında gösterilir."
               disabled={!showAttribute || !attributeTitle.trim()}
             />
           </SelectionCard>
-        </div>
-
+        </div>{" "}
         <div className="rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4 shadow-sm">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h4 className="text-sm font-semibold text-[var(--color-text-admin)]">
-                Inventory management
+                Stok yönetimi
               </h4>
               <p className="text-xs text-[var(--color-text-admin-muted)]">
-                Set stock per variant. Missing values default to zero.
+                Her varyant için stok girin. Boş bırakılanlar sıfır kabul
+                edilir.
               </p>
             </div>
             <button
@@ -583,7 +585,7 @@ export default function ProductForm({
               onClick={() => setInventoryOpen((prev) => !prev)}
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             >
-              {inventoryOpen ? "Hide inventory" : "Manage inventory"}
+              {inventoryOpen ? "Stoku gizle" : "Stoku yönet"}
             </button>
           </div>
           {inventoryOpen && (
@@ -599,7 +601,7 @@ export default function ProductForm({
                         {column.label}
                       </th>
                     ))}
-                    <th className="px-3 py-2 text-left font-medium">Stock</th>
+                    <th className="px-3 py-2 text-left font-medium">Stok</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-border-admin)]/60 text-[var(--color-text-admin)]">
@@ -631,23 +633,23 @@ export default function ProductForm({
             </div>
           )}
         </div>
-
         <div>
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-[var(--color-text-admin)]">
-              Media gallery
+              Medya galerisi
             </h4>
             <span className="text-xs text-[var(--color-text-admin-muted)]">
-              {totalImages} / 8 images
+              {totalImages} / 8 görsel
             </span>
           </div>
           <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
-            Upload high-quality square images. Drag to reorder after save.
+            Yüksek kaliteli kare görseller yükleyin. Kaydettikten sonra
+            sürükleyerek sıralayabilirsiniz.
           </p>
           <div className="mt-3 flex flex-wrap gap-3">
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--color-border-admin)] px-4 py-3 text-sm text-[var(--color-text-admin)] hover:border-[var(--color-text-admin)]">
               <Upload className="h-4 w-4" />
-              Add images
+              Görsel ekle
               <input
                 type="file"
                 accept="image/*"
@@ -671,7 +673,7 @@ export default function ProductForm({
                   onClick={() => removeExistingImage(image)}
                   className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-xs font-semibold text-white"
                 >
-                  Remove
+                  Kaldır
                 </button>
               </figure>
             ))}
@@ -682,7 +684,7 @@ export default function ProductForm({
               >
                 <img
                   src={image.preview}
-                  alt="New upload"
+                  alt="Yeni yükleme"
                   className="h-24 w-24 object-cover"
                 />
                 <button
@@ -690,7 +692,7 @@ export default function ProductForm({
                   onClick={() => removeNewImage(image)}
                   className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-xs font-semibold text-white"
                 >
-                  Remove
+                  Kaldır
                 </button>
               </figure>
             ))}
@@ -701,7 +703,6 @@ export default function ProductForm({
             )}
           </div>
         </div>
-
         {error && (
           <div className="rounded-xl bg-[var(--color-bg-hover)] px-4 py-3 text-sm text-[var(--color-accent)]">
             {error}
@@ -758,7 +759,7 @@ function SelectionCard({ title, description, checked, onToggle, children }) {
             onChange={onToggle}
             className="h-4 w-4 rounded border-[var(--color-border-admin)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
           />
-          Show
+          Göster
         </label>
       </div>
       <div className="mt-3 space-y-3">{children}</div>

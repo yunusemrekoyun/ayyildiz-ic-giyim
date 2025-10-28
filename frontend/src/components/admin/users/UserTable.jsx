@@ -1,4 +1,3 @@
-// src/components/admin/users/UserTable.jsx
 import {
   Eye,
   Mail,
@@ -15,8 +14,8 @@ export default function UserTable({
   loading = false,
   onSelect,
   onChangeRole,
-  onSoftDelete, // NEW
-  onRestore, // NEW
+  onSoftDelete,
+  onRestore,
   currentUserId,
   pendingUserId,
 }) {
@@ -38,11 +37,11 @@ export default function UserTable({
       <div className="grid place-items-center rounded-2xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-6 py-14 text-center">
         <div className="max-w-md space-y-2">
           <p className="text-base font-medium text-[var(--color-text-admin)]">
-            No users yet
+            Henüz kullanıcı yok
           </p>
           <p className="text-sm text-[var(--color-text-admin-muted)]">
-            Invite shoppers or import customer lists to start building your
-            community.
+            Topluluğunuzu oluşturmak için kullanıcı davet edin veya müşteri
+            listelerini içe aktarın.
           </p>
         </div>
       </div>
@@ -54,11 +53,11 @@ export default function UserTable({
       <table className="w-full min-w-[820px] table-fixed divide-y divide-[var(--color-border-admin)]/70 text-sm">
         <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
           <tr>
-            <th className="px-4 py-3 text-left font-medium">Customer</th>
-            <th className="px-4 py-3 text-left font-medium">Contact</th>
-            <th className="px-4 py-3 text-left font-medium">Role</th>
-            <th className="px-4 py-3 text-left font-medium">Joined</th>
-            <th className="px-4 py-3 text-right font-medium">Actions</th>
+            <th className="px-4 py-3 text-left font-medium">Kullanıcı</th>
+            <th className="px-4 py-3 text-left font-medium">İletişim</th>
+            <th className="px-4 py-3 text-left font-medium">Rol</th>
+            <th className="px-4 py-3 text-left font-medium">Katılma Tarihi</th>
+            <th className="px-4 py-3 text-right font-medium">İşlemler</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[var(--color-border-admin)]/60 text-[var(--color-text-admin)]">
@@ -102,13 +101,13 @@ export default function UserTable({
                         </p>
                         {isDeleted && user.deletedAlias ? (
                           <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                            as{" "}
+                            olarak{" "}
                             <span className="italic">{user.deletedAlias}</span>
                           </span>
                         ) : null}
                         {isDeleted ? (
                           <span className="ml-1 inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
-                            <UserX className="h-3 w-3" /> Deleted
+                            <UserX className="h-3 w-3" /> Silindi
                           </span>
                         ) : null}
                       </div>
@@ -161,7 +160,7 @@ export default function UserTable({
                       onClick={() => onSelect?.(user)}
                       className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
                     >
-                      <Eye className="h-4 w-4" /> View
+                      <Eye className="h-4 w-4" /> Görüntüle
                     </button>
 
                     <button
@@ -174,25 +173,25 @@ export default function UserTable({
                       }`}
                       title={
                         isDeleted
-                          ? "Deleted accounts cannot change role"
+                          ? "Silinmiş hesaplarda rol değiştirilemez"
                           : isSelf && user.role === "admin"
-                          ? "You cannot revoke your own admin rights"
+                          ? "Kendi yönetici yetkini kaldıramazsın"
                           : user.role === "admin"
-                          ? "Revoke admin access"
-                          : "Promote to admin"
+                          ? "Yönetici yetkisini kaldır"
+                          : "Yönetici yap"
                       }
                     >
                       {isPending ? (
                         <span className="text-[var(--color-text-admin-muted)]">
-                          Updating...
+                          Güncelleniyor...
                         </span>
                       ) : user.role === "admin" ? (
                         <>
-                          <ShieldOff className="h-4 w-4" /> Remove admin
+                          <ShieldOff className="h-4 w-4" /> Yönetici Kaldır
                         </>
                       ) : (
                         <>
-                          <ShieldCheck className="h-4 w-4" /> Make admin
+                          <ShieldCheck className="h-4 w-4" /> Yönetici Yap
                         </>
                       )}
                     </button>
@@ -204,15 +203,15 @@ export default function UserTable({
                         className="inline-flex items-center gap-2 rounded-full border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60"
                         title={
                           isSelf
-                            ? "You cannot delete yourself"
-                            : "Deactivate (soft delete)"
+                            ? "Kendi hesabını silemezsin"
+                            : "Pasif et (yumuşak silme)"
                         }
                       >
                         {isPending ? (
-                          "Working..."
+                          "İşleniyor..."
                         ) : (
                           <>
-                            <UserX className="h-4 w-4" /> Delete
+                            <UserX className="h-4 w-4" /> Sil
                           </>
                         )}
                       </button>
@@ -221,13 +220,13 @@ export default function UserTable({
                         onClick={() => onRestore?.(user)}
                         disabled={isPending}
                         className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:opacity-60"
-                        title="Restore account"
+                        title="Hesabı geri yükle"
                       >
                         {isPending ? (
-                          "Working..."
+                          "İşleniyor..."
                         ) : (
                           <>
-                            <Undo2 className="h-4 w-4" /> Restore
+                            <Undo2 className="h-4 w-4" /> Geri Yükle
                           </>
                         )}
                       </button>

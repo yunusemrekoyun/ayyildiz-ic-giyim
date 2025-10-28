@@ -15,32 +15,32 @@ import AlertBanner from "../../components/ui/AlertBanner.jsx";
 const SLOT_CONFIG = [
   {
     id: "slot-big",
-    label: "Primary Spotlight",
-    description: "Large 2x2 hero card",
+    label: "Ana Vitrin",
+    description: "Büyük 2x2 hero kartı",
     layout: "BIG",
     sortOrder: 0,
     className: "md:col-span-2 md:row-span-2",
   },
   {
     id: "slot-wide",
-    label: "Wide Banner",
-    description: "2x1 horizontal card",
+    label: "Geniş Banner",
+    description: "2x1 yatay kart",
     layout: "WIDE",
     sortOrder: 1,
     className: "md:col-span-2 md:row-span-1",
   },
   {
     id: "slot-small-a",
-    label: "Tile (Left)",
-    description: "Small tile",
+    label: "Kare (Sol)",
+    description: "Küçük kare",
     layout: "SMALL",
     sortOrder: 2,
     className: "md:col-span-1 md:row-span-1",
   },
   {
     id: "slot-small-b",
-    label: "Tile (Right)",
-    description: "Small tile",
+    label: "Kare (Sağ)",
+    description: "Küçük kare",
     layout: "SMALL",
     sortOrder: 3,
     className: "md:col-span-1 md:row-span-1",
@@ -178,8 +178,8 @@ export default function AdminCampaignLayout() {
         setBanner({
           variant: "success",
           message: highlight
-            ? `Layout updated • ${highlight}${layout ? ` (${layout})` : ""}`
-            : "Campaign layout updated",
+            ? `Yerleşim güncellendi • ${highlight}${layout ? ` (${layout})` : ""}`
+            : "Kampanya yerleşimi güncellendi",
         });
       } catch (error) {
         setBanner({
@@ -216,7 +216,7 @@ export default function AdminCampaignLayout() {
     async (campaignId) => {
       if (!campaignId || saving) return;
       const next = produceAssignments(assignments, null, campaignId);
-      await persistAssignments(next, { highlight: "Available list" });
+      await persistAssignments(next, { highlight: "Uygun liste" });
     },
     [assignments, persistAssignments, saving]
   );
@@ -225,7 +225,7 @@ export default function AdminCampaignLayout() {
     const current = assignments[slotId];
     if (!current) return;
     const next = { ...assignments, [slotId]: null };
-    await persistAssignments(next, { highlight: "Slot cleared" });
+    await persistAssignments(next, { highlight: "Slot temizlendi" });
   };
 
   const handleDragStart = (campaignId) => {
@@ -272,15 +272,15 @@ export default function AdminCampaignLayout() {
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back
+            Geri
           </Link>
           <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs uppercase tracking-wide text-[var(--color-text-admin-muted)]">
             <LayoutDashboard className="h-4 w-4" />
-            Layout
+            Yerleşim
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-[var(--color-text-admin-muted)]">
-          Drag campaigns into the grid to mirror the home page order.
+          Kampanyaları ana sayfa sıralamasını yansıtmak için ızgaraya sürükleyin.
         </div>
       </header>
 
@@ -298,10 +298,10 @@ export default function AdminCampaignLayout() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border-admin)] pb-4">
               <div>
                 <h2 className="text-lg font-semibold text-[var(--color-text-admin)]">
-                  Home Campaign Layout
+                  Anasayfa Kampanya Yerleşimi
                 </h2>
                 <p className="text-xs text-[var(--color-text-admin-muted)]">
-                  Slots reflect the home page layout (big, wide, small, small).
+                  Slotlar ana sayfa yerleşimini yansıtır (büyük, geniş, küçük, küçük).
                 </p>
               </div>
               <button
@@ -313,12 +313,12 @@ export default function AdminCampaignLayout() {
                 {loading ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Refreshing
+                    Yenileniyor
                   </>
                 ) : (
                   <>
                     <Radio className="h-3.5 w-3.5" />
-                    Reset
+                    Sıfırla
                   </>
                 )}
               </button>
@@ -351,7 +351,7 @@ export default function AdminCampaignLayout() {
                         <Square className="h-8 w-8" />
                         <div className="text-sm font-semibold">{slot.label}</div>
                         <p className="text-xs">{slot.description}</p>
-                        <p className="text-[11px] uppercase">Drop campaign here</p>
+                        <p className="text-[11px] uppercase">Kampanyayı buraya bırak</p>
                       </div>
                     )}
                     <div className="pointer-events-none absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-admin-muted)]">
@@ -374,10 +374,10 @@ export default function AdminCampaignLayout() {
             <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border-admin)] pb-3">
               <div>
                 <p className="text-sm font-semibold text-[var(--color-text-admin)]">
-                  Available campaigns
+                  Uygun kampanyalar
                 </p>
                 <p className="text-xs text-[var(--color-text-admin-muted)]">
-                  Drag to assign or drop here to remove.
+                  Atamak için sürükleyin veya kaldırmak için buraya bırakın.
                 </p>
               </div>
               {saving && (
@@ -388,7 +388,7 @@ export default function AdminCampaignLayout() {
             <ul className="mt-3 space-y-3">
               {availableCampaigns.length === 0 ? (
                 <li className="rounded-xl border border-dashed border-[var(--color-border-admin)] px-4 py-6 text-center text-xs text-[var(--color-text-admin-muted)]">
-                  All campaigns are placed in the layout.
+                  Tüm kampanyalar yerleşime yerleştirildi.
                 </li>
               ) : (
                 availableCampaigns.map((campaign) => (
@@ -436,7 +436,7 @@ function SlotCampaignCard({ campaign, onRemove, onDragStart, onDragEnd, disabled
       </div>
       <div className="mt-4 flex items-center justify-between text-xs text-[var(--color-text-admin-muted)]">
         <span>
-          Layout: <strong>{campaign.layout}</strong>
+          Yerleşim: <strong>{campaign.layout}</strong>
         </span>
         <button
           type="button"
@@ -444,7 +444,7 @@ function SlotCampaignCard({ campaign, onRemove, onDragStart, onDragEnd, disabled
           disabled={disabled}
           className="rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
         >
-          Remove
+          Kaldır
         </button>
       </div>
     </div>
@@ -475,7 +475,7 @@ function AvailableCampaignCard({ campaign, onDragStart, onDragEnd, disabled }) {
           </div>
         )}
         <div className="mt-1 text-[11px] uppercase text-[var(--color-text-admin-muted)]">
-          Current layout: {campaign.layout}
+          Geçerli yerleşim: {campaign.layout}
         </div>
       </div>
     </div>
@@ -515,7 +515,7 @@ function produceAssignments(current, targetSlotId, campaignId) {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return "Beklenmeyen hata";
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);

@@ -91,15 +91,15 @@ export default function AdminProducts() {
 
   const handleDeleteProduct = async (product) => {
     const ok = await confirm({
-      title: "Delete product",
-      description: `Delete “${product.name}”? This action cannot be undone.`,
-      confirmText: "Delete",
+      title: "Ürünü sil",
+      description: `“${product.name}” silinsin mi? Bu işlem geri alınamaz.`,
+      confirmText: "Sil",
       tone: "danger",
     });
     if (!ok) return;
     try {
       await productApi.remove(product.id || product.slug);
-      setBanner({ variant: "warning", message: "Product deleted" });
+      setBanner({ variant: "warning", message: "Ürün silindi" });
       await loadProducts(pagination.page);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -109,11 +109,11 @@ export default function AdminProducts() {
   const handleSaveProduct = async (payload) => {
     if (editingProduct?.id) {
       await productApi.update(editingProduct.id, payload);
-      setBanner({ variant: "success", message: "Product updated" });
+      setBanner({ variant: "success", message: "Ürün güncellendi" });
       await loadProducts(pagination.page);
     } else {
       await productApi.create(payload);
-      setBanner({ variant: "success", message: "Product created" });
+      setBanner({ variant: "success", message: "Ürün oluşturuldu" });
       await loadProducts(1);
     }
   };
@@ -128,10 +128,10 @@ export default function AdminProducts() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-            Products
+            Ürünler
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-            Add, edit and curate items across the store catalog.
+            Mağaza kataloğundaki ürünleri ekleyin, düzenleyin ve yönetin.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -139,13 +139,13 @@ export default function AdminProducts() {
             onClick={() => loadProducts(pagination.page)}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            <RefreshCw className="h-4 w-4" /> Refresh
+            <RefreshCw className="h-4 w-4" /> Yenile
           </button>
           <button
             onClick={handleCreateClick}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
           >
-            <PlusCircle className="h-4 w-4" /> New product
+            <PlusCircle className="h-4 w-4" /> Yeni ürün
           </button>
         </div>
       </header>
@@ -156,20 +156,20 @@ export default function AdminProducts() {
           <input
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Search products"
+            placeholder="Ürün ara"
             className="w-full border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
           />
         </label>
         <label className="md:col-span-1 flex items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
           <span className="text-sm text-[var(--color-text-admin-muted)]">
-            Category
+            Kategori
           </span>
           <select
             value={categoryFilter}
             onChange={(event) => setCategoryFilter(event.target.value)}
             className="flex-1 border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
           >
-            <option value="">All categories</option>
+            <option value="">Tüm kategoriler</option>
             {categoryOptions.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.label}
@@ -178,7 +178,7 @@ export default function AdminProducts() {
           </select>
         </label>
         <div className="md:col-span-1 flex items-center justify-end text-xs text-[var(--color-text-admin-muted)]">
-          {pagination.total} products • page {pagination.page} of{" "}
+          {pagination.total} ürün • sayfa {pagination.page} /{" "}
           {pagination.pages}
         </div>
       </div>
@@ -205,14 +205,14 @@ export default function AdminProducts() {
             disabled={pagination.page === 1}
             className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
           >
-            Previous
+            Önceki
           </button>
           <button
             onClick={() => goToPage(pagination.page + 1)}
             disabled={pagination.page >= pagination.pages}
             className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
           >
-            Next
+            Sonraki
           </button>
         </div>
       )}
@@ -240,7 +240,7 @@ function useDebounce(value, delay = 400) {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return "Beklenmeyen hata";
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);

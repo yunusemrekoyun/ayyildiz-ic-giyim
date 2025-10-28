@@ -53,24 +53,32 @@ export default function AdminHeroManagerInner() {
     setItems((arr) => arr.map((x) => (x.id === item.id ? updated : x)));
     setBanner({
       variant: "success",
-      message: `Hero “${updated.title}” is now ${updated.isActive ? "active" : "hidden"}.`,
+      message: `Hero “${updated.title}” artık ${
+        updated.isActive ? "aktif" : "gizli"
+      }.`,
     });
   }
 
   async function remove(item) {
     const ok = await confirm({
-      title: "Delete hero",
-      description: `Delete “${item.title}”? This action cannot be undone.`,
+      title: "Hero’yu sil",
+      description: `“${item.title}” silinsin mi? Bu işlem geri alınamaz.`,
       tone: "danger",
-      confirmText: "Delete",
+      confirmText: "Sil",
     });
     if (!ok) return;
     try {
       await heroApi.remove(item.id);
       setItems((arr) => arr.filter((x) => x.id !== item.id));
-      setBanner({ variant: "warning", message: `Hero “${item.title}” deleted.` });
+      setBanner({
+        variant: "warning",
+        message: `Hero “${item.title}” silindi.`,
+      });
     } catch (error) {
-      setBanner({ variant: "danger", message: error?.message || "Unable to delete hero" });
+      setBanner({
+        variant: "danger",
+        message: error?.message || "Hero silinemedi",
+      });
     }
   }
 
@@ -111,9 +119,9 @@ export default function AdminHeroManagerInner() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-sm text-[var(--color-text-admin-muted)]">
-            Home
+            Anasayfa
           </div>
-          <h2 className="text-xl font-semibold">Hero Manager</h2>
+          <h2 className="text-xl font-semibold">Hero Yöneticisi</h2>
         </div>
         <div className="flex items-center gap-2">
           <Link
@@ -121,14 +129,14 @@ export default function AdminHeroManagerInner() {
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm hover:bg-[var(--color-bg-hover)]"
           >
             <ChevronLeft className="h-4 w-4" />
-            Back to Settings
+            Ayarlara Dön
           </Link>
           <button
             onClick={() => setEditing("new")}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90"
           >
             <Plus className="h-4 w-4" />
-            New Hero
+            Yeni Hero
           </button>
         </div>
       </div>
@@ -158,7 +166,7 @@ export default function AdminHeroManagerInner() {
                 />
               ) : (
                 <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                  No media
+                  Medya yok
                 </div>
               )}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent p-4 text-white">
@@ -175,10 +183,10 @@ export default function AdminHeroManagerInner() {
                   {h.buttonText || "—"}
                 </div>
                 <div className="text-xs text-[var(--color-text-admin-muted)]">
-                  Target:{" "}
+                  Hedef:{" "}
                   {h.target?.type === "CATEGORIES"
-                    ? `Categories(${h.target.categories?.length || 0})`
-                    : "Shop"}
+                    ? `Kategoriler(${h.target.categories?.length || 0})`
+                    : "Mağaza"}
                 </div>
               </div>
 
@@ -186,28 +194,28 @@ export default function AdminHeroManagerInner() {
                 <button
                   onClick={() => move(h, -1)}
                   className="rounded-lg p-2 hover:bg-[var(--color-bg-hover)]"
-                  title="Move up"
+                  title="Yukarı taşı"
                 >
                   <ArrowUp className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => move(h, +1)}
                   className="rounded-lg p-2 hover:bg-[var(--color-bg-hover)]"
-                  title="Move down"
+                  title="Aşağı taşı"
                 >
                   <ArrowDown className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setEditing(h)}
                   className="rounded-lg p-2 hover:bg-[var(--color-bg-hover)]"
-                  title="Edit"
+                  title="Düzenle"
                 >
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => toggleActive(h)}
                   className="rounded-lg p-2 hover:bg-[var(--color-bg-hover)]"
-                  title={h.isActive ? "Deactivate" : "Activate"}
+                  title={h.isActive ? "Devre dışı bırak" : "Etkinleştir"}
                 >
                   {h.isActive ? (
                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -218,7 +226,7 @@ export default function AdminHeroManagerInner() {
                 <button
                   onClick={() => remove(h)}
                   className="rounded-lg p-2 hover:bg-[var(--color-bg-hover)]"
-                  title="Delete"
+                  title="Sil"
                 >
                   <Trash2 className="h-4 w-4 text-rose-600" />
                 </button>
@@ -243,7 +251,10 @@ export default function AdminHeroManagerInner() {
               copy[index] = saved;
               return copy;
             });
-            setBanner({ variant: "success", message: `Hero “${saved.title}” saved.` });
+            setBanner({
+              variant: "success",
+              message: `Hero “${saved.title}” kaydedildi.`,
+            });
           }}
         />
       )}
@@ -291,7 +302,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
         });
       } else {
         if (!file) {
-          setError("Please select an image or a video.");
+          setError("Lütfen bir görsel veya video seçin.");
           setSaving(false);
           return;
         }
@@ -313,7 +324,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
       <div className="absolute inset-x-0 top-0 mx-auto mt-8 w-[min(900px,92vw)] overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-2xl">
         <div className="flex items-center justify-between border-b border-[var(--color-border-admin)] px-5 py-3">
           <div className="text-lg font-semibold">
-            {initial ? "Edit Hero" : "New Hero"}
+            {initial ? "Hero’yu Düzenle" : "Yeni Hero"}
           </div>
           <button
             onClick={onClose}
@@ -336,27 +347,27 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
           {/* SOL */}
           <div className="md:col-span-7 space-y-4">
             <Field
-              label="Title"
+              label="Başlık"
               value={form.title}
               onChange={(v) => setForm((s) => ({ ...s, title: v }))}
               required
             />
             <Field
-              label="Subtitle"
+              label="Alt başlık"
               value={form.subtitle}
               onChange={(v) => setForm((s) => ({ ...s, subtitle: v }))}
               required
             />
             <Field
-              label="Button Text"
+              label="Buton Metni"
               value={form.buttonText}
               onChange={(v) => setForm((s) => ({ ...s, buttonText: v }))}
-              placeholder="(optional)"
+              placeholder="(opsiyonel)"
             />
 
-            {/* Target */}
+            {/* Hedef */}
             <div>
-              <div className="mb-1 text-sm font-medium">Target</div>
+              <div className="mb-1 text-sm font-medium">Hedef</div>
               <div className="flex flex-wrap items-center gap-2">
                 {["SHOP", "CATEGORIES"].map((t) => (
                   <button
@@ -370,7 +381,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
                         : "border-[var(--color-border-admin)] text-[var(--color-text-admin-muted)] hover:bg-[var(--color-bg-hover)]",
                     ].join(" ")}
                   >
-                    {t}
+                    {t === "SHOP" ? "Mağaza" : "Kategoriler"}
                   </button>
                 ))}
               </div>
@@ -378,7 +389,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
               {form.targetType === "CATEGORIES" && (
                 <div className="mt-3">
                   <div className="mb-1 text-xs text-[var(--color-text-admin-muted)]">
-                    Select one or more categories
+                    Bir veya daha fazla kategori seçin
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {allCategories.map((c) => {
@@ -415,13 +426,13 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field
-                label="Active"
+                label="Aktif"
                 type="checkbox"
                 checked={!!form.isActive}
                 onChange={(v) => setForm((s) => ({ ...s, isActive: v }))}
               />
               <Field
-                label="Sort Order"
+                label="Sıra"
                 type="number"
                 value={form.sortOrder}
                 onChange={(v) =>
@@ -440,16 +451,16 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
                 className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-5 py-2.5 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90 disabled:opacity-60"
               >
                 <Save className="h-4 w-4" />
-                Save
+                Kaydet
               </button>
             </div>
           </div>
 
-          {/* SAĞ: MEDIA */}
+          {/* SAĞ: MEDYA */}
           <div className="md:col-span-5">
             <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] p-3">
               <div className="mb-2 text-sm font-medium">
-                Media (image or video)
+                Medya (görsel veya video)
               </div>
 
               <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]">
@@ -465,7 +476,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
                     ) : (
                       <img
                         src={mediaPreview}
-                        alt="preview"
+                        alt="Önizleme"
                         className="h-full w-full object-cover"
                       />
                     )
@@ -478,13 +489,13 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
                   ) : initialHasImage ? (
                     <img
                       src={mediaPreview}
-                      alt="preview"
+                      alt="Önizleme"
                       className="h-full w-full object-cover"
                     />
                   ) : null
                 ) : (
                   <div className="grid h-full place-items-center text-[var(--color-text-admin-muted)]">
-                    No media
+                    Medya yok
                   </div>
                 )}
               </div>
@@ -497,7 +508,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
                     className="hidden"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
                   />
-                  Upload
+                  Yükle
                 </label>
                 {initial?.id && (
                   <label className="inline-flex items-center gap-2 text-sm">
@@ -506,13 +517,13 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
                       checked={!!removeMedia}
                       onChange={(e) => setRemoveMedia(e.target.checked)}
                     />
-                    Remove current media
+                    Mevcut medyayı kaldır
                   </label>
                 )}
               </div>
 
               <div className="mt-2 text-xs text-[var(--color-text-admin-muted)]">
-                Only one media is allowed (either image or video).
+                Yalnızca tek bir medya öğesine izin verilir (görsel veya video).
               </div>
             </div>
           </div>
@@ -565,8 +576,8 @@ function Field({
 function parseErr(e) {
   try {
     const msg = JSON.parse(e?.message || "")?.message;
-    return msg || e?.message || "Unexpected error";
+    return msg || e?.message || "Beklenmeyen hata";
   } catch {
-    return e?.message || "Unexpected error";
+    return e?.message || "Beklenmeyen hata";
   }
 }

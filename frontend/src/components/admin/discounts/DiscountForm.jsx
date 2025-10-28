@@ -65,13 +65,7 @@ export default function DiscountForm({
       mapInitial(initialDiscount?.appliesTo?.categories, categoryOptions)
     );
     setError("");
-  }, [
-    open,
-    initialDiscount,
-    productOptions,
-    setOptions,
-    categoryOptions,
-  ]);
+  }, [open, initialDiscount, productOptions, setOptions, categoryOptions]);
 
   const productNameMap = useMemo(() => {
     const map = new Map();
@@ -99,12 +93,12 @@ export default function DiscountForm({
     if (submitting) return;
 
     if (!name.trim()) {
-      setError("Name is required");
+      setError("İndirim adı zorunludur");
       return;
     }
     const perc = Number(percentage);
     if (!Number.isFinite(perc) || perc <= 0 || perc > 100) {
-      setError("Percentage must be between 1 and 100");
+      setError("Yüzde değeri 1 ile 100 arasında olmalıdır");
       return;
     }
     if (
@@ -112,7 +106,7 @@ export default function DiscountForm({
       selectedSets.length === 0 &&
       selectedCategories.length === 0
     ) {
-      setError("Select at least one product, set or category");
+      setError("En az bir ürün, set veya kategori seçin");
       return;
     }
 
@@ -125,9 +119,7 @@ export default function DiscountForm({
       products: selectedProducts
         .map((item) => normalizeId(item.id))
         .filter(Boolean),
-      sets: selectedSets
-        .map((item) => normalizeId(item.id))
-        .filter(Boolean),
+      sets: selectedSets.map((item) => normalizeId(item.id)).filter(Boolean),
       categories: selectedCategories
         .map((item) => normalizeId(item.id))
         .filter(Boolean),
@@ -139,10 +131,9 @@ export default function DiscountForm({
     const setCount = selectedSets.length;
     const categoryCount = selectedCategories.length;
     const parts = [];
-    if (productCount) parts.push(`${productCount} product${productCount > 1 ? "s" : ""}`);
-    if (setCount) parts.push(`${setCount} set${setCount > 1 ? "s" : ""}`);
-    if (categoryCount)
-      parts.push(`${categoryCount} categor${categoryCount > 1 ? "ies" : "y"}`);
+    if (productCount) parts.push(`${productCount} ürün`);
+    if (setCount) parts.push(`${setCount} set`);
+    if (categoryCount) parts.push(`${categoryCount} kategori`);
     return parts.join(" • ");
   }, [selectedProducts.length, selectedSets.length, selectedCategories.length]);
 
@@ -150,8 +141,8 @@ export default function DiscountForm({
     <AdminModal
       open={open}
       onClose={onClose}
-      title={isEditing ? "Edit discount" : "Create discount"}
-      description="Define percentage promotions and assign them to products, sets or categories."
+      title={isEditing ? "İndirimi Düzenle" : "İndirim Oluştur"}
+      description="Yüzdelik indirimler tanımlayın ve ürün, set veya kategorilere atayın."
       footer={
         <>
           <button
@@ -160,7 +151,7 @@ export default function DiscountForm({
             className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             disabled={submitting}
           >
-            Cancel
+            İptal
           </button>
           <button
             type="submit"
@@ -168,7 +159,7 @@ export default function DiscountForm({
             className="rounded-full bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-60"
             disabled={submitting}
           >
-            {isEditing ? "Save changes" : "Create discount"}
+            {isEditing ? "Değişiklikleri Kaydet" : "İndirim Oluştur"}
           </button>
         </>
       }
@@ -185,20 +176,20 @@ export default function DiscountForm({
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-              Name
+              İsim
             </span>
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
               className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-              placeholder="Summer sale"
+              placeholder="Yaz indirimi"
               disabled={submitting}
             />
           </label>
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-              Percentage
+              Yüzde
             </span>
             <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2">
               <input
@@ -212,21 +203,26 @@ export default function DiscountForm({
                 placeholder="15"
                 disabled={submitting}
               />
-              <span className="text-sm text-[var(--color-text-admin-muted)]">%</span>
+              <span className="text-sm text-[var(--color-text-admin-muted)]">
+                %
+              </span>
             </div>
           </label>
         </div>
 
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-            Description <span className="text-[var(--color-text-admin-muted)]">(optional)</span>
+            Açıklama{" "}
+            <span className="text-[var(--color-text-admin-muted)]">
+              (isteğe bağlı)
+            </span>
           </span>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={3}
             className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-            placeholder="Visible to staff only"
+            placeholder="Yalnızca personele görünür"
             disabled={submitting}
           />
         </label>
@@ -240,42 +236,42 @@ export default function DiscountForm({
               className="h-4 w-4 rounded border-[var(--color-border-admin)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
               disabled={submitting}
             />
-            Active immediately
+            Hemen aktif et
           </label>
           {coverageHint && (
             <span className="text-xs text-[var(--color-text-admin-muted)]">
-              Targets: {coverageHint}
+              Hedefler: {coverageHint}
             </span>
           )}
         </div>
 
         <EntityPicker
-          label="Products"
+          label="Ürünler"
           options={productOptions}
           value={selectedProducts}
           onChange={setSelectedProducts}
-          placeholder="Search products by name"
-          helper="Discount applies directly to selected products."
+          placeholder="Ürün adıyla ara"
+          helper="İndirim doğrudan seçili ürünlere uygulanır."
           disabled={submitting}
         />
 
         <EntityPicker
-          label="Sets"
+          label="Setler"
           options={setOptions}
           value={selectedSets}
           onChange={setSelectedSets}
-          placeholder="Search sets"
-          helper="Discount applies to selected sets as a whole."
+          placeholder="Setleri ara"
+          helper="İndirim seçilen setlerin tamamına uygulanır."
           disabled={submitting}
         />
 
         <EntityPicker
-          label="Categories"
+          label="Kategoriler"
           options={categoryOptions}
           value={selectedCategories}
           onChange={setSelectedCategories}
-          placeholder="Search categories"
-          helper="Includes all products within the selected categories and their descendants."
+          placeholder="Kategorileri ara"
+          helper="Seçili kategoriler ve alt kategorilerindeki tüm ürünleri kapsar."
           disabled={submitting}
         />
 
@@ -283,44 +279,46 @@ export default function DiscountForm({
           <div className="space-y-3">
             <AlertBanner
               variant="warning"
-              title="Conflicting discounts detected"
-              message={conflict.message || "Selected targets already have discounts."}
+              title="Çakışan indirimler tespit edildi"
+              message={
+                conflict.message ||
+                "Seçilen hedeflerde zaten indirim bulunuyor."
+              }
             />
             <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-4 py-3 text-sm">
               <p className="mb-2 font-medium text-[var(--color-text-admin)]">
-                Affected discounts
+                Etkilenen indirimler
               </p>
               <ul className="space-y-2">
                 {conflict.conflicts.map((entry) => (
-                  <li key={entry.id} className="rounded-lg bg-[var(--color-bg-hover)] px-3 py-2">
+                  <li
+                    key={entry.id}
+                    className="rounded-lg bg-[var(--color-bg-hover)] px-3 py-2"
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-medium text-[var(--color-text-admin)]">
-                          {entry.name || "Untitled discount"}
+                          {entry.name || "İsimsiz indirim"}
                         </p>
                         <p className="text-xs text-[var(--color-text-admin-muted)]">
-                          {entry.percentage}% off
+                          %{entry.percentage} indirim
                         </p>
                       </div>
                       <div className="text-xs text-[var(--color-text-admin-muted)] text-right">
                         {entry.productIds?.length
-                          ? `${entry.productIds.length} product${
-                              entry.productIds.length > 1 ? "s" : ""
-                            }`
+                          ? `${entry.productIds.length} ürün`
                           : null}
                         {entry.setIds?.length
-                          ? `${entry.productIds?.length ? " • " : ""}${entry.setIds.length} set${
-                              entry.setIds.length > 1 ? "s" : ""
-                            }`
+                          ? `${entry.productIds?.length ? " • " : ""}${
+                              entry.setIds.length
+                            } set`
                           : null}
                         {entry.categoryIds?.length
                           ? `${
                               entry.productIds?.length || entry.setIds?.length
                                 ? " • "
                                 : ""
-                            }${entry.categoryIds.length} categor${
-                              entry.categoryIds.length > 1 ? "ies" : "y"
-                            }`
+                            }${entry.categoryIds.length} kategori`
                           : null}
                       </div>
                     </div>
@@ -332,19 +330,19 @@ export default function DiscountForm({
                           <li key={id}>{productNameMap.get(id) || id}</li>
                         ))}
                         {entry.productIds?.length > 5 && (
-                          <li>… {entry.productIds.length - 5} more</li>
+                          <li>… {entry.productIds.length - 5} daha</li>
                         )}
                         {entry.setIds?.slice(0, 5).map((id) => (
                           <li key={id}>{setNameMap.get(id) || id}</li>
                         ))}
                         {entry.setIds?.length > 5 && (
-                          <li>… {entry.setIds.length - 5} more</li>
+                          <li>… {entry.setIds.length - 5} daha</li>
                         )}
                         {entry.categoryIds?.slice(0, 5).map((id) => (
                           <li key={id}>{categoryNameMap.get(id) || id}</li>
                         ))}
                         {entry.categoryIds?.length > 5 && (
-                          <li>… {entry.categoryIds.length - 5} more</li>
+                          <li>… {entry.categoryIds.length - 5} daha</li>
                         )}
                       </ul>
                     )}
@@ -359,7 +357,7 @@ export default function DiscountForm({
                 className="inline-flex items-center gap-1 rounded-full bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-60"
                 disabled={submitting}
               >
-                Overwrite existing
+                Mevcut olanın üzerine yaz
               </button>
               <button
                 type="button"
@@ -367,7 +365,7 @@ export default function DiscountForm({
                 className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
                 disabled={submitting}
               >
-                Apply to non-conflicting only
+                Yalnızca çakışmayanlara uygula
               </button>
               <button
                 type="button"
@@ -375,7 +373,7 @@ export default function DiscountForm({
                 className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
                 disabled={submitting}
               >
-                Cancel action
+                İşlemi iptal et
               </button>
             </div>
           </div>
@@ -383,8 +381,7 @@ export default function DiscountForm({
 
         <div className="rounded-xl border border-dashed border-[var(--color-border-admin)] px-4 py-3 text-xs text-[var(--color-text-admin-muted)]">
           <p>
-            Final price preview example: {currency.format(120)} →
-            {" "}
+            Fiyat önizleme örneği: {currency.format(120)} →{" "}
             {percentage
               ? currency.format(
                   Math.max(0, 120 - (120 * Number(percentage || 0)) / 100)

@@ -50,10 +50,10 @@ export default function CategoryTree({
       <div className="flex items-center justify-between border-b border-[var(--color-border-admin)] px-4 py-4">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-admin)]">
-            Category Tree
+            Kategori Ağacı
           </h3>
           <p className="text-xs text-[var(--color-text-admin-muted)]">
-            {totalCount} {totalCount === 1 ? "entry" : "entries"}
+            {totalCount} {totalCount === 1 ? "kayıt" : "kayıt"}
           </p>
         </div>
         <button
@@ -61,7 +61,7 @@ export default function CategoryTree({
           className="inline-flex items-center gap-1 rounded-full bg-[var(--color-bg-hover)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]/70"
         >
           <PlusCircle className="h-4 w-4" />
-          New root
+          Yeni kök
         </button>
       </div>
 
@@ -113,7 +113,7 @@ function TreeNode({ node, depth, expanded, onToggle, selectedId, onSelect }) {
               ? "hover:border-[var(--color-text-admin)]"
               : "pointer-events-none opacity-0"
           }`}
-          aria-label={isExpanded ? "Collapse" : "Expand"}
+          aria-label={isExpanded ? "Daralt" : "Genişlet"}
         >
           {hasChildren ? (
             isExpanded ? (
@@ -135,7 +135,7 @@ function TreeNode({ node, depth, expanded, onToggle, selectedId, onSelect }) {
             {node.image?.url && (
               <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--color-text-admin-muted)]">
                 <ImageIcon className="h-3 w-3" />
-                image
+                görsel
               </span>
             )}
           </span>
@@ -172,14 +172,14 @@ function EmptyState({ onCreateRoot }) {
         <FolderTree className="h-6 w-6" />
       </div>
       <p className="text-sm text-[var(--color-text-admin-muted)]">
-        No categories yet. Create your first root category to get started.
+        Henüz kategori yok. Başlamak için ilk kök kategorinizi oluşturun.
       </p>
       <button
         onClick={onCreateRoot}
         className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
       >
         <PlusCircle className="h-4 w-4" />
-        Add root category
+        Kök kategori ekle
       </button>
     </div>
   );

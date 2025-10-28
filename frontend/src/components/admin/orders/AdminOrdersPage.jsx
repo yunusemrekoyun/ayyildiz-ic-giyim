@@ -14,12 +14,12 @@ import {
 import OrderDetailsModal from "../../orders/OrderDetailsModal";
 
 const STATUS_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "pending", label: "Pending" },
-  { value: "paid", label: "Paid" },
-  { value: "shipped", label: "Shipped" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "", label: "Tümü" },
+  { value: "pending", label: "Beklemede" },
+  { value: "paid", label: "Ödendi" },
+  { value: "shipped", label: "Kargolandı" },
+  { value: "completed", label: "Tamamlandı" },
+  { value: "cancelled", label: "İptal Edildi" },
 ];
 
 const STATUS_COLORS = {
@@ -44,11 +44,18 @@ const money = (value) => {
 function StatusBadge({ status }) {
   const key = String(status || "pending").toLowerCase();
   const cls = STATUS_COLORS[key] || STATUS_COLORS.pending;
+  const labels = {
+    pending: "Beklemede",
+    paid: "Ödendi",
+    shipped: "Kargolandı",
+    completed: "Tamamlandı",
+    cancelled: "İptal Edildi",
+  };
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${cls}`}
     >
-      {key.charAt(0).toUpperCase() + key.slice(1)}
+      {labels[key] || "Bilinmiyor"}
     </span>
   );
 }
@@ -78,7 +85,7 @@ export default function AdminOrdersPage() {
     } catch (error) {
       setBanner({
         variant: "danger",
-        message: error?.message || "Unable to load orders",
+        message: error?.message || "Siparişler yüklenemedi",
       });
     } finally {
       setLoading(false);
@@ -113,11 +120,11 @@ export default function AdminOrdersPage() {
             : order
         )
       );
-      setBanner({ variant: "success", message: "Order status updated" });
+      setBanner({ variant: "success", message: "Sipariş durumu güncellendi" });
     } catch (error) {
       setBanner({
         variant: "danger",
-        message: error?.message || "Unable to update status",
+        message: error?.message || "Durum güncellenemedi",
       });
     } finally {
       setBusyOrderId(null);
@@ -131,11 +138,11 @@ export default function AdminOrdersPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-            Orders
+            Siparişler
           </h1>
           <p className="text-sm text-[var(--color-text-admin-muted)]">
-            Monitor incoming orders, update statuses and review shipment
-            details.
+            Gelen siparişleri görüntüleyin, durumlarını güncelleyin ve kargo
+            detaylarını inceleyin.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -143,7 +150,7 @@ export default function AdminOrdersPage() {
             onClick={onRefresh}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm hover:bg-[var(--color-bg-hover)]"
           >
-            <RefreshCw className="h-4 w-4" /> Refresh
+            <RefreshCw className="h-4 w-4" /> Yenile
           </button>
         </div>
       </header>
@@ -166,7 +173,7 @@ export default function AdminOrdersPage() {
             <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
             <input
               className="w-full border-0 bg-transparent text-sm outline-none"
-              placeholder="Search by order number"
+              placeholder="Sipariş numarasına göre ara"
               value={filters.q}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, q: e.target.value }))
@@ -191,7 +198,7 @@ export default function AdminOrdersPage() {
               type="submit"
               className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90"
             >
-              <Search className="h-4 w-4" /> Search
+              <Search className="h-4 w-4" /> Ara
             </button>
           </div>
         </form>
@@ -202,25 +209,25 @@ export default function AdminOrdersPage() {
           <table className="min-w-full divide-y divide-[var(--color-border-admin)]/60 text-sm">
             <thead className="bg-[var(--color-bg-admin)]/60">
               <tr className="text-left text-[var(--color-text-admin-muted)]">
-                <th className="px-4 py-3 font-medium">Order</th>
-                <th className="px-4 py-3 font-medium">Customer</th>
-                <th className="px-4 py-3 font-medium">Total</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Placed</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
+                <th className="px-4 py-3 font-medium">Sipariş</th>
+                <th className="px-4 py-3 font-medium">Müşteri</th>
+                <th className="px-4 py-3 font-medium">Toplam</th>
+                <th className="px-4 py-3 font-medium">Durum</th>
+                <th className="px-4 py-3 font-medium">Tarih</th>
+                <th className="px-4 py-3 font-medium text-right">İşlemler</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-admin)]/50">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-sm">
-                    Loading orders...
+                    Siparişler yükleniyor...
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-sm">
-                    No orders found.
+                    Hiç sipariş bulunamadı.
                   </td>
                 </tr>
               ) : (
@@ -244,7 +251,7 @@ export default function AdminOrdersPage() {
                           </span>
                           <span className="flex items-center gap-1 text-xs text-[var(--color-text-admin-muted)]">
                             <PackageCheck className="h-3.5 w-3.5" />
-                            {order.items?.length || 0} items
+                            {order.items?.length || 0} ürün
                           </span>
                         </div>
                       </td>
@@ -275,7 +282,7 @@ export default function AdminOrdersPage() {
                             {money(order.total)}
                           </span>
                           <span className="text-xs text-[var(--color-text-admin-muted)]">
-                            {order.shippingName || "Shipping"}:{" "}
+                            {order.shippingName || "Kargo"}:{" "}
                             {money(order.shipping)}
                           </span>
                         </div>
@@ -305,7 +312,7 @@ export default function AdminOrdersPage() {
                         <div className="flex flex-col gap-1">
                           <span className="flex items-center gap-1 text-xs text-[var(--color-text-admin-muted)]">
                             <CalendarDays className="h-3.5 w-3.5" />
-                            Created
+                            Oluşturulma
                           </span>
                           <span>{created}</span>
                         </div>
@@ -316,14 +323,14 @@ export default function AdminOrdersPage() {
                             onClick={() => setSelectedOrderId(order.id)}
                             className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
                           >
-                            <Truck className="h-3.5 w-3.5" /> View
+                            <Truck className="h-3.5 w-3.5" /> Görüntüle
                           </button>
                           <button
                             onClick={() =>
                               setSelectedOrderId(order.orderNumber)
                             }
                             className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-                            title="Open by order number"
+                            title="Sipariş numarasıyla aç"
                           >
                             <ArrowLeftRight className="h-3.5 w-3.5" />
                           </button>
@@ -339,7 +346,8 @@ export default function AdminOrdersPage() {
 
         <footer className="flex items-center justify-between border-t border-[var(--color-border-admin)]/60 px-4 py-3 text-sm text-[var(--color-text-admin-muted)]">
           <span>
-            Showing {rows.length} of {pagination.total || rows.length} orders
+            Toplam {pagination.total || rows.length} siparişten {rows.length}{" "}
+            tanesi gösteriliyor
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -347,17 +355,17 @@ export default function AdminOrdersPage() {
               onClick={() => fetchOrders(Math.max(1, page - 1), filters)}
               className="rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
             >
-              Prev
+              Önceki
             </button>
             <span>
-              Page {page} / {pagination.pages || 1}
+              Sayfa {page} / {pagination.pages || 1}
             </span>
             <button
               disabled={page >= (pagination.pages || 1) || loading}
               onClick={() => fetchOrders(page + 1, filters)}
               className="rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
             >
-              Next
+              Sonraki
             </button>
           </div>
         </footer>

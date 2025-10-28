@@ -103,11 +103,11 @@ function makeTrend(days = 30) {
 function makeTraffic() {
   // toplam %100
   const raw = [
-    { key: "Organic", color: "var(--color-primary)" },
-    { key: "Paid", color: "var(--color-accent)" },
-    { key: "Social", color: "var(--color-secondary)" },
-    { key: "Referral", color: "var(--color-surface)" },
-    { key: "Direct", color: "var(--color-contact-bg)" },
+    { key: "Organik", color: "var(--color-primary)" },
+    { key: "Ücretli", color: "var(--color-accent)" },
+    { key: "Sosyal", color: "var(--color-secondary)" },
+    { key: "Yönlendirme", color: "var(--color-surface)" },
+    { key: "Doğrudan", color: "var(--color-contact-bg)" },
   ].map((x) => ({ ...x, v: Math.random() * 30 + 10 }));
   const sum = raw.reduce((a, b) => a + b.v, 0);
   return raw.map((x) => ({ ...x, value: Math.round((x.v / sum) * 100) }));
@@ -115,8 +115,8 @@ function makeTraffic() {
 
 function makeDevices() {
   const d = [
-    { key: "Mobile", color: "var(--color-accent)" },
-    { key: "Desktop", color: "var(--color-primary)" },
+    { key: "Mobil", color: "var(--color-accent)" },
+    { key: "Masaüstü", color: "var(--color-primary)" },
     { key: "Tablet", color: "var(--color-secondary)" },
   ].map((x) => ({ ...x, v: Math.random() * 50 + 15 }));
   const sum = d.reduce((a, b) => a + b.v, 0);
@@ -150,11 +150,11 @@ function makeFunnel() {
   const checkout = Math.round(visits * 0.1);
   const purchase = Math.round(visits * 0.07);
   return [
-    { name: "Visits", value: visits },
-    { name: "Product Views", value: view },
-    { name: "Add to Cart", value: add },
-    { name: "Checkout", value: checkout },
-    { name: "Purchases", value: purchase },
+    { name: "Ziyaretler", value: visits },
+    { name: "Ürün Görüntülemeleri", value: view },
+    { name: "Sepete Eklemeler", value: add },
+    { name: "Ödeme", value: checkout },
+    { name: "Satın Almalar", value: purchase },
   ];
 }
 
@@ -194,26 +194,26 @@ export default function AdminAnalytics() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Kpi
           icon={<Users className="h-5 w-5" />}
-          title="Visitors"
+          title="Ziyaretçiler"
           value={visitorsCount}
           trend="+8%"
         />
         <Kpi
           icon={<MousePointer2 className="h-5 w-5" />}
-          title="Sessions"
+          title="Oturumlar"
           value={sessionsCount}
           trend="+5%"
         />
         <Kpi
           icon={<TrendingUp className="h-5 w-5" />}
-          title="Bounce Rate"
+          title="Hemen Çıkma Oranı"
           value={bounceCount}
           trend="-2%"
           negative
         />
         <Kpi
           icon={<Clock3 className="h-5 w-5" />}
-          title="Avg. Session"
+          title="Ort. Oturum Süresi"
           value={avgDur}
           trend="+6%"
         />
@@ -223,8 +223,8 @@ export default function AdminAnalytics() {
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Visitors & Sessions (30 days)"
-            subtitle="smoothed, includes bots filtering"
+            title="Ziyaretçi ve Oturumlar (30 gün)"
+            subtitle="düzgünleştirilmiş, bot filtrelemesi içerir"
           />
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -279,7 +279,7 @@ export default function AdminAnalytics() {
                 <Area
                   type="monotone"
                   dataKey="visitors"
-                  name="Visitors"
+                  name="Ziyaretçiler"
                   stroke="var(--color-primary)"
                   fill="url(#visGrad)"
                   strokeWidth={2}
@@ -287,7 +287,7 @@ export default function AdminAnalytics() {
                 <Area
                   type="monotone"
                   dataKey="sessions"
-                  name="Sessions"
+                  name="Oturumlar"
                   stroke="var(--color-accent)"
                   fill="url(#sesGrad)"
                   strokeWidth={2}
@@ -299,8 +299,8 @@ export default function AdminAnalytics() {
 
         <Card>
           <CardHeader
-            title="Traffic Sources"
-            subtitle="share of total sessions"
+            title="Trafik Kaynakları"
+            subtitle="toplam oturum payı"
           />
           <div className="flex items-center gap-6">
             <div className="h-56 w-56">
@@ -341,12 +341,15 @@ export default function AdminAnalytics() {
       {/* Heatmap + Devices */}
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Hourly Activity Heatmap" subtitle="last 7 days" />
+          <CardHeader
+            title="Saatlik Aktivite Isı Haritası"
+            subtitle="son 7 gün"
+          />
           <Heatmap data={heat} />
         </Card>
 
         <Card>
-          <CardHeader title="Devices" subtitle="share of sessions" />
+          <CardHeader title="Cihazlar" subtitle="oturum payı" />
           <div className="flex items-center gap-6">
             <div className="h-56 w-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -386,7 +389,10 @@ export default function AdminAnalytics() {
       {/* Countries + Funnel */}
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Top Countries" subtitle="by visitors" />
+          <CardHeader
+            title="En Çok Ziyaretçi Gelen Ülkeler"
+            subtitle="ziyaretçi sayısına göre"
+          />
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -424,7 +430,10 @@ export default function AdminAnalytics() {
         </Card>
 
         <Card>
-          <CardHeader title="Conversion Funnel" subtitle="session → purchase" />
+          <CardHeader
+            title="Dönüşüm Hunisi"
+            subtitle="oturum → satın alma"
+          />
           <Funnel data={funnel} />
         </Card>
       </div>
@@ -457,7 +466,7 @@ function Kpi({ icon, title, value, trend, negative = false }) {
 }
 
 function Heatmap({ data }) {
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const days = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[720px]">

@@ -39,7 +39,7 @@ function useCountUp(target = 0, ms = 900) {
 function RingStat({
   size = 96,
   value = 72,
-  label = "Conversion",
+  label = "Dönüşüm",
   color = "var(--color-accent)",
 }) {
   const [pct, setPct] = useState(0);
@@ -81,7 +81,7 @@ function RingStat({
       </div>
       <div className="space-y-0.5">
         <div className="text-sm text-text-admin-muted">{label}</div>
-        <div className="text-xs text-secondary">this month</div>
+        <div className="text-xs text-secondary">bu ay</div>
       </div>
     </div>
   );
@@ -105,7 +105,7 @@ function makeSparkData(days = 12) {
 
 function makeBars(categories = 6) {
   return Array.from({ length: categories }).map((_, i) => ({
-    name: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i] || `D${i}`,
+    name: ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"][i] || `G${i}`,
     orders: Math.round(20 + Math.random() * 80),
     refunds: Math.round(Math.random() * 12),
   }));
@@ -140,28 +140,28 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           icon={<ShoppingCart className="h-5 w-5" />}
-          title="Orders"
+          title="Siparişler"
           value={orders}
           delta="+12%"
           positive
         />
         <KpiCard
           icon={<Users className="h-5 w-5" />}
-          title="New Customers"
+          title="Yeni Müşteriler"
           value={customers}
           delta="+5%"
           positive
         />
         <KpiCard
           icon={<Package className="h-5 w-5" />}
-          title="Active Products"
+          title="Aktif Ürünler"
           value={products}
           delta="-1%"
           positive={false}
         />
         <KpiCard
           icon={<Tag className="h-5 w-5" />}
-          title="Active Coupons"
+          title="Aktif Kuponlar"
           value={coupons}
           delta="+2"
           positive
@@ -172,8 +172,8 @@ export default function AdminDashboard() {
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Revenue (last 14 days)"
-            subtitle="incl. taxes & shipping"
+            title="Gelir (son 14 gün)"
+            subtitle="vergiler ve kargo dahil"
           />
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -227,8 +227,8 @@ export default function AdminDashboard() {
 
         <Card>
           <CardHeader
-            title="Weekly Orders vs Refunds"
-            subtitle="volume by day"
+            title="Haftalık Sipariş vs İade"
+            subtitle="günlük adet"
           />
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -270,12 +270,12 @@ export default function AdminDashboard() {
           <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-text-admin-muted">
             <RingStat
               value={76}
-              label="Fulfillment SLA"
+              label="Teslimat SLA'sı"
               color="var(--color-primary)"
             />
             <RingStat
               value={42}
-              label="Return Rate"
+              label="İade Oranı"
               color="var(--color-secondary)"
             />
           </div>
@@ -285,11 +285,11 @@ export default function AdminDashboard() {
       {/* Alt kısım: Son siparişler + Top ürünler */}
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Recent Orders" subtitle="last 10" />
+          <CardHeader title="Son Siparişler" subtitle="son 10" />
           <OrdersTable />
         </Card>
         <Card>
-          <CardHeader title="Top Products" subtitle="by revenue" />
+          <CardHeader title="En Çok Satan Ürünler" subtitle="gelire göre" />
           <TopProducts />
         </Card>
       </div>
@@ -367,7 +367,7 @@ function OrdersTable() {
           "Gizem K.",
         ][i],
         total: (49 + Math.random() * 250).toFixed(2),
-        status: ["Paid", "Pending", "Refunded", "Shipped"][
+        status: ["Ödendi", "Beklemede", "İade edildi", "Kargolandı"][
           Math.floor(Math.random() * 4)
         ],
         date: new Date(Date.now() - i * 86400000).toLocaleDateString(),
@@ -376,10 +376,10 @@ function OrdersTable() {
   );
   const badge = (s) => {
     const map = {
-      Paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      Pending: "bg-amber-50 text-amber-700 border-amber-200",
-      Refunded: "bg-rose-50 text-rose-700 border-rose-200",
-      Shipped: "bg-indigo-50 text-indigo-700 border-indigo-200",
+      "Ödendi": "bg-emerald-50 text-emerald-700 border-emerald-200",
+      "Beklemede": "bg-amber-50 text-amber-700 border-amber-200",
+      "İade edildi": "bg-rose-50 text-rose-700 border-rose-200",
+      "Kargolandı": "bg-indigo-50 text-indigo-700 border-indigo-200",
     };
     return map[s] || "bg-gray-50 text-gray-700 border-gray-200";
   };
@@ -388,11 +388,11 @@ function OrdersTable() {
       <table className="min-w-full divide-y divide-[var(--color-border-admin)]">
         <thead className="bg-surface-light">
           <tr className="text-left text-sm text-text-admin-muted">
-            <th className="px-4 py-3 font-medium">Order</th>
-            <th className="px-4 py-3 font-medium">Customer</th>
-            <th className="px-4 py-3 font-medium">Date</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium text-right">Total</th>
+            <th className="px-4 py-3 font-medium">Sipariş</th>
+            <th className="px-4 py-3 font-medium">Müşteri</th>
+            <th className="px-4 py-3 font-medium">Tarih</th>
+            <th className="px-4 py-3 font-medium">Durum</th>
+            <th className="px-4 py-3 font-medium text-right">Toplam</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[var(--color-border-admin)] bg-bg-card">
@@ -429,12 +429,12 @@ function TopProducts() {
     () =>
       Array.from({ length: 6 }).map((_, i) => ({
         name: [
-          "Silk Chemise",
-          "Lace Bra",
-          "Satin PJ Set",
-          "Cotton Bikini",
-          "Wedding Robe",
-          "Premium Towel",
+          "İpek Gecelik",
+          "Dantelli Sütyen",
+          "Saten Pijama Takımı",
+          "Pamuklu Bikini",
+          "Gelin Sabahlığı",
+          "Premium Havlu",
         ][i],
         sku: "SKU-" + (1000 + i),
         revenue: Math.round(1200 + Math.random() * 4000),
@@ -459,7 +459,7 @@ function TopProducts() {
               <div className="text-sm font-semibold text-primary">
                 €{p.revenue.toLocaleString()}
               </div>
-              <div className="text-xs text-text-admin-muted">of category</div>
+              <div className="text-xs text-text-admin-muted">kategori payı</div>
             </div>
           </div>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--color-border-admin)]/60">

@@ -150,16 +150,16 @@ export default function SetForm({
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Set name is required");
+      setError("Set adı zorunludur");
       return;
     }
     const numericPrice = Number(price);
     if (!Number.isFinite(numericPrice) || numericPrice < 0) {
-      setError("Set price must be valid");
+      setError("Set fiyatı geçerli olmalıdır");
       return;
     }
     if (!entries.length) {
-      setError("Add at least one product to the set");
+      setError("Sete en az bir ürün ekleyin");
       return;
     }
     setSubmitting(true);
@@ -175,7 +175,7 @@ export default function SetForm({
       };
       await onSubmit?.(payload);
     } catch (err) {
-      setError(err.message || "Failed to save set");
+      setError(err.message || "Set kaydedilemedi");
     } finally {
       setSubmitting(false);
     }
@@ -188,8 +188,8 @@ export default function SetForm({
         if (submitting) return;
         onClose?.();
       }}
-      title={initialSet?.id ? "Edit set" : "Create set"}
-      description="Compose bundles of products from your catalog."
+      title={initialSet?.id ? "Seti düzenle" : "Set oluştur"}
+      description="Kataloğunuzdaki ürünlerden paketler oluşturun."
       footer={
         <>
           {initialSet?.id && (
@@ -198,7 +198,7 @@ export default function SetForm({
               onClick={onDelete}
               className="mr-auto inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
             >
-              <Trash2 className="h-4 w-4" /> Delete
+              <Trash2 className="h-4 w-4" /> Sil
             </button>
           )}
           <button
@@ -207,7 +207,7 @@ export default function SetForm({
             className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             disabled={submitting}
           >
-            Cancel
+            İptal
           </button>
           <button
             type="submit"
@@ -216,10 +216,10 @@ export default function SetForm({
             disabled={submitting}
           >
             {submitting
-              ? "Saving..."
+              ? "Kaydediliyor..."
               : initialSet?.id
-              ? "Save changes"
-              : "Create set"}
+              ? "Değişiklikleri kaydet"
+              : "Set oluştur"}
           </button>
         </>
       }
@@ -229,19 +229,19 @@ export default function SetForm({
         <section className="grid gap-4 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-              Set name<span className="text-[var(--color-accent)]">*</span>
+              Set adı<span className="text-[var(--color-accent)]">*</span>
             </span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-              placeholder="Premium Wedding Package"
+              placeholder="Premium Düğün Paketi"
               maxLength={160}
             />
           </label>
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-              Price (EUR)<span className="text-[var(--color-accent)]">*</span>
+              Fiyat (EUR)<span className="text-[var(--color-accent)]">*</span>
             </span>
             <input
               type="number"
@@ -260,14 +260,14 @@ export default function SetForm({
           </label>
           <label className="md:col-span-2 block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-              Description
+              Açıklama
             </span>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-              placeholder="Describe what makes this set special."
+              placeholder="Bu seti özel kılan özellikleri açıklayın."
             />
           </label>
           <label className="inline-flex items-center gap-2 text-sm text-[var(--color-text-admin)]">
@@ -277,7 +277,7 @@ export default function SetForm({
               onChange={(e) => setShow(e.target.checked)}
               className="h-4 w-4 rounded border-[var(--color-border-admin)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
             />
-            Visible in storefront
+            Vitrinde görünür
           </label>
         </section>
 
@@ -285,10 +285,10 @@ export default function SetForm({
         <section>
           <header className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[var(--color-text-admin)]">
-              Images
+              Görseller
             </h3>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-dashed border-[var(--color-border-admin)] px-4 py-2 text-sm text-[var(--color-text-admin)] hover:border-[var(--color-text-admin)]">
-              <Plus className="h-4 w-4" /> Upload
+              <Plus className="h-4 w-4" /> Yükle
               <input
                 type="file"
                 accept="image/*"
@@ -314,7 +314,7 @@ export default function SetForm({
                   onClick={() => handleRemoveExistingImage(img.publicId)}
                   className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-xs font-semibold text-white"
                 >
-                  Remove
+                  Kaldır
                 </button>
               </figure>
             ))}
@@ -325,7 +325,7 @@ export default function SetForm({
               >
                 <img
                   src={img.preview}
-                  alt="New upload"
+                  alt="Yeni yükleme"
                   className="h-24 w-24 object-cover"
                 />
                 <button
@@ -333,7 +333,7 @@ export default function SetForm({
                   onClick={() => handleRemoveNewImage(img.preview)}
                   className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-xs font-semibold text-white"
                 >
-                  Remove
+                  Kaldır
                 </button>
               </figure>
             ))}
@@ -345,10 +345,10 @@ export default function SetForm({
           <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-[var(--color-text-admin)]">
-                Set products
+                Set ürünleri
               </h3>
               <p className="text-xs text-[var(--color-text-admin-muted)]">
-                Pick items from your existing catalog.
+                Mevcut kataloğunuzdan ürün seçin.
               </p>
             </div>
             <div className="flex gap-2">
@@ -358,7 +358,7 @@ export default function SetForm({
                 disabled={!productOptions.length}
                 className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
               >
-                <Plus className="h-4 w-4" /> Add product
+                <Plus className="h-4 w-4" /> Ürün ekle
               </button>
             </div>
           </header>
@@ -371,20 +371,20 @@ export default function SetForm({
               >
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-[var(--color-text-admin)]">
-                    Product
+                    Ürün
                   </h4>
                   <button
                     type="button"
                     onClick={() => handleRemoveEntry(entry.key)}
                     className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-500"
                   >
-                    <Trash2 className="h-4 w-4" /> Remove
+                    <Trash2 className="h-4 w-4" /> Kaldır
                   </button>
                 </div>
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
                   <label className="block md:col-span-2">
                     <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
-                      Product
+                      Ürün
                     </span>
                     <select
                       value={entry.productId || ""}
@@ -402,7 +402,7 @@ export default function SetForm({
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
-                      Quantity
+                      Adet
                     </span>
                     <input
                       type="number"

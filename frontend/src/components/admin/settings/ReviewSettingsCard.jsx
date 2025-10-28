@@ -13,7 +13,7 @@ const formatPreviewText = (review) => {
   if (!review) return "";
   if (review.title) return review.title;
   if (review.body) return review.body.slice(0, 80);
-  return `Rating ${review.rating ?? "—"}`;
+  return `Puan ${review.rating ?? "—"}`;
 };
 
 export default function ReviewSettingsCard() {
@@ -29,16 +29,14 @@ export default function ReviewSettingsCard() {
       try {
         const [{ summary: summaryData }, pendingData] = await Promise.all([
           reviewApi.summary().then((data) => ({ summary: data })),
-          reviewApi
-            .listPending({ limit: 3 })
-            .catch(() => ({ reviews: [] })),
+          reviewApi.listPending({ limit: 3 }).catch(() => ({ reviews: [] })),
         ]);
         if (!mounted) return;
         setSummary(summaryData || { pending: 0, approved: 0, total: 0 });
         setPendingPreview(pendingData?.reviews || []);
         setError(null);
       } catch (err) {
-        if (mounted) setError(err?.message || "Unable to load reviews");
+        if (mounted) setError(err?.message || "Yorumlar yüklenemedi");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -51,17 +49,17 @@ export default function ReviewSettingsCard() {
   const stats = useMemo(
     () => [
       {
-        label: "Pending",
+        label: "Beklemede",
         value: summary.pending ?? 0,
         Icon: Clock3,
       },
       {
-        label: "Approved",
+        label: "Onaylandı",
         value: summary.approved ?? 0,
         Icon: CheckCircle2,
       },
       {
-        label: "Total",
+        label: "Toplam",
         value: summary.total ?? 0,
         Icon: MessageSquare,
       },
@@ -80,10 +78,10 @@ export default function ReviewSettingsCard() {
         </div>
         <div>
           <div className="text-sm font-semibold text-[var(--color-text-admin)]">
-            Reviews & Feedback
+            Yorumlar & Geri Bildirim
           </div>
           <div className="text-xs text-[var(--color-text-admin-muted)]">
-            Moderate and publish customer reviews.
+            Müşteri yorumlarını denetleyin ve yayınlayın.
           </div>
         </div>
       </div>
@@ -122,7 +120,7 @@ export default function ReviewSettingsCard() {
 
           <div>
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Pending preview
+              Bekleyen önizleme
             </div>
             <div className="flex flex-col gap-2">
               {loading ? (
@@ -150,7 +148,7 @@ export default function ReviewSettingsCard() {
                             review?.target?.name ||
                             review?.set?.name ||
                             "—",
-                          label: "Product",
+                          label: "Ürün",
                         };
                   return (
                     <div
@@ -158,7 +156,7 @@ export default function ReviewSettingsCard() {
                       className="rounded-xl border border-[var(--color-border-admin)]/40 bg-white/10 p-3 text-xs text-[var(--color-text-admin)]"
                     >
                       <div className="font-semibold">
-                        {review.user?.name || "Anonymous"}
+                        {review.user?.name || "Anonim"}
                       </div>
                       <div className="flex items-center gap-2 text-[var(--color-text-admin-muted)]">
                         <span>{target.name}</span>
@@ -174,7 +172,7 @@ export default function ReviewSettingsCard() {
                 })
               ) : (
                 <div className="rounded-xl border border-[var(--color-border-admin)]/40 bg-white/10 p-3 text-xs text-[var(--color-text-admin-muted)]">
-                  No pending reviews
+                  Bekleyen yorum yok
                 </div>
               )}
             </div>
@@ -182,7 +180,7 @@ export default function ReviewSettingsCard() {
         </div>
 
         <div className="mt-6 flex items-center justify-between rounded-full border border-[var(--color-border-admin)] px-3 py-2 text-xs font-semibold text-[var(--color-text-admin)] transition-colors group-hover:bg-[var(--color-bg-hover)]">
-          Manage reviews
+          Yorumları yönet
           <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
         </div>
       </div>

@@ -22,9 +22,7 @@ export default function CouponForm({
     setCode(initialCoupon?.code ?? "");
     setDescription(initialCoupon?.description ?? "");
     setPercentage(
-      initialCoupon?.percentage != null
-        ? String(initialCoupon.percentage)
-        : ""
+      initialCoupon?.percentage != null ? String(initialCoupon.percentage) : ""
     );
     setMinSubtotal(
       initialCoupon?.minSubtotal != null
@@ -40,17 +38,17 @@ export default function CouponForm({
     if (submitting) return;
 
     if (!code.trim()) {
-      setError("Coupon code is required");
+      setError("Kupon kodu zorunludur");
       return;
     }
     const perc = Number(percentage);
     if (!Number.isFinite(perc) || perc <= 0 || perc > 100) {
-      setError("Percentage must be between 1 and 100");
+      setError("Yüzde değeri 1 ile 100 arasında olmalıdır");
       return;
     }
     const min = Number(minSubtotal || 0);
     if (!Number.isFinite(min) || min < 0) {
-      setError("Minimum subtotal must be zero or greater");
+      setError("Minimum sepet tutarı sıfır veya daha büyük olmalıdır");
       return;
     }
 
@@ -68,8 +66,8 @@ export default function CouponForm({
     <AdminModal
       open={open}
       onClose={onClose}
-      title={isEditing ? "Edit coupon" : "Create coupon"}
-      description="Generate unique codes that apply percentage discounts at checkout."
+      title={isEditing ? "Kuponu Düzenle" : "Kupon Oluştur"}
+      description="Ödeme sırasında yüzde indirimi uygulayan benzersiz kodlar oluşturun."
       footer={
         <>
           <button
@@ -78,7 +76,7 @@ export default function CouponForm({
             className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             disabled={submitting}
           >
-            Cancel
+            İptal
           </button>
           <button
             type="submit"
@@ -86,7 +84,7 @@ export default function CouponForm({
             className="rounded-full bg-[var(--color-accent)] px-5 py-2 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-60"
             disabled={submitting}
           >
-            {isEditing ? "Save changes" : "Create coupon"}
+            {isEditing ? "Değişiklikleri Kaydet" : "Kupon Oluştur"}
           </button>
         </>
       }
@@ -102,7 +100,7 @@ export default function CouponForm({
 
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-            Code
+            Kod
           </span>
           <input
             value={code}
@@ -113,14 +111,14 @@ export default function CouponForm({
             disabled={submitting || isEditing}
           />
           <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
-            Codes are stored in uppercase and must be unique.
+            Kodlar büyük harflerle saklanır ve benzersiz olmalıdır.
           </p>
         </label>
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-              Percentage
+              İndirim Yüzdesi
             </span>
             <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2">
               <input
@@ -134,13 +132,15 @@ export default function CouponForm({
                 placeholder="10"
                 disabled={submitting}
               />
-              <span className="text-sm text-[var(--color-text-admin-muted)]">%</span>
+              <span className="text-sm text-[var(--color-text-admin-muted)]">
+                %
+              </span>
             </div>
           </label>
 
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-              Minimum subtotal (optional)
+              Minimum Sepet Tutarı (isteğe bağlı)
             </span>
             <input
               type="number"
@@ -153,21 +153,21 @@ export default function CouponForm({
               disabled={submitting}
             />
             <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
-              Leave empty to allow usage on any cart total.
+              Herhangi bir sepet tutarında kullanım için boş bırakın.
             </p>
           </label>
         </div>
 
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-            Description
+            Açıklama
           </span>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={3}
             className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-            placeholder="Internal notes"
+            placeholder="İç notlar"
             disabled={submitting}
           />
         </label>
@@ -180,7 +180,7 @@ export default function CouponForm({
             className="h-4 w-4 rounded border-[var(--color-border-admin)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
             disabled={submitting}
           />
-          Active immediately
+          Hemen aktif et
         </label>
       </form>
     </AdminModal>

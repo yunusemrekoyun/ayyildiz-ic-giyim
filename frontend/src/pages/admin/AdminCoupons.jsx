@@ -55,16 +55,16 @@ export default function AdminCoupons() {
 
   const handleDelete = async (coupon) => {
     const ok = await confirm({
-      title: "Delete coupon",
-      description: `Remove code “${coupon.code}”?`,
-      confirmText: "Delete",
+      title: "Kuponu sil",
+      description: `“${coupon.code}” kodu kaldırılsın mı?`,
+      confirmText: "Sil",
       tone: "danger",
     });
     if (!ok) return;
     try {
       await couponApi.remove(coupon.id);
       setCoupons((prev) => prev.filter((item) => item.id !== coupon.id));
-      setBanner({ variant: "warning", message: "Coupon deleted" });
+      setBanner({ variant: "warning", message: "Kupon silindi" });
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
     }
@@ -81,8 +81,8 @@ export default function AdminCoupons() {
       setBanner({
         variant: "success",
         message: updated.active
-          ? `Coupon ${updated.code} activated`
-          : `Coupon ${updated.code} deactivated`,
+          ? `Kupon ${updated.code} etkinleştirildi`
+          : `Kupon ${updated.code} devre dışı bırakıldı`,
       });
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -98,11 +98,11 @@ export default function AdminCoupons() {
         setCoupons((prev) =>
           prev.map((item) => (item.id === updated.id ? updated : item))
         );
-        setBanner({ variant: "success", message: "Coupon updated" });
+        setBanner({ variant: "success", message: "Kupon güncellendi" });
       } else {
         const created = await couponApi.create(payload);
         setCoupons((prev) => [created, ...prev]);
-        setBanner({ variant: "success", message: "Coupon created" });
+        setBanner({ variant: "success", message: "Kupon oluşturuldu" });
       }
       closeModal();
     } catch (error) {
@@ -120,10 +120,10 @@ export default function AdminCoupons() {
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-              Coupons
+              Kuponlar
             </h1>
             <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-              Configure code-based promotions with optional minimum cart rules.
+              Kod tabanlı kampanyaları isteğe bağlı minimum sepet kurallarıyla yapılandırın.
             </p>
           </div>
         </div>
@@ -132,13 +132,13 @@ export default function AdminCoupons() {
             onClick={loadCoupons}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            <RefreshCw className="h-4 w-4" /> Refresh
+            <RefreshCw className="h-4 w-4" /> Yenile
           </button>
           <button
             onClick={openCreateModal}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
           >
-            <PlusCircle className="h-4 w-4" /> New coupon
+            <PlusCircle className="h-4 w-4" /> Yeni kupon
           </button>
         </div>
       </header>
@@ -155,10 +155,10 @@ export default function AdminCoupons() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border-admin)] pb-4">
           <div>
             <p className="text-sm font-semibold text-[var(--color-text-admin)]">
-              Active coupons
+              Aktif kuponlar
             </p>
             <p className="text-xs text-[var(--color-text-admin-muted)]">
-              {activeCount} active • {coupons.length} total
+              {activeCount} aktif • {coupons.length} toplam
             </p>
           </div>
         </div>
@@ -185,7 +185,7 @@ export default function AdminCoupons() {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return "Beklenmeyen hata";
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);

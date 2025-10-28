@@ -17,7 +17,7 @@ import {
 const THEME_PRESETS = [
   {
     key: "rose",
-    name: "Rose (Current)",
+    name: "Gül (Mevcut)",
     store: {
       "--color-primary": "#5C2A35", // derin bordo
       "--color-secondary": "#8A4D5B",
@@ -44,7 +44,7 @@ const THEME_PRESETS = [
 
   {
     key: "forest",
-    name: "Forest",
+    name: "Orman",
     store: {
       "--color-primary": "#064E3B",
       "--color-secondary": "#0F766E",
@@ -71,7 +71,7 @@ const THEME_PRESETS = [
 
   {
     key: "ocean",
-    name: "Ocean",
+    name: "Okyanus",
     store: {
       "--color-primary": "#0C4A6E",
       "--color-secondary": "#0369A1",
@@ -98,7 +98,7 @@ const THEME_PRESETS = [
 
   {
     key: "grape",
-    name: "Grape",
+    name: "Üzüm",
     store: {
       "--color-primary": "#4C1D95",
       "--color-secondary": "#6D28D9",
@@ -126,7 +126,7 @@ const THEME_PRESETS = [
   // 🌅 Sunset — sıcak tonlar
   {
     key: "sunset",
-    name: "Sunset",
+    name: "Günbatımı",
     store: {
       "--color-primary": "#7C2D12",
       "--color-secondary": "#B45309",
@@ -154,7 +154,7 @@ const THEME_PRESETS = [
   // ❄️ Nordic — soğuk mavi tonlar, profesyonel görünüm
   {
     key: "nordic",
-    name: "Nordic",
+    name: "Nordik",
     store: {
       "--color-primary": "#1E293B",
       "--color-secondary": "#334155",
@@ -283,7 +283,7 @@ export default function ThemeSettingsPage() {
       <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
         <div className="flex items-center gap-2 text-[var(--color-text-admin-muted)]">
           <Loader2 className="h-5 w-5 animate-spin" />
-          Loading theme…
+          Tema yükleniyor…
         </div>
       </div>
     );
@@ -296,12 +296,12 @@ export default function ThemeSettingsPage() {
           <div className="flex flex-col gap-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
               <Sparkles className="h-4 w-4" />
-              Appearance
+              Görünüm
             </div>
-            <h2 className="text-2xl font-semibold">Theme & Colors</h2>
+            <h2 className="text-2xl font-semibold">Tema & Renkler</h2>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Pick a palette to restyle storefront and admin. Your choice
-              persists globally.
+              Mağaza vitrini ve yönetim panelini yeniden renklendirmek için bir
+              palet seçin. Seçiminiz tüm site genelinde uygulanır.
             </p>
           </div>
 
@@ -329,7 +329,7 @@ export default function ThemeSettingsPage() {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              Save as Active
+              Aktif Olarak Kaydet
             </button>
             {previewKey && (
               <button
@@ -347,21 +347,21 @@ export default function ThemeSettingsPage() {
                 }}
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
               >
-                Cancel Preview
+                Önizlemeyi İptal Et
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* tips */}
+      {/* ipuçları */}
       <aside className="xl:col-span-4">
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          <h3 className="text-lg font-semibold">Tips</h3>
+          <h3 className="text-lg font-semibold">İpuçları</h3>
           <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-admin-muted)]">
-            <li>Preview is temporary; save to persist.</li>
-            <li>Saved theme applies to storefront & admin.</li>
-            <li>Extend palettes in code anytime.</li>
+            <li>Önizleme geçicidir; kalıcı yapmak için kaydedin.</li>
+            <li>Kaydedilen tema vitrin ve yönetim panelinde geçerli olur.</li>
+            <li>İstediğiniz zaman kodda yeni paletler ekleyebilirsiniz.</li>
           </ul>
         </div>
       </aside>

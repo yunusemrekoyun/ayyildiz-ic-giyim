@@ -34,9 +34,7 @@ export default function ColorSelector({
     if (!normalized) return;
     const key = normalized.toLowerCase();
     if (selectedSet.has(key)) {
-      emitChange(
-        normalizedValues.filter((item) => item.toLowerCase() !== key)
-      );
+      emitChange(normalizedValues.filter((item) => item.toLowerCase() !== key));
     } else {
       emitChange([...normalizedValues, normalized]);
     }
@@ -99,11 +97,11 @@ export default function ColorSelector({
             onChange={(event) => setCustomColor(event.target.value)}
             disabled={disabled}
             className="h-9 w-9 cursor-pointer rounded-lg border border-[var(--color-border-admin)] bg-white p-0"
-            title="Pick custom colour"
+            title="Özel renk seç"
           />
           <div>
             <div className="text-xs font-semibold text-[var(--color-text-admin)]">
-              Custom colour
+              Özel renk
             </div>
             <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-admin-muted)]">
               {customColor.toUpperCase()}
@@ -116,17 +114,17 @@ export default function ColorSelector({
           disabled={disabled}
           className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
         >
-          Add colour
+          Renk ekle
         </button>
         <p className="text-[11px] text-[var(--color-text-admin-muted)]">
-          Add multiple shades to create more specific swatches.
+          Daha spesifik örnekler oluşturmak için birden fazla ton ekleyin.
         </p>
       </div>
 
       {normalizedValues.length > 0 ? (
         <div className="space-y-2">
           <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-            Selected colours
+            Seçilen renkler
           </div>
           <ul className="flex flex-wrap gap-2">
             {normalizedValues.map((value) => {
@@ -145,7 +143,7 @@ export default function ColorSelector({
                         type="button"
                         onClick={() => handleRemove(value)}
                         className="rounded-full p-0.5 text-[var(--color-text-admin-muted)] hover:text-[var(--color-text-admin)]"
-                        aria-label={`Remove ${info.label}`}
+                        aria-label={`Kaldır ${info.label}`}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -158,7 +156,7 @@ export default function ColorSelector({
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-[var(--color-border-admin)]/60 bg-[var(--color-bg-card)] px-3 py-2 text-xs text-[var(--color-text-admin-muted)]">
-          No colours selected yet.
+          Henüz renk seçilmedi.
         </div>
       )}
     </div>

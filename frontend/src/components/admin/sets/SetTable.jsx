@@ -38,7 +38,8 @@ export default function SetTable({
     return (
       <div className="grid place-items-center rounded-2xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-6 py-12 text-center">
         <p className="max-w-md text-sm text-[var(--color-text-admin-muted)]">
-          No sets created yet. Use “New set” to compose a curated bundle.
+          Henüz set oluşturulmadı. Seçkili bir paket hazırlamak için “Yeni set”i
+          kullanın.
         </p>
       </div>
     );
@@ -51,10 +52,10 @@ export default function SetTable({
           <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
             <tr>
               <th className="px-4 py-3 text-left font-medium">Set</th>
-              <th className="px-4 py-3 text-left font-medium">Price</th>
-              <th className="px-4 py-3 text-left font-medium">Stock</th>
-              <th className="px-4 py-3 text-left font-medium">Visibility</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 text-left font-medium">Fiyat</th>
+              <th className="px-4 py-3 text-left font-medium">Stok</th>
+              <th className="px-4 py-3 text-left font-medium">Görünürlük</th>
+              <th className="px-4 py-3 text-right font-medium">İşlemler</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--color-border-admin)]/60 text-[var(--color-text-admin)]">
@@ -76,7 +77,7 @@ export default function SetTable({
                     <div className="min-w-0">
                       <div className="truncate font-semibold">{set.name}</div>
                       <div className="text-xs text-[var(--color-text-admin-muted)]">
-                        {set.products?.length || 0} items
+                        {set.products?.length || 0} ürün
                       </div>
                     </div>
                   </div>
@@ -92,10 +93,10 @@ export default function SetTable({
                         setInspectOpen(true);
                       }}
                       className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-                      title="Inspect variant stocks"
+                      title="Varyant stoklarını incele"
                     >
                       <Search className="h-4 w-4" />
-                      Inspect
+                      İncele
                     </button>
                   </div>
                 </td>
@@ -107,7 +108,7 @@ export default function SetTable({
                         : "bg-amber-50 text-amber-700"
                     }`}
                   >
-                    {set.show ? "Visible" : "Hidden"}
+                    {set.show ? "Görünür" : "Gizli"}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -116,13 +117,13 @@ export default function SetTable({
                       onClick={() => onEdit?.(set)}
                       className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
                     >
-                      <Edit3 className="h-4 w-4" /> Edit
+                      <Edit3 className="h-4 w-4" /> Düzenle
                     </button>
                     <button
                       onClick={() => onDelete?.(set)}
                       className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
                     >
-                      <Trash2 className="h-4 w-4" /> Delete
+                      <Trash2 className="h-4 w-4" /> Sil
                     </button>
                   </div>
                 </td>
@@ -157,7 +158,7 @@ function StockInspectModal({ setItem, onClose }) {
       if (inv.length === 0) {
         items.push({
           key: `${p.id || p._id || "p"}::default`,
-          productName: p.name || "Unnamed product",
+          productName: p.name || "İsimsiz ürün",
           qtyInSet: sp.quantity || 1,
           variant: { color: null, size: null, attributeValue: null },
           stockCatalog: 0,
@@ -177,7 +178,7 @@ function StockInspectModal({ setItem, onClose }) {
 
         items.push({
           key: `${p.id || p._id || "p"}::${idx}`,
-          productName: p.name || "Unnamed product",
+          productName: p.name || "İsimsiz ürün",
           qtyInSet: sp.quantity || 1,
           variant: {
             color: v.color ?? null,
@@ -199,17 +200,17 @@ function StockInspectModal({ setItem, onClose }) {
         <header className="flex items-center justify-between border-b border-[var(--color-border-admin)] px-5 py-3">
           <div>
             <h3 className="font-semibold text-[var(--color-text-admin)]">
-              Stock details — {setItem.name}
+              Stok detayları — {setItem.name}
             </h3>
             <p className="text-xs text-[var(--color-text-admin-muted)]">
-              Variant-level stock (color · size · attribute)
+              Varyant seviyesinde stok (renk · beden · özellik)
             </p>
           </div>
           <button
             onClick={onClose}
             className="rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            Close
+            Kapat
           </button>
         </header>
 
@@ -217,17 +218,17 @@ function StockInspectModal({ setItem, onClose }) {
           <table className="min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
             <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">Product</th>
-                <th className="px-3 py-2 text-left font-medium">Variant</th>
-                <th className="px-3 py-2 text-right font-medium">Qty in Set</th>
+                <th className="px-3 py-2 text-left font-medium">Ürün</th>
+                <th className="px-3 py-2 text-left font-medium">Varyant</th>
                 <th className="px-3 py-2 text-right font-medium">
-                  Stock (Catalog)
+                  Set içi adet
                 </th>
                 <th className="px-3 py-2 text-right font-medium">
-                  Stock (Set)
+                  Stok (Katalog)
                 </th>
+                <th className="px-3 py-2 text-right font-medium">Stok (Set)</th>
                 <th className="px-3 py-2 text-right font-medium">
-                  Stock (Legacy)
+                  Stok (Eski)
                 </th>
               </tr>
             </thead>
@@ -263,7 +264,7 @@ function StockInspectModal({ setItem, onClose }) {
 function VariantLabel({ color, size, attributeValue }) {
   const info = getColorInfo(color);
   const parts = [
-    info.label || null, // renk adı (paletten çözülmüş)
+    info.label || null,
     size || null,
     attributeValue || null,
   ].filter(Boolean);
@@ -277,7 +278,7 @@ function VariantLabel({ color, size, attributeValue }) {
           aria-hidden="true"
         />
       )}
-      <span>{parts.length ? parts.join(" · ") : "Default"}</span>
+      <span>{parts.length ? parts.join(" · ") : "Varsayılan"}</span>
     </div>
   );
 }

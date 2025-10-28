@@ -35,18 +35,19 @@ export default function CategoryForm({
   }, [imageFile]);
 
   const parentHelper = useMemo(() => {
-    if (!category) return "Select where this category lives (optional).";
+    if (!category)
+      return "Bu kategorinin nerede yer alacağını seçin (opsiyonel).";
     if (category.level === 0)
-      return "This is a top-level category. You can nest it under another root.";
+      return "Bu üst seviye bir kategoridir. Başka bir kök altına da yerleştirebilirsiniz.";
     if (category.level === 1)
-      return "This is a second-level category. You can promote/demote it.";
-    return "Leaf categories cannot have children.";
+      return "Bu ikinci seviye bir kategoridir. Yükseltebilir/indirebilirsiniz.";
+    return "Yaprak kategorilerin alt kategorisi olamaz.";
   }, [category]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Category name is required");
+      setError("Kategori adı zorunludur");
       return;
     }
     setError("");
@@ -74,7 +75,7 @@ export default function CategoryForm({
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setError("Please upload an image file");
+      setError("Lütfen bir görsel dosyası yükleyin");
       return;
     }
     setImageFile(file);
@@ -94,12 +95,12 @@ export default function CategoryForm({
       <div className="flex items-start justify-between border-b border-[var(--color-border-admin)] px-5 py-4">
         <div>
           <h3 className="text-lg font-semibold text-[var(--color-text-admin)]">
-            {isEditing ? "Edit Category" : "Create Category"}
+            {isEditing ? "Kategoriyi Düzenle" : "Kategori Oluştur"}
           </h3>
           <p className="text-sm text-[var(--color-text-admin-muted)]">
             {isEditing
-              ? "Update the category name, hierarchy or thumbnail."
-              : "Add a new category at any level of the catalog."}
+              ? "Kategori adını, hiyerarşisini veya küçük görselini güncelleyin."
+              : "Kataloğun herhangi bir seviyesine yeni bir kategori ekleyin."}
           </p>
         </div>
         {isEditing && (
@@ -108,7 +109,7 @@ export default function CategoryForm({
             onClick={onCancelEdit}
             className="rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            Create new
+            Yeni oluştur
           </button>
         )}
       </div>
@@ -123,27 +124,28 @@ export default function CategoryForm({
           <>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Category name<span className="text-[var(--color-accent)]">*</span>
+                Kategori adı
+                <span className="text-[var(--color-accent)]">*</span>
               </span>
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 maxLength={120}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-                placeholder="e.g. Lingerie"
+                placeholder="örn. İç Çamaşırı"
               />
             </label>
 
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Parent category
+                Üst kategori
               </span>
               <select
                 value={parent || ""}
                 onChange={(event) => setParent(event.target.value)}
                 className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
               >
-                <option value="">No parent (root)</option>
+                <option value="">Üst kategori yok (kök)</option>
                 {parentOptions.map((option) => (
                   <option
                     key={option.id}
@@ -163,15 +165,16 @@ export default function CategoryForm({
 
             <div>
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
-                Thumbnail image
+                Küçük görsel
               </span>
               <p className="mb-2 text-xs text-[var(--color-text-admin-muted)]">
-                Optional 1:1 cover used in catalog menus. PNG or JPG up to 2MB.
+                Katalog menülerinde kullanılan, opsiyonel 1:1 kapak. PNG veya
+                JPG, en fazla 2MB.
               </p>
               <div className="flex flex-wrap gap-3">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-[var(--color-border-admin)] px-4 py-3 text-sm text-[var(--color-text-admin)] hover:border-[var(--color-text-admin)]">
                   <Upload className="h-4 w-4" />
-                  Upload image
+                  Görsel yükle
                   <input
                     type="file"
                     accept="image/*"
@@ -184,7 +187,7 @@ export default function CategoryForm({
                     {previewUrl ? (
                       <img
                         src={previewUrl}
-                        alt="Preview"
+                        alt="Önizleme"
                         className="h-24 w-24 object-cover"
                       />
                     ) : (
@@ -197,22 +200,25 @@ export default function CategoryForm({
                       onClick={handleClearImage}
                       className="absolute inset-x-0 bottom-0 bg-black/50 py-1 text-xs font-semibold text-white"
                     >
-                      Remove
+                      Kaldır
                     </button>
                   </div>
                 )}
-                {isEditing && category?.image && !previewUrl && !removeImage && (
-                  <div className="overflow-hidden rounded-xl border border-[var(--color-border-admin)]">
-                    <img
-                      src={category.image.url}
-                      alt={category.name}
-                      className="h-24 w-24 object-cover"
-                    />
-                  </div>
-                )}
+                {isEditing &&
+                  category?.image &&
+                  !previewUrl &&
+                  !removeImage && (
+                    <div className="overflow-hidden rounded-xl border border-[var(--color-border-admin)]">
+                      <img
+                        src={category.image.url}
+                        alt={category.name}
+                        className="h-24 w-24 object-cover"
+                      />
+                    </div>
+                  )}
                 {removeImage && !imageFile && (
                   <span className="inline-flex items-center rounded-full bg-[var(--color-bg-hover)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)]">
-                    Image will be removed
+                    Görsel kaldırılacak
                   </span>
                 )}
               </div>
@@ -234,7 +240,7 @@ export default function CategoryForm({
               className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
-              Delete
+              Sil
             </button>
           )}
           <div className="ml-auto flex items-center gap-3">
@@ -243,7 +249,11 @@ export default function CategoryForm({
               disabled={submitting}
               className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-60"
             >
-              {submitting ? "Saving..." : isEditing ? "Save changes" : "Create category"}
+              {submitting
+                ? "Kaydediliyor..."
+                : isEditing
+                ? "Değişiklikleri kaydet"
+                : "Kategori oluştur"}
             </button>
           </div>
         </div>

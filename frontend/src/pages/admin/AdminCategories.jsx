@@ -80,11 +80,11 @@ export default function AdminCategories() {
     try {
       if (selectedCategory?.id) {
         await categoryApi.update(selectedCategory.id, payload);
-        setBanner({ variant: "success", message: "Category updated" });
+        setBanner({ variant: "success", message: "Kategori güncellendi" });
         await refreshTree(selectedCategory.id);
       } else {
         const created = await categoryApi.create(payload);
-        setBanner({ variant: "success", message: "Category created" });
+        setBanner({ variant: "success", message: "Kategori oluşturuldu" });
         setSelectedCategory(null);
         await refreshTree(created.id);
       }
@@ -98,9 +98,9 @@ export default function AdminCategories() {
   const handleDelete = async () => {
     if (!selectedCategory?.id) return;
     const ok = await confirm({
-      title: "Delete category",
-      description: `Deleting “${selectedCategory.name}” is permanent. Continue?`,
-      confirmText: "Delete",
+      title: "Kategoriyi sil",
+      description: `“${selectedCategory.name}” kategorisini silmek kalıcıdır. Devam edilsin mi?`,
+      confirmText: "Sil",
       tone: "danger",
     });
     if (!ok) return;
@@ -108,7 +108,7 @@ export default function AdminCategories() {
     setSaving(true);
     try {
       await categoryApi.remove(selectedCategory.id);
-      setBanner({ variant: "warning", message: "Category deleted" });
+      setBanner({ variant: "warning", message: "Kategori silindi" });
       setSelectedCategory(null);
       setSelectedId(null);
       await refreshTree();
@@ -123,10 +123,10 @@ export default function AdminCategories() {
     <section className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-          Categories
+          Kategoriler
         </h1>
         <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-          Manage the three-level catalog tree and optional thumbnails.
+          Üç seviyeli katalog ağacını ve isteğe bağlı küçük görselleri yönetin.
         </p>
       </header>
 
@@ -174,7 +174,7 @@ export default function AdminCategories() {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return "Beklenmeyen hata";
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);

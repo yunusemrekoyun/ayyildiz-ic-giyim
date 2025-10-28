@@ -132,7 +132,7 @@ export default function ShippingReturnsSettings() {
         setBanner({
           variant: "danger",
           message:
-            extractMessage(e) || "Failed to load Shipping & Returns content.",
+            extractMessage(e) || "Kargo ve iade içeriği yüklenemedi.",
         });
       } finally {
         if (mounted) setLoading(false);
@@ -160,12 +160,12 @@ export default function ShippingReturnsSettings() {
 
       setBanner({
         variant: "success",
-        message: "Shipping & Returns content saved successfully.",
+        message: "Kargo ve iade içeriği başarıyla kaydedildi.",
       });
     } catch (e) {
       setBanner({
         variant: "danger",
-        message: extractMessage(e) || "Failed to save content.",
+        message: extractMessage(e) || "İçerik kaydedilemedi.",
       });
     } finally {
       setSaving(false);
@@ -184,16 +184,15 @@ export default function ShippingReturnsSettings() {
           <div className="flex flex-col gap-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
               <Sparkles className="h-4 w-4" />
-              Content • Shipping & Returns
+              İçerik • Kargo ve İade
             </div>
-            <h1 className="text-2xl font-semibold">Shipping & Returns Page</h1>
+            <h1 className="text-2xl font-semibold">Kargo ve İade Sayfası</h1>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Manage hero headline, content sections, quick facts and SEO
-              metadata. This controls the public{" "}
+              Hero başlığını, içerik bölümlerini, hızlı bilgiler ve SEO verilerini yönetin. Bu ayarlar kamuya açık{" "}
               <code className="rounded bg-[var(--color-bg-hover)] px-1 py-0.5">
                 /shipping-and-returns
               </code>{" "}
-              page.
+              sayfasını kontrol eder.
             </p>
           </div>
 
@@ -223,7 +222,7 @@ export default function ShippingReturnsSettings() {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              Save changes
+              Değişiklikleri kaydet
             </button>
 
             <Link
@@ -232,24 +231,24 @@ export default function ShippingReturnsSettings() {
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             >
               <Eye className="h-4 w-4" />
-              Preview
+              Önizleme
             </Link>
 
             <button
               type="button"
               onClick={toggleActive}
               className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-              title={form.isActive ? "Disable page" : "Enable page"}
+              title={form.isActive ? "Sayfayı pasifleştir" : "Sayfayı etkinleştir"}
             >
               {form.isActive ? (
                 <>
                   <ToggleRight className="h-4 w-4 text-emerald-600" />
-                  Active
+                  Aktif
                 </>
               ) : (
                 <>
                   <ToggleLeft className="h-4 w-4 text-rose-600" />
-                  Inactive
+                  Pasif
                 </>
               )}
             </button>
@@ -264,23 +263,23 @@ export default function ShippingReturnsSettings() {
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
             <div className="md:col-span-6">
-              <Label>Page Title</Label>
+              <Label>Sayfa Başlığı</Label>
               <Input
                 value={form.heroTitle}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, heroTitle: e.target.value }))
                 }
-                placeholder="Shipping & Returns"
+                placeholder="Kargo ve İade"
               />
             </div>
             <div className="md:col-span-6">
-              <Label>Subtitle</Label>
+              <Label>Alt Başlık</Label>
               <Input
                 value={form.heroSubtitle}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, heroSubtitle: e.target.value }))
                 }
-                placeholder="Short supportive sentence…"
+                placeholder="Kısa destekleyici cümle..."
               />
             </div>
           </div>
@@ -308,12 +307,12 @@ export default function ShippingReturnsSettings() {
       {/* Tips */}
       <aside className="xl:col-span-4">
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          <h3 className="text-lg font-semibold">Tips</h3>
+          <h3 className="text-lg font-semibold">İpuçları</h3>
           <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-admin-muted)]">
-            <li>Keep hero concise; focus on clarity.</li>
-            <li>Use 4–6 “Quick facts” for the sidebar.</li>
-            <li>Structure sections: shipping, rates, returns, refunds.</li>
-            <li>SEO: unique title & description for better CTR.</li>
+            <li>Hero alanını kısa ve anlaşılır tutun.</li>
+            <li>Kenar çubuğu için 4-6 "Hızlı bilgi" kullanın.</li>
+            <li>Bölümleri kargo, ücretler, iadeler ve geri ödemeler şeklinde yapılandırın.</li>
+            <li>SEO için benzersiz başlık ve açıklama ekleyin.</li>
           </ul>
         </div>
       </aside>
@@ -359,7 +358,7 @@ function SectionsEditor({ sections = [], onChange }) {
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <List className="h-5 w-5 text-[var(--color-text-admin-muted)]" />
-          <h2 className="text-lg font-semibold">Content Sections</h2>
+          <h2 className="text-lg font-semibold">İçerik Bölümleri</h2>
         </div>
         <button
           type="button"
@@ -367,13 +366,13 @@ function SectionsEditor({ sections = [], onChange }) {
           className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
-          Add section
+          Bölüm ekle
         </button>
       </div>
 
       {sections.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--color-border-admin)] p-6 text-sm text-[var(--color-text-admin-muted)]">
-          No sections yet. Click “Add section” to start.
+          Henüz bölüm yok. Başlamak için “Bölüm ekle”yi tıklayın.
         </div>
       ) : (
         <div className="space-y-6">
@@ -385,18 +384,18 @@ function SectionsEditor({ sections = [], onChange }) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm text-[var(--color-text-admin-muted)]">
                   <GripVertical className="h-4 w-4" />
-                  Section {i + 1}
+                  Bölüm {i + 1}
                 </div>
                 <div className="flex items-center gap-2">
-                  <IconButton onClick={() => move(i, -1)} title="Move up">
+                  <IconButton onClick={() => move(i, -1)} title="Yukarı taşı">
                     <ChevronUp className="h-4 w-4" />
                   </IconButton>
-                  <IconButton onClick={() => move(i, +1)} title="Move down">
+                  <IconButton onClick={() => move(i, +1)} title="Aşağı taşı">
                     <ChevronDown className="h-4 w-4" />
                   </IconButton>
                   <IconButton
                     onClick={() => removeSection(i)}
-                    title="Remove section"
+                    title="Bölümü kaldır"
                     danger
                   >
                     <Trash2 className="h-4 w-4" />
@@ -406,18 +405,18 @@ function SectionsEditor({ sections = [], onChange }) {
 
               <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-12">
                 <div className="md:col-span-6">
-                  <Label>Section Title</Label>
+                  <Label>Bölüm Başlığı</Label>
                   <Input
                     value={s.title}
                     onChange={(e) =>
                       updateSection(i, { title: e.target.value })
                     }
-                    placeholder="Shipping destinations & carriers"
+                    placeholder="Teslimat bölgeleri ve kargo firmaları"
                   />
                 </div>
 
                 <div className="md:col-span-6">
-                  <Label>List Heading (optional)</Label>
+                  <Label>Liste Başlığı (isteğe bağlı)</Label>
                   <Input
                     value={s.list?.heading || ""}
                     onChange={(e) =>
@@ -428,24 +427,24 @@ function SectionsEditor({ sections = [], onChange }) {
                         },
                       })
                     }
-                    placeholder="Estimated transit times:"
+                    placeholder="Tahmini teslimat süreleri:"
                   />
                 </div>
               </div>
 
               {/* Paragraphs */}
               <div className="mt-4">
-                <Label>Paragraphs</Label>
+                <Label>Paragraflar</Label>
                 <MultiText
                   values={s.paragraphs || []}
                   onChange={(vals) => updateSection(i, { paragraphs: vals })}
-                  placeholder="Add a paragraph…"
+                  placeholder="Paragraf ekleyin..."
                 />
               </div>
 
               {/* List Items */}
               <div className="mt-4">
-                <Label>List Items</Label>
+                <Label>Liste Öğeleri</Label>
                 <MultiLineItems
                   values={s.list?.items || []}
                   onChange={(vals) =>
@@ -453,7 +452,7 @@ function SectionsEditor({ sections = [], onChange }) {
                       list: { heading: s.list?.heading || "", items: vals },
                     })
                   }
-                  placeholder="Germany, Austria, Benelux: 2–3 business days"
+                  placeholder="Almanya, Avusturya, Benelüx: 2–3 iş günü"
                 />
               </div>
             </article>
@@ -500,20 +499,20 @@ function SidebarEditor({ sidebar, onChange }) {
     <div className="mt-6 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
       <div className="mb-4 flex items-center gap-2">
         <Info className="h-5 w-5 text-[var(--color-text-admin-muted)]" />
-        <h2 className="text-lg font-semibold">Sidebar</h2>
+        <h2 className="text-lg font-semibold">Kenar Çubuğu</h2>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
         <div className="md:col-span-7">
-          <Label>Quick facts</Label>
+          <Label>Hızlı bilgiler</Label>
           <MultiLineItems
             values={side.quickFacts || []}
             onChange={updateQuickFacts}
-            placeholder="• All orders ship with climate-compensated services."
+            placeholder="• Tüm siparişler karbon nötr kargo ile gönderilir."
           />
         </div>
         <div className="md:col-span-5">
-          <Label>Help box (HTML allowed)</Label>
+          <Label>Yardım kutusu (HTML kullanılabilir)</Label>
           <textarea
             value={side.helpBoxHtmlRaw || ""} // ham metni ayrı saklayalım
             onChange={(e) => {
@@ -703,13 +702,13 @@ function MultiText({ values = [], onChange, placeholder }) {
             className="w-full rounded-2xl border border-[var(--color-border-admin)] bg-white px-4 py-3 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] focus:ring-2 focus:ring-[var(--color-text-admin)]/10"
           />
           <div className="mt-1 flex flex-col gap-1">
-            <IconButton onClick={() => move(i, -1)} title="Move up">
+            <IconButton onClick={() => move(i, -1)} title="Yukarı taşı">
               <ChevronUp className="h-4 w-4" />
             </IconButton>
-            <IconButton onClick={() => move(i, +1)} title="Move down">
+            <IconButton onClick={() => move(i, +1)} title="Aşağı taşı">
               <ChevronDown className="h-4 w-4" />
             </IconButton>
-            <IconButton onClick={() => remove(i)} danger title="Remove">
+            <IconButton onClick={() => remove(i)} danger title="Kaldır">
               <Trash2 className="h-4 w-4" />
             </IconButton>
           </div>
@@ -721,7 +720,7 @@ function MultiText({ values = [], onChange, placeholder }) {
         className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold hover:bg-[var(--color-bg-hover)]"
       >
         <Plus className="h-3.5 w-3.5" />
-        Add paragraph
+        Paragraf ekle
       </button>
     </div>
   );
@@ -757,14 +756,14 @@ function MultiLineItems({ values = [], onChange, placeholder }) {
             placeholder={placeholder}
             className="w-full rounded-2xl border border-[var(--color-border-admin)] bg-white px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] focus:ring-2 focus:ring-[var(--color-text-admin)]/10"
           />
-          <div className="mt-0.5 flex flex-col gap-1">
-            <IconButton onClick={() => move(i, -1)} title="Move up">
+         <div className="mt-0.5 flex flex-col gap-1">
+            <IconButton onClick={() => move(i, -1)} title="Yukarı taşı">
               <ChevronUp className="h-4 w-4" />
             </IconButton>
-            <IconButton onClick={() => move(i, +1)} title="Move down">
+            <IconButton onClick={() => move(i, +1)} title="Aşağı taşı">
               <ChevronDown className="h-4 w-4" />
             </IconButton>
-            <IconButton onClick={() => remove(i)} danger title="Remove">
+            <IconButton onClick={() => remove(i)} danger title="Kaldır">
               <Trash2 className="h-4 w-4" />
             </IconButton>
           </div>
@@ -776,7 +775,7 @@ function MultiLineItems({ values = [], onChange, placeholder }) {
         className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold hover:bg-[var(--color-bg-hover)]"
       >
         <Plus className="h-3.5 w-3.5" />
-        Add list item
+        Liste öğesi ekle
       </button>
     </div>
   );

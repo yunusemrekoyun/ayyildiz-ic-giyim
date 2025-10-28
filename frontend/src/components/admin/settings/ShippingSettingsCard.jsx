@@ -6,12 +6,12 @@ import { Coins, Loader2, Truck } from "lucide-react";
 export default function ShippingSettingsCard() {
   const { refreshShipping } = useCart() || {};
   const [form, setForm] = useState({
-    name: "Standard Shipping",
+    name: "Standart Kargo",
     fee: "0",
     freeThreshold: "0",
   });
   const [initialConfig, setInitialConfig] = useState({
-    name: "Standard Shipping",
+    name: "Standart Kargo",
     fee: 0,
     freeThreshold: 0,
   });
@@ -28,12 +28,12 @@ export default function ShippingSettingsCard() {
         if (!mounted || !config) return;
         setInitialConfig(config);
         setForm({
-          name: config.name || "Standard Shipping",
+          name: config.name || "Standart Kargo",
           fee: String(config.fee ?? 0),
           freeThreshold: String(config.freeThreshold ?? 0),
         });
       } catch (err) {
-        if (mounted) setError(err?.message || "Unable to load shipping settings");
+        if (mounted) setError(err?.message || "Kargo ayarları yüklenemedi");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -62,7 +62,7 @@ export default function ShippingSettingsCard() {
     setMessage(null);
     try {
       const payload = {
-        name: form.name.trim() || "Standard Shipping",
+        name: form.name.trim() || "Standart Kargo",
         fee: Math.max(0, Number(form.fee || 0)),
         freeThreshold: Math.max(0, Number(form.freeThreshold || 0)),
       };
@@ -71,14 +71,12 @@ export default function ShippingSettingsCard() {
       setForm({
         name: (updated?.name || payload.name).trim(),
         fee: String(updated?.fee ?? payload.fee),
-        freeThreshold: String(
-          updated?.freeThreshold ?? payload.freeThreshold
-        ),
+        freeThreshold: String(updated?.freeThreshold ?? payload.freeThreshold),
       });
-      setMessage("Shipping settings updated");
+      setMessage("Kargo ayarları güncellendi");
       await refreshShipping?.();
     } catch (err) {
-      setError(err?.message || "Unable to update shipping settings");
+      setError(err?.message || "Kargo ayarları güncellenemedi");
     } finally {
       setSaving(false);
     }
@@ -92,15 +90,18 @@ export default function ShippingSettingsCard() {
         </div>
         <div>
           <h3 className="text-base font-semibold text-[var(--color-text-admin)]">
-            Shipping & Delivery
+            Kargo & Teslimat
           </h3>
           <p className="text-xs text-[var(--color-text-admin-muted)]">
-            Configure the base shipping fee and when free delivery activates.
+            Temel kargo ücretini ve ücretsiz teslimat eşiğini yapılandırın.
           </p>
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="flex flex-1 flex-col justify-between">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-1 flex-col justify-between"
+      >
         <div className="space-y-4 px-4 py-4">
           {error && (
             <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-600">
@@ -114,7 +115,7 @@ export default function ShippingSettingsCard() {
           )}
 
           <label className="block text-sm text-[var(--color-text-admin)]">
-            <span className="mb-1 block font-medium">Shipping name</span>
+            <span className="mb-1 block font-medium">Kargo adı</span>
             <input
               className="w-full rounded-xl border border-[var(--color-border-admin)] bg-white px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
               value={form.name}
@@ -124,7 +125,9 @@ export default function ShippingSettingsCard() {
           </label>
 
           <label className="block text-sm text-[var(--color-text-admin)]">
-            <span className="mb-1 block font-medium">Base shipping fee (€)</span>
+            <span className="mb-1 block font-medium">
+              Temel kargo ücreti (€)
+            </span>
             <div className="flex items-center gap-2">
               <Coins className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
               <input
@@ -140,7 +143,9 @@ export default function ShippingSettingsCard() {
           </label>
 
           <label className="block text-sm text-[var(--color-text-admin)]">
-            <span className="mb-1 block font-medium">Free shipping threshold (€)</span>
+            <span className="mb-1 block font-medium">
+              Ücretsiz kargo eşiği (€)
+            </span>
             <input
               type="number"
               min="0"
@@ -151,16 +156,15 @@ export default function ShippingSettingsCard() {
               disabled={loading || saving}
             />
             <span className="mt-1 block text-xs text-[var(--color-text-admin-muted)]">
-              Customers pay the fee unless their cart subtotal meets this
-              amount.
+              Müşteriler bu tutara ulaşmadıkları sürece kargo ücreti öderler.
             </span>
           </label>
         </div>
 
         <footer className="flex flex-col gap-2 border-t border-[var(--color-border-admin)]/60 bg-[var(--color-bg-admin)]/10 px-4 py-3 text-[var(--color-text-admin)] md:flex-row md:items-center md:justify-between">
           <div className="text-xs">
-            Current: {initialConfig.name} • Fee €{summary.fee} • Free above €
-            {summary.threshold}
+            Mevcut: {initialConfig.name} • Ücret €{summary.fee} • Ücretsiz kargo
+            eşiği €{summary.threshold}
           </div>
           <button
             type="submit"
@@ -168,7 +172,7 @@ export default function ShippingSettingsCard() {
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-xs font-semibold text-[var(--color-bg-admin)] hover:opacity-90 disabled:opacity-60"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Save settings
+            Ayarları Kaydet
           </button>
         </footer>
       </form>

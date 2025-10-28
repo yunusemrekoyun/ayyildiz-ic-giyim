@@ -68,15 +68,15 @@ export default function AdminSets() {
 
   const handleDelete = async (set) => {
     const ok = await confirm({
-      title: "Delete set",
-      description: `Delete “${set.name}”? This action cannot be undone.`,
-      confirmText: "Delete",
+      title: "Seti sil",
+      description: `“${set.name}” silinsin mi? Bu işlem geri alınamaz.`,
+      confirmText: "Sil",
       tone: "danger",
     });
     if (!ok) return;
     try {
       await setApi.remove(set.id || set.slug);
-      setBanner({ variant: "warning", message: "Set deleted" });
+      setBanner({ variant: "warning", message: "Set silindi" });
       await loadSets();
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -87,10 +87,10 @@ export default function AdminSets() {
     try {
       if (editingSet?.id) {
         await setApi.update(editingSet.id, payload);
-        setBanner({ variant: "success", message: "Set updated" });
+        setBanner({ variant: "success", message: "Set güncellendi" });
       } else {
         await setApi.create(payload);
-        setBanner({ variant: "success", message: "Set created" });
+        setBanner({ variant: "success", message: "Set oluşturuldu" });
       }
       setModalOpen(false);
       await loadSets();
@@ -105,10 +105,10 @@ export default function AdminSets() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-            Sets
+            Setler
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-            Build and manage bundled products to showcase curated collections.
+            Özel koleksiyonları sergilemek için paket ürünler oluşturup yönetin.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -116,13 +116,13 @@ export default function AdminSets() {
             onClick={loadSets}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            <RefreshCw className="h-4 w-4" /> Refresh
+            <RefreshCw className="h-4 w-4" /> Yenile
           </button>
           <button
             onClick={handleCreate}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
           >
-            <PlusCircle className="h-5 w-5" /> New set
+            <PlusCircle className="h-5 w-5" /> Yeni set
           </button>
         </div>
       </header>
@@ -170,7 +170,7 @@ function flattenTree(tree = [], path = []) {
 }
 
 function extractMessage(error) {
-  if (!error) return "Unexpected error";
+  if (!error) return "Beklenmeyen hata";
   if (error instanceof Error) {
     try {
       const parsed = JSON.parse(error.message);

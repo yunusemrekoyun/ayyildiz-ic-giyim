@@ -1,8 +1,8 @@
 import { Pencil, Trash2, Power } from "lucide-react";
 
-const currency = new Intl.NumberFormat("en-US", {
+const currency = new Intl.NumberFormat("tr-TR", {
   style: "currency",
-  currency: "EUR",
+  currency: "TRY",
   minimumFractionDigits: 0,
 });
 
@@ -29,7 +29,7 @@ export default function CouponTable({
   if (!coupons.length) {
     return (
       <div className="rounded-2xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-12 text-center text-[var(--color-text-admin-muted)]">
-        No coupons available. Create your first one.
+        Henüz kupon yok. İlk kuponunuzu oluşturun.
       </div>
     );
   }
@@ -40,22 +40,22 @@ export default function CouponTable({
         <thead className="bg-[var(--color-bg-hover)]/60">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Code
+              Kod
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Percentage
+              Yüzde
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Minimum subtotal
+              Minimum Sepet Tutarı
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Status
+              Durum
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Updated
+              Güncellenme
             </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Actions
+              İşlemler
             </th>
           </tr>
         </thead>
@@ -78,9 +78,7 @@ export default function CouponTable({
                 {coupon.percentage}%
               </td>
               <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin)]">
-                {coupon.minSubtotal
-                  ? currency.format(coupon.minSubtotal)
-                  : "—"}
+                {coupon.minSubtotal ? currency.format(coupon.minSubtotal) : "—"}
               </td>
               <td className="px-4 py-4 align-top">
                 <span
@@ -90,7 +88,7 @@ export default function CouponTable({
                       : "bg-[var(--color-border-admin)]/40 text-[var(--color-text-admin-muted)]"
                   }`}
                 >
-                  {coupon.active ? "Active" : "Inactive"}
+                  {coupon.active ? "Aktif" : "Pasif"}
                 </span>
               </td>
               <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin-muted)]">
@@ -102,7 +100,7 @@ export default function CouponTable({
                     type="button"
                     onClick={() => onToggleActive?.(coupon)}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-                    title={coupon.active ? "Deactivate" : "Activate"}
+                    title={coupon.active ? "Pasifleştir" : "Aktifleştir"}
                   >
                     <Power className="h-4 w-4" />
                   </button>
@@ -110,7 +108,7 @@ export default function CouponTable({
                     type="button"
                     onClick={() => onEdit?.(coupon)}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-                    title="Edit coupon"
+                    title="Kuponu düzenle"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
@@ -118,7 +116,7 @@ export default function CouponTable({
                     type="button"
                     onClick={() => onDelete?.(coupon)}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50"
-                    title="Delete coupon"
+                    title="Kuponu sil"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -135,11 +133,11 @@ export default function CouponTable({
 function formatTimestamp(value) {
   if (!value) return "—";
   try {
-    return new Intl.DateTimeFormat("en-GB", {
+    return new Intl.DateTimeFormat("tr-TR", {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(new Date(value));
   } catch {
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString("tr-TR");
   }
 }

@@ -4,43 +4,44 @@ import { formatRelative } from "./helpers.js";
 export default function UserStats({ metrics = {} }) {
   const cards = [
     {
-      title: "Total users",
+      title: "Toplam Kullanıcı",
       value: formatNumber(metrics.totalUsers),
       Icon: Users,
       accent: "from-sky-500/25 via-sky-500/10 to-transparent",
       helper:
         metrics.latestUser?.fullName && metrics.latestUser?.createdAt
-          ? `Latest signup ${formatRelative(metrics.latestUser.createdAt)}`
-          : "All accounts",
+          ? `Son kayıt ${formatRelative(metrics.latestUser.createdAt)}`
+          : "Tüm hesaplar",
     },
     {
-      title: "Administrators",
+      title: "Yöneticiler",
       value: formatNumber(metrics.adminUsers),
       Icon: ShieldCheck,
       accent: "from-indigo-500/25 via-indigo-500/10 to-transparent",
       helper:
         metrics.adminUsers === 1
-          ? "Single admin"
-          : `${formatNumber(metrics.adminUsers || 0)} team members`,
+          ? "Tek yönetici"
+          : `${formatNumber(metrics.adminUsers || 0)} ekip üyesi`,
     },
     {
-      title: "New (30 days)",
+      title: "Yeni (30 gün)",
       value: formatNumber(metrics.newUsersLast30Days),
       Icon: UserPlus,
       accent: "from-emerald-500/25 via-emerald-500/10 to-transparent",
-      helper: "Last 30 days",
+      helper: "Son 30 gün",
     },
     {
-      title: "Growth",
+      title: "Büyüme",
       value: `${formatGrowth(metrics.growthRate30Days)}%`,
       Icon: TrendingUp,
-      accent: (metrics.growthRate30Days ?? 0) >= 0
-        ? "from-teal-500/25 via-teal-500/10 to-transparent"
-        : "from-rose-500/25 via-rose-500/10 to-transparent",
+      accent:
+        (metrics.growthRate30Days ?? 0) >= 0
+          ? "from-teal-500/25 via-teal-500/10 to-transparent"
+          : "from-rose-500/25 via-rose-500/10 to-transparent",
       helper:
         (metrics.growthRate30Days ?? 0) >= 0
-          ? "vs. prev. 30 days"
-          : "slower than last period",
+          ? "önceki 30 güne göre"
+          : "önceki döneme göre yavaşlama",
     },
   ];
 
@@ -95,5 +96,5 @@ function formatNumber(value) {
   if (value === undefined || value === null) return "0";
   const n = Number(value);
   if (Number.isNaN(n)) return "0";
-  return n.toLocaleString("en-US");
+  return n.toLocaleString("tr-TR");
 }

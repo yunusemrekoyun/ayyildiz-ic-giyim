@@ -10,7 +10,7 @@ import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { flattenCategoryTree } from "../../utils/catalog.js";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
 
-const currency = new Intl.NumberFormat("en-US", {
+const currency = new Intl.NumberFormat("tr-TR", {
   style: "currency",
   currency: "EUR",
   minimumFractionDigits: 0,
@@ -58,7 +58,7 @@ export default function AdminDiscounts() {
 
       const mappedProducts = (productRes.products || []).map((product) => ({
         id: String(product.id || product._id || "").trim(),
-        label: product.name || "Unnamed product",
+        label: product.name || "Adsız ürün",
         hint: currency.format(product.finalPrice ?? product.price ?? 0),
       }));
       setProductOptions(mappedProducts);
@@ -67,7 +67,7 @@ export default function AdminDiscounts() {
         Array.isArray(setRes) ? setRes : setRes?.sets || []
       ).map((set) => ({
         id: String(set.id || set._id || "").trim(),
-        label: set.name || "Untitled set",
+        label: set.name || "Başlıksız set",
         hint: currency.format(set.finalPrice ?? set.price ?? 0),
       }));
       setSetOptionsList(mappedSets);
@@ -80,10 +80,10 @@ export default function AdminDiscounts() {
           const label =
             (Array.isArray(item.path) && item.path.length
               ? item.path.join(" / ")
-              : item.label || item.name || String(catId)) || "Unnamed";
+              : item.label || item.name || String(catId)) || "Adsız";
           const hint =
             typeof item.level === "number"
-              ? `Level ${item.level + 1}`
+              ? `Seviye ${item.level + 1}`
               : undefined;
           return { id: String(catId), label, hint };
         })
@@ -117,16 +117,16 @@ export default function AdminDiscounts() {
 
   const handleDelete = async (discount) => {
     const ok = await confirm({
-      title: "Delete discount",
-      description: `Remove “${discount.name}”? This cannot be undone.`,
-      confirmText: "Delete",
+      title: "İndirimi sil",
+      description: `“${discount.name}” kaldırılsın mı? Bu işlem geri alınamaz.`,
+      confirmText: "Sil",
       tone: "danger",
     });
     if (!ok) return;
     try {
       await discountApi.remove(discount.id);
       setDiscounts((prev) => prev.filter((item) => item.id !== discount.id));
-      setBanner({ variant: "warning", message: "Discount deleted" });
+      setBanner({ variant: "warning", message: "İndirim silindi" });
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
     }
@@ -143,8 +143,8 @@ export default function AdminDiscounts() {
       setBanner({
         variant: "success",
         message: updated.active
-          ? `“${updated.name}” activated`
-          : `“${updated.name}” deactivated`,
+          ? `“${updated.name}” etkinleştirildi`
+          : `“${updated.name}” devre dışı bırakıldı`,
       });
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -160,12 +160,12 @@ export default function AdminDiscounts() {
         setDiscounts((prev) =>
           prev.map((item) => (item.id === updated.id ? updated : item))
         );
-        setBanner({ variant: "success", message: "Discount updated" });
+        setBanner({ variant: "success", message: "İndirim güncellendi" });
       } else {
         const created = await discountApi.create(payload);
         if (!created?.cancelled) {
           setDiscounts((prev) => [created, ...prev]);
-          setBanner({ variant: "success", message: "Discount created" });
+          setBanner({ variant: "success", message: "İndirim oluşturuldu" });
         }
       }
       closeModal();
@@ -182,7 +182,7 @@ export default function AdminDiscounts() {
       } else {
         setBanner({
           variant: "danger",
-          message: parsed?.message || "Unexpected error",
+          message: parsed?.message || "Beklenmeyen hata",
         });
       }
       setFormSubmitting(false);
@@ -194,7 +194,7 @@ export default function AdminDiscounts() {
 
     if (resolution === "cancel") {
       setConflictState(null);
-      setBanner({ variant: "info", message: "Discount action cancelled." });
+      setBanner({ variant: "info", message: "İndirim işlemi iptal edildi." });
       setFormSubmitting(false);
       return;
     }
@@ -208,17 +208,17 @@ export default function AdminDiscounts() {
         setDiscounts((prev) =>
           prev.map((item) => (item.id === result.id ? result : item))
         );
-        setBanner({ variant: "success", message: "Discount updated" });
+        setBanner({ variant: "success", message: "İndirim güncellendi" });
       } else {
         result = await discountApi.create(payload);
         if (result?.cancelled) {
           setBanner({
             variant: "info",
-            message: "Discount creation cancelled.",
+            message: "İndirim oluşturma iptal edildi.",
           });
         } else {
           setDiscounts((prev) => [result, ...prev]);
-          setBanner({ variant: "success", message: "Discount created" });
+          setBanner({ variant: "success", message: "İndirim oluşturuldu" });
         }
       }
       setConflictState(null);
@@ -243,10 +243,10 @@ export default function AdminDiscounts() {
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-              Discounts
+              İndirimler
             </h1>
             <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-              Manage catalog-wide promotions and coupons.
+              Katalog genelindeki kampanyaları ve kuponları yönetin.
             </p>
           </div>
         </div>
@@ -256,13 +256,13 @@ export default function AdminDiscounts() {
             onClick={loadDiscounts}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
-            <RefreshCw className="h-4 w-4" /> Refresh
+            <RefreshCw className="h-4 w-4" /> Yenile
           </button>
           <button
             onClick={openCreateModal}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
           >
-            <PlusCircle className="h-4 w-4" /> New discount
+            <PlusCircle className="h-4 w-4" /> Yeni indirim
           </button>
         </div>
       </header>
@@ -279,10 +279,10 @@ export default function AdminDiscounts() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border-admin)] pb-4">
           <div>
             <p className="text-sm font-semibold text-[var(--color-text-admin)]">
-              Active discounts
+              Aktif indirimler
             </p>
             <p className="text-xs text-[var(--color-text-admin-muted)]">
-              {activeCount} active • {discounts.length} total
+              {activeCount} aktif • {discounts.length} toplam
             </p>
           </div>
         </div>
@@ -329,5 +329,5 @@ function parseApiError(error) {
 
 function extractMessage(error) {
   const parsed = parseApiError(error);
-  return parsed?.message || "Unexpected error";
+  return parsed?.message || "Beklenmeyen hata";
 }

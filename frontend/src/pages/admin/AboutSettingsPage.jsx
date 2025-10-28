@@ -51,9 +51,9 @@ export default function AboutSettingsPage() {
 
       const res = await aboutApi.update(form);
       setData(res.about);
-      toast.success("About page updated");
+      toast.success("Hakkımızda sayfası güncellendi");
     } catch (err) {
-      toast.error(err.message || "Error saving");
+      toast.error(err.message || "Kaydedilirken hata oluştu");
     } finally {
       setSaving(false);
     }
@@ -64,7 +64,7 @@ export default function AboutSettingsPage() {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-          About Page Content
+          Hakkımızda Sayfası İçeriği
         </h1>
         <button
           onClick={handleSubmit}
@@ -73,38 +73,38 @@ export default function AboutSettingsPage() {
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           <Save className="h-4 w-4" />
-          Save
+          Kaydet
         </button>
       </div>
 
       {/* HERO SECTION */}
-      <SectionCard title="Hero Section">
+      <SectionCard title="Hero Bölümü">
         <TextInput
-          label="Hero Title"
+          label="Hero Başlığı"
           value={data.heroTitle}
           onChange={(v) => handleInput("heroTitle", v)}
         />
         <TextArea
-          label="Hero Subtitle"
+          label="Hero Alt Başlık"
           value={data.heroSubtitle}
           onChange={(v) => handleInput("heroSubtitle", v)}
         />
         <ImageUpload
-          label="Hero Image"
+          label="Hero Görseli"
           current={data.heroImage?.url}
           onChange={(f) => handleFile("heroImage", f)}
         />
       </SectionCard>
 
       {/* STORY / VALUES */}
-      <SectionCard title="Story, Vision & Values">
+      <SectionCard title="Hikaye, Vizyon ve Değerler">
         {data.dotBlocks.map((b, i) => (
           <div
             key={i}
             className="rounded-xl border border-[var(--color-border-admin)] p-4 mb-4 bg-[var(--color-bg-card)]"
           >
             <TextInput
-              label="Title"
+              label="Başlık"
               value={b.title}
               onChange={(v) =>
                 handleInput("dotBlocks", [
@@ -115,7 +115,7 @@ export default function AboutSettingsPage() {
               }
             />
             <TextArea
-              label="Text"
+              label="Metin"
               value={b.text}
               onChange={(v) =>
                 handleInput("dotBlocks", [
@@ -128,14 +128,14 @@ export default function AboutSettingsPage() {
           </div>
         ))}
         <ImageUpload
-          label="Left Image"
+          label="Sol Görsel"
           current={data.leftImage?.url}
           onChange={(f) => handleFile("leftImage", f)}
         />
       </SectionCard>
 
       {/* STATS */}
-      <SectionCard title="Stats / Badges">
+      <SectionCard title="İstatistikler / Rozetler">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {data.stats.map((s, i) => (
             <div
@@ -143,7 +143,7 @@ export default function AboutSettingsPage() {
               className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4"
             >
               <TextInput
-                label="Value"
+                label="Değer"
                 value={s.value}
                 onChange={(v) =>
                   handleInput(
@@ -155,7 +155,7 @@ export default function AboutSettingsPage() {
                 }
               />
               <TextInput
-                label="Label"
+                label="Etiket"
                 value={s.label}
                 onChange={(v) =>
                   handleInput(
@@ -172,33 +172,33 @@ export default function AboutSettingsPage() {
       </SectionCard>
 
       {/* MATERIALS */}
-      <SectionCard title="Materials & Responsibility">
+      <SectionCard title="Materyaller ve Sorumluluk">
         <TextInput
-          label="Title"
+          label="Başlık"
           value={data.materialsTitle}
           onChange={(v) => handleInput("materialsTitle", v)}
         />
         <TextArea
-          label="Text"
+          label="Metin"
           value={data.materialsText}
           onChange={(v) => handleInput("materialsText", v)}
         />
         <ImageUpload
-          label="Materials Image"
+          label="Materyaller Görseli"
           current={data.materialsImage?.url}
           onChange={(f) => handleFile("materialsImage", f)}
         />
       </SectionCard>
 
       {/* CTA */}
-      <SectionCard title="Call To Action">
+      <SectionCard title="Eyleme Çağrı (CTA)">
         <TextInput
-          label="Title"
+          label="Başlık"
           value={data.ctaTitle}
           onChange={(v) => handleInput("ctaTitle", v)}
         />
         <TextArea
-          label="Subtitle"
+          label="Alt Başlık"
           value={data.ctaSubtitle}
           onChange={(v) => handleInput("ctaSubtitle", v)}
         />

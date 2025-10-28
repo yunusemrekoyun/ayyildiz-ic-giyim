@@ -4,7 +4,9 @@ import EntityPicker from "../discounts/EntityPicker.jsx";
 
 function mapSelected(ids = [], options = []) {
   if (!ids.length) return [];
-  const optionMap = new Map(options.map((option) => [String(option.id), option]));
+  const optionMap = new Map(
+    options.map((option) => [String(option.id), option])
+  );
   return ids
     .map((raw) => {
       const id =
@@ -165,13 +167,13 @@ export default function CampaignForm({
     setError("");
 
     if (!name.trim()) {
-      setError("Campaign name is required.");
+      setError("Kampanya adı zorunludur.");
       return;
     }
 
     if (summary.discountConflicts.length) {
       setError(
-        `Selected discount(s) cover both sets and products: ${summary.discountConflicts
+        `Seçili indirim(ler) hem setleri hem ürünleri kapsıyor: ${summary.discountConflicts
           .map((d) => d.label || d.name || d.id)
           .join(", ")}`
       );
@@ -180,20 +182,20 @@ export default function CampaignForm({
 
     if (targetConflict) {
       setError(
-        "You cannot target sets together with products/categories. Please adjust the selections."
+        "Setleri ürünler/kategoriler ile birlikte hedefleyemezsiniz. Lütfen seçimleri düzenleyin."
       );
       return;
     }
 
     if (!summary.hasSets && !summary.hasProducts) {
       setError(
-        "Select at least one product, category, set or discount for this campaign."
+        "Bu kampanya için en az bir ürün, kategori, set veya indirim seçin."
       );
       return;
     }
 
     if (mode === "create" && !imageFile) {
-      setError("Please upload a campaign image.");
+      setError("Lütfen bir kampanya görseli yükleyin.");
       return;
     }
 
@@ -218,7 +220,9 @@ export default function CampaignForm({
     } catch (err) {
       const message =
         err?.message ||
-        (err instanceof Error ? err.message : String(err || "Unexpected error"));
+        (err instanceof Error
+          ? err.message
+          : String(err || "Beklenmeyen hata"));
       setError(message);
     }
   };
@@ -240,13 +244,13 @@ export default function CampaignForm({
       <header className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-            {mode === "create" ? "New Campaign" : "Edit Campaign"}
+            {mode === "create" ? "Yeni Kampanya" : "Kampanyayı Düzenle"}
           </p>
           <h2 className="text-xl font-semibold text-[var(--color-text-admin)]">
-            {mode === "create" ? "Create campaign" : initialCampaign?.name}
+            {mode === "create" ? "Kampanya oluştur" : initialCampaign?.name}
           </h2>
           <p className="text-xs text-[var(--color-text-admin-muted)]">
-            Configure the campaign card that appears on the home page.
+            Ana sayfada görünen kampanya kartını yapılandırın.
           </p>
         </div>
 
@@ -257,7 +261,7 @@ export default function CampaignForm({
               onClick={onCancel}
               className="rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
             >
-              Cancel
+              İptal
             </button>
           )}
           <button
@@ -265,7 +269,11 @@ export default function CampaignForm({
             disabled={submitting}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-xs font-semibold text-[var(--color-bg-admin)] transition hover:opacity-90 disabled:opacity-60"
           >
-            {submitting ? "Saving…" : mode === "create" ? "Create" : "Save"}
+            {submitting
+              ? "Kaydediliyor…"
+              : mode === "create"
+              ? "Oluştur"
+              : "Kaydet"}
           </button>
         </div>
       </header>
@@ -279,69 +287,69 @@ export default function CampaignForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-            Campaign name
+            Kampanya adı
           </span>
           <input
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
             className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-            placeholder="Summer Capsule"
+            placeholder="Yaz Kapsülü"
           />
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-            Badge (optional)
+            Rozet (opsiyonel)
           </span>
           <input
             type="text"
             value={badge}
             onChange={(event) => setBadge(event.target.value)}
             className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-            placeholder="Limited"
+            placeholder="Sınırlı"
           />
         </label>
         <label className="sm:col-span-2 block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-            Description (optional)
+            Açıklama (opsiyonel)
           </span>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={3}
             className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-            placeholder="Highlight the offer or storyline for this campaign card."
+            placeholder="Bu kampanya kartı için teklifi veya hikâyeyi vurgulayın."
           />
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-            CTA text
+            CTA metni
           </span>
           <input
             type="text"
             value={ctaText}
             onChange={(event) => setCtaText(event.target.value)}
             className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
-            placeholder="Shop now"
+            placeholder="Hemen alışveriş yap"
           />
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-            Layout
+            Yerleşim
           </span>
           <select
             value={layout}
             onChange={(event) => setLayout(event.target.value)}
             className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
           >
-            <option value="BIG">Big (2x2 spotlight)</option>
-            <option value="WIDE">Wide (2x1 banner)</option>
-            <option value="SMALL">Small tile</option>
+            <option value="BIG">Büyük (2x2 vitrin)</option>
+            <option value="WIDE">Geniş (2x1 banner)</option>
+            <option value="SMALL">Küçük karo</option>
           </select>
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-            Sort order
+            Sıra
           </span>
           <input
             type="number"
@@ -352,7 +360,7 @@ export default function CampaignForm({
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-            Visibility
+            Görünürlük
           </span>
           <button
             type="button"
@@ -363,9 +371,9 @@ export default function CampaignForm({
                 : "border-amber-200 bg-amber-50 text-amber-700"
             }`}
           >
-            <span>{isActive ? "Active" : "Hidden"}</span>
+            <span>{isActive ? "Aktif" : "Gizli"}</span>
             <span className="text-xs">
-              {isActive ? "Visible on home" : "Not visible"}
+              {isActive ? "Ana sayfada görünür" : "Görünmez"}
             </span>
           </button>
         </label>
@@ -373,7 +381,7 @@ export default function CampaignForm({
 
       <div>
         <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-          Campaign image
+          Kampanya görseli
         </span>
         <div className="flex items-start gap-3">
           <label className="flex cursor-pointer flex-1 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--color-border-admin)]/80 bg-[var(--color-bg-admin)]/60 px-6 py-10 text-center text-sm text-[var(--color-text-admin-muted)] hover:border-[var(--color-text-admin)]">
@@ -382,7 +390,7 @@ export default function CampaignForm({
                 <div className="relative mx-auto h-40 w-full max-w-xs overflow-hidden rounded-xl border border-[var(--color-border-admin)]">
                   <img
                     src={imagePreview}
-                    alt="Campaign preview"
+                    alt="Kampanya önizleme"
                     className="h-full w-full object-cover"
                   />
                   <button
@@ -392,26 +400,26 @@ export default function CampaignForm({
                       resetImage();
                     }}
                     className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
-                    title="Remove image"
+                    title="Görseli kaldır"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-[var(--color-text-admin-muted)]">
-                  Click to replace
+                  Değiştirmek için tıklayın
                 </p>
               </div>
             ) : (
               <>
                 <UploadCloud className="h-8 w-8 text-[var(--color-text-admin)]" />
                 <span>
-                  Drop an image or{" "}
+                  Bir görsel bırakın ya da{" "}
                   <span className="font-semibold text-[var(--color-text-admin)]">
-                    browse
+                    göz atın
                   </span>
                 </span>
                 <span className="text-[11px] text-[var(--color-text-admin-muted)]">
-                  Recommended 1200x800 JPG/PNG
+                  Önerilen 1200x800 JPG/PNG
                 </span>
               </>
             )}
@@ -434,31 +442,31 @@ export default function CampaignForm({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--color-text-admin-muted)]">
-              Target summary
+              Hedef özeti
             </p>
             <p className="text-sm font-semibold text-[var(--color-text-admin)]">
               {summary.targetType === "SETS"
-                ? "Sets page /sets?campaign=…"
-                : "Shop page /shop?campaign=…"}
+                ? "Sets sayfası /sets?campaign=…"
+                : "Mağaza sayfası /shop?campaign=…"}
             </p>
           </div>
           <div className="text-xs text-[var(--color-text-admin-muted)]">
-            Products: {selectedProducts.length} • Sets: {selectedSets.length} •
-            Categories: {selectedCategories.length} • Discounts:{" "}
+            Ürünler: {selectedProducts.length} • Setler: {selectedSets.length} •
+            Kategoriler: {selectedCategories.length} • İndirimler:{" "}
             {selectedDiscounts.length}
           </div>
         </div>
 
         {targetConflict && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            Mixed selections detected. Campaigns must target either sets or
-            products/categories, not both.
+            Karışık seçimler tespit edildi. Kampanyalar ya setleri ya da
+            ürünler/kategorileri hedeflemelidir; ikisi birden olmaz.
           </div>
         )}
 
         {summary.discountConflicts.length > 0 && (
           <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-            Discounts covering both sets and products are not allowed:{" "}
+            Hem setleri hem ürünleri kapsayan indirimlere izin verilmez:{" "}
             {summary.discountConflicts
               .map((d) => d.label || d.name || d.id)
               .join(", ")}
@@ -467,39 +475,39 @@ export default function CampaignForm({
       </div>
 
       <EntityPicker
-        label="Products"
+        label="Ürünler"
         options={productOptions}
         value={selectedProducts}
         onChange={setSelectedProducts}
-        placeholder="Search products…"
-        helper="Visible on /shop."
+        placeholder="Ürünlerde ara…"
+        helper=" /shop üzerinde görünür."
       />
 
       <EntityPicker
-        label="Categories"
+        label="Kategoriler"
         options={categoryOptions}
         value={selectedCategories}
         onChange={setSelectedCategories}
-        placeholder="Search categories…"
-        helper="Includes descendants."
+        placeholder="Kategorilerde ara…"
+        helper="Alt kırılımları da içerir."
       />
 
       <EntityPicker
-        label="Sets"
+        label="Setler"
         options={setOptions}
         value={selectedSets}
         onChange={setSelectedSets}
-        placeholder="Search sets…"
-        helper="Sets campaigns redirect to /sets."
+        placeholder="Setlerde ara…"
+        helper="Set kampanyaları /sets adresine yönlendirir."
       />
 
       <EntityPicker
-        label="Discount groups"
+        label="İndirim grupları"
         options={discountOptions}
         value={selectedDiscounts}
         onChange={setSelectedDiscounts}
-        placeholder="Search discounts…"
-        helper="Campaign inherits the discount coverage"
+        placeholder="İndirimlerde ara…"
+        helper="Kampanya indirim kapsamını devralır."
       />
     </form>
   );

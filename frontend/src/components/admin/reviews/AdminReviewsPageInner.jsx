@@ -58,7 +58,7 @@ export default function AdminReviewsPageInner() {
     } catch (error) {
       setBanner({
         variant: "danger",
-        message: error?.message || "Failed to load review summary.",
+        message: error?.message || "İnceleme özeti yüklenemedi.",
       });
     }
   }, []);
@@ -71,82 +71,76 @@ export default function AdminReviewsPageInner() {
     } catch (error) {
       setBanner({
         variant: "danger",
-        message: error?.message || "Unable to load pending review slider.",
+        message: error?.message || "Bekleyen inceleme slaytı yüklenemedi.",
       });
     } finally {
       setCarouselLoading(false);
     }
   }, []);
 
-  const loadPendingList = useCallback(
-    async (page = 1) => {
-      setPendingLoading(true);
-      try {
-        const data = await reviewApi.listAdmin({
-          status: "pending",
-          page,
-          limit: LIST_LIMIT,
-        });
-        const pagination = normalizePagination(data?.pagination, page);
-        if (page > pagination.pages && pagination.pages >= 1) {
-          setPendingPage(pagination.pages);
-          return;
-        }
-        setPendingData({
-          reviews: data?.reviews || [],
-          pagination,
-        });
-      } catch (error) {
-        setBanner({
-          variant: "danger",
-          message: error?.message || "Failed to load pending reviews.",
-        });
-        setPendingData((prev) => ({
-          ...prev,
-          reviews: [],
-          pagination: { page: 1, pages: 1, total: 0, limit: LIST_LIMIT },
-        }));
-      } finally {
-        setPendingLoading(false);
+  const loadPendingList = useCallback(async (page = 1) => {
+    setPendingLoading(true);
+    try {
+      const data = await reviewApi.listAdmin({
+        status: "pending",
+        page,
+        limit: LIST_LIMIT,
+      });
+      const pagination = normalizePagination(data?.pagination, page);
+      if (page > pagination.pages && pagination.pages >= 1) {
+        setPendingPage(pagination.pages);
+        return;
       }
-    },
-    []
-  );
+      setPendingData({
+        reviews: data?.reviews || [],
+        pagination,
+      });
+    } catch (error) {
+      setBanner({
+        variant: "danger",
+        message: error?.message || "Bekleyen incelemeler yüklenemedi.",
+      });
+      setPendingData((prev) => ({
+        ...prev,
+        reviews: [],
+        pagination: { page: 1, pages: 1, total: 0, limit: LIST_LIMIT },
+      }));
+    } finally {
+      setPendingLoading(false);
+    }
+  }, []);
 
-  const loadApprovedList = useCallback(
-    async (page = 1) => {
-      setApprovedLoading(true);
-      try {
-        const data = await reviewApi.listAdmin({
-          status: "approved",
-          page,
-          limit: LIST_LIMIT,
-        });
-        const pagination = normalizePagination(data?.pagination, page);
-        if (page > pagination.pages && pagination.pages >= 1) {
-          setApprovedPage(pagination.pages);
-          return;
-        }
-        setApprovedData({
-          reviews: data?.reviews || [],
-          pagination,
-        });
-      } catch (error) {
-        setBanner({
-          variant: "danger",
-          message: error?.message || "Failed to load approved reviews.",
-        });
-        setApprovedData((prev) => ({
-          ...prev,
-          reviews: [],
-          pagination: { page: 1, pages: 1, total: 0, limit: LIST_LIMIT },
-        }));
-      } finally {
-        setApprovedLoading(false);
+  const loadApprovedList = useCallback(async (page = 1) => {
+    setApprovedLoading(true);
+    try {
+      const data = await reviewApi.listAdmin({
+        status: "approved",
+        page,
+        limit: LIST_LIMIT,
+      });
+      const pagination = normalizePagination(data?.pagination, page);
+      if (page > pagination.pages && pagination.pages >= 1) {
+        setApprovedPage(pagination.pages);
+        return;
       }
-    },
-    []
-  );
+      setApprovedData({
+        reviews: data?.reviews || [],
+        pagination,
+      });
+    } catch (error) {
+      setBanner({
+        variant: "danger",
+        message: error?.message || "Onaylı incelemeler yüklenemedi.",
+      });
+      setApprovedData((prev) => ({
+        ...prev,
+        reviews: [],
+        pagination: { page: 1, pages: 1, total: 0, limit: LIST_LIMIT },
+      }));
+    } finally {
+      setApprovedLoading(false);
+    }
+  }, []);
 
   const refreshAll = useCallback(async () => {
     await Promise.all([
@@ -155,7 +149,14 @@ export default function AdminReviewsPageInner() {
       loadPendingList(pendingPage),
       loadApprovedList(approvedPage),
     ]);
-  }, [loadSummary, loadCarousel, loadPendingList, loadApprovedList, pendingPage, approvedPage]);
+  }, [
+    loadSummary,
+    loadCarousel,
+    loadPendingList,
+    loadApprovedList,
+    pendingPage,
+    approvedPage,
+  ]);
 
   useEffect(() => {
     loadSummary();
@@ -173,19 +174,19 @@ export default function AdminReviewsPageInner() {
   const summaryCards = useMemo(
     () => [
       {
-        label: "Pending",
+        label: "Bekleyen",
         value: summary.pending,
         Icon: Clock3,
         tone: "bg-amber-500/10 text-amber-500",
       },
       {
-        label: "Approved",
+        label: "Onaylanan",
         value: summary.approved,
         Icon: CheckCircle2,
         tone: "bg-emerald-500/10 text-emerald-500",
       },
       {
-        label: "Total",
+        label: "Toplam",
         value: summary.total,
         Icon: MessageSquare,
         tone: "bg-sky-500/10 text-sky-500",
@@ -205,9 +206,9 @@ export default function AdminReviewsPageInner() {
         const target = getTargetMeta(resolved);
         setBanner({
           variant: "success",
-          message: `Review for ${target.name} (${targetTypeLabel(
+          message: `${reviewerName} tarafından ${targetTypeLabel(
             target.type
-          )}) from ${reviewerName} approved.`,
+          )} “${target.name}” için yazılan inceleme onaylandı.`,
         });
         await Promise.all([
           loadSummary(),
@@ -218,13 +219,20 @@ export default function AdminReviewsPageInner() {
       } catch (error) {
         setBanner({
           variant: "danger",
-          message: error?.message || "Failed to approve review.",
+          message: error?.message || "İnceleme onaylanamadı.",
         });
       } finally {
         setActionLoading((prev) => removeKey(prev, review.id));
       }
     },
-    [approvedPage, loadApprovedList, loadCarousel, loadPendingList, loadSummary, pendingPage]
+    [
+      approvedPage,
+      loadApprovedList,
+      loadCarousel,
+      loadPendingList,
+      loadSummary,
+      pendingPage,
+    ]
   );
 
   const handleDelete = useCallback(
@@ -233,12 +241,12 @@ export default function AdminReviewsPageInner() {
       const target = getTargetMeta(review);
       const reviewerName = getReviewerName(review);
       const ok = await confirm({
-        title: "Delete review",
-        description: `Delete review for ${target.name} (${targetTypeLabel(
+        title: "İncelemeyi sil",
+        description: `${reviewerName} tarafından ${targetTypeLabel(
           target.type
-        )}) from ${reviewerName}?`,
+        )} “${target.name}” için yazılan inceleme silinsin mi?`,
         tone: "danger",
-        confirmText: "Delete",
+        confirmText: "Sil",
       });
       if (!ok) return;
 
@@ -247,7 +255,7 @@ export default function AdminReviewsPageInner() {
         await reviewApi.remove(review.id);
         setBanner({
           variant: "warning",
-          message: `Review for ${target.name} from ${reviewerName} deleted.`,
+          message: `${reviewerName} tarafından “${target.name}” için yazılan inceleme silindi.`,
         });
         await Promise.all([
           loadSummary(),
@@ -258,13 +266,21 @@ export default function AdminReviewsPageInner() {
       } catch (error) {
         setBanner({
           variant: "danger",
-          message: error?.message || "Failed to delete review.",
+          message: error?.message || "İnceleme silinemedi.",
         });
       } finally {
         setActionLoading((prev) => removeKey(prev, review.id));
       }
     },
-    [approvedPage, confirm, loadApprovedList, loadCarousel, loadPendingList, loadSummary, pendingPage]
+    [
+      approvedPage,
+      confirm,
+      loadApprovedList,
+      loadCarousel,
+      loadPendingList,
+      loadSummary,
+      pendingPage,
+    ]
   );
 
   return (
@@ -272,9 +288,10 @@ export default function AdminReviewsPageInner() {
       <header className="flex flex-col gap-4 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Review Moderation</h1>
+            <h1 className="text-2xl font-semibold">İnceleme Moderasyonu</h1>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Approve, reject and track customer feedback across the store.
+              Mağaza genelinde müşteri geri bildirimlerini onayla, reddet ve
+              takip et.
             </p>
           </div>
           <button
@@ -283,7 +300,7 @@ export default function AdminReviewsPageInner() {
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
           >
             <RefreshCcw className="h-4 w-4" />
-            Refresh data
+            Verileri yenile
           </button>
         </div>
 
@@ -303,7 +320,9 @@ export default function AdminReviewsPageInner() {
                     {item.value}
                   </div>
                 </div>
-                <div className={`grid h-12 w-12 place-items-center rounded-xl ${item.tone}`}>
+                <div
+                  className={`grid h-12 w-12 place-items-center rounded-xl ${item.tone}`}
+                >
                   <MetricIcon className="h-5 w-5" />
                 </div>
               </div>
@@ -330,8 +349,8 @@ export default function AdminReviewsPageInner() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <ReviewListSection
-          title="Pending reviews"
-          subtitle="Queued reviews waiting for approval."
+          title="Bekleyen incelemeler"
+          subtitle="Onay bekleyen kuyruğa alınmış incelemeler."
           reviews={pendingData.reviews}
           loading={pendingLoading}
           pagination={pendingData.pagination}
@@ -343,8 +362,8 @@ export default function AdminReviewsPageInner() {
         />
 
         <ReviewListSection
-          title="Approved reviews"
-          subtitle="Published reviews currently visible on the site."
+          title="Onaylanan incelemeler"
+          subtitle="Sitede şu anda görünür olan yayınlanmış incelemeler."
           reviews={approvedData.reviews}
           loading={approvedLoading}
           pagination={approvedData.pagination}
@@ -394,7 +413,7 @@ function PendingReviewCarousel({
   if (!reviews?.length) {
     return (
       <section className="rounded-3xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6 text-center text-sm text-[var(--color-text-admin-muted)]">
-        No pending reviews awaiting moderation.
+        Moderasyon bekleyen inceleme yok.
       </section>
     );
   }
@@ -404,10 +423,10 @@ function PendingReviewCarousel({
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-[var(--color-text-admin)]">
-            Pending review spotlight
+            Bekleyen inceleme vitrini
           </h2>
           <p className="text-sm text-[var(--color-text-admin-muted)]">
-            Reviews rotate automatically; take action directly from here.
+            İncelemeler otomatik döner; buradan direkt işlem yapabilirsin.
           </p>
         </div>
         <div className="hidden items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)] md:flex">
@@ -441,7 +460,7 @@ function PendingReviewCarousel({
                         {reviewerName}
                       </div>
                       <div className="text-xs text-[var(--color-text-admin-muted)]">
-                        {review.user?.email || "No email"}
+                        {review.user?.email || "E-posta yok"}
                       </div>
                     </div>
                   </div>
@@ -455,7 +474,7 @@ function PendingReviewCarousel({
                       </span>
                     </div>
                     <p className="mt-3 whitespace-pre-line leading-relaxed">
-                      {review.body || review.title || "No message"}
+                      {review.body || review.title || "Mesaj yok"}
                     </p>
                   </div>
                 </div>
@@ -486,7 +505,7 @@ function PendingReviewCarousel({
                       ) : (
                         <Check className="h-4 w-4" />
                       )}
-                      Approve
+                      Onayla
                     </button>
                     <button
                       type="button"
@@ -499,7 +518,7 @@ function PendingReviewCarousel({
                       ) : (
                         <Trash2 className="h-4 w-4" />
                       )}
-                      Delete
+                      Sil
                     </button>
                   </div>
                 </aside>
@@ -520,14 +539,13 @@ function PendingReviewCarousel({
                 ? "bg-[var(--color-text-admin)]"
                 : "bg-[var(--color-border-admin)]"
             }`}
-            aria-label={`Show review ${index + 1}`}
+            aria-label={`İnceleme ${index + 1} göster`}
           />
         ))}
       </div>
     </section>
   );
 }
-
 function ReviewListSection({
   title,
   subtitle,
@@ -586,7 +604,7 @@ function ReviewListSection({
                   </div>
 
                   <div className="rounded-2xl border border-[var(--color-border-admin)]/40 bg-white/10 p-3 text-sm text-[var(--color-text-admin)]">
-                    {review.body || review.title || "No message provided."}
+                    {review.body || review.title || "Mesaj girilmemiş."}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-admin-muted)]">
@@ -628,7 +646,7 @@ function ReviewListSection({
                         ) : (
                           <Check className="h-4 w-4" />
                         )}
-                        Approve
+                        Onayla
                       </button>
                     ) : null}
                     <button
@@ -642,7 +660,7 @@ function ReviewListSection({
                       ) : (
                         <Trash2 className="h-4 w-4" />
                       )}
-                      Delete
+                      Sil
                     </button>
                   </div>
                 </div>
@@ -651,16 +669,20 @@ function ReviewListSection({
           })
         ) : (
           <div className="rounded-2xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]/30 p-6 text-center text-sm text-[var(--color-text-admin-muted)]">
-            No reviews in this state.
+            Bu durumda inceleme yok.
           </div>
         )}
       </div>
 
       <footer className="mt-auto flex items-center justify-between gap-3 border-t border-[var(--color-border-admin)]/50 pt-4 text-xs text-[var(--color-text-admin-muted)]">
         <div>
-          {pagination.total} total • Page {pagination.page} of {pagination.pages}
+          {pagination.total} toplam • Sayfa {pagination.page} /{" "}
+          {pagination.pages}
         </div>
-        <PaginationControls pagination={pagination} onPageChange={onPageChange} />
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={onPageChange}
+        />
       </footer>
     </section>
   );
@@ -676,7 +698,7 @@ function PaginationControls({ pagination, onPageChange }) {
         disabled={page <= 1}
         className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
       >
-        ‹ Prev
+        ‹ Önceki
       </button>
       <button
         type="button"
@@ -684,7 +706,7 @@ function PaginationControls({ pagination, onPageChange }) {
         disabled={page >= pages}
         className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
       >
-        Next ›
+        Sonraki ›
       </button>
     </div>
   );
@@ -694,7 +716,10 @@ function normalizePagination(pagination = {}, fallbackPage = 1) {
   const page = Math.max(1, Number(pagination.page || fallbackPage || 1));
   const limit = Math.max(1, Number(pagination.limit || LIST_LIMIT));
   const total = Math.max(0, Number(pagination.total || 0));
-  const pages = Math.max(1, Number(pagination.pages || Math.ceil(total / limit) || 1));
+  const pages = Math.max(
+    1,
+    Number(pagination.pages || Math.ceil(total / limit) || 1)
+  );
   return { page, limit, total, pages };
 }
 
@@ -715,26 +740,24 @@ function formatDateTime(value) {
 
 function getTargetMeta(review) {
   if (!review) {
-    return { name: "Unknown item", type: "product" };
+    return { name: "Bilinmeyen öğe", type: "product" };
   }
-  const type =
-    review.target?.type ||
-    (review.set ? "set" : "product");
+  const type = review.target?.type || (review.set ? "set" : "product");
   const name =
     review.target?.name ||
     review.product?.name ||
     review.set?.name ||
-    "Unknown item";
+    "Bilinmeyen öğe";
   return { name, type };
 }
 
 function getReviewerName(review) {
-  if (!review) return "customer";
-  return review.user?.name || "customer";
+  if (!review) return "müşteri";
+  return review.user?.name || "müşteri";
 }
 
 function targetTypeLabel(type) {
-  return type === "set" ? "Set" : "Product";
+  return type === "set" ? "Set" : "Ürün";
 }
 
 function renderRating(rating) {
@@ -745,11 +768,15 @@ function renderRating(rating) {
         <Star
           key={index}
           className={`h-4 w-4 ${
-            index < value ? "fill-amber-400 text-amber-400" : "text-[var(--color-border-admin)]"
+            index < value
+              ? "fill-amber-400 text-amber-400"
+              : "text-[var(--color-border-admin)]"
           }`}
         />
       ))}
-      <span className="text-xs text-[var(--color-text-admin-muted)]">{value.toFixed(1)}</span>
+      <span className="text-xs text-[var(--color-text-admin-muted)]">
+        {value.toFixed(1)}
+      </span>
     </>
   );
 }
