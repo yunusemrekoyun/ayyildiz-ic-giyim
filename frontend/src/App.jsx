@@ -41,6 +41,7 @@ import ShippingReturnsSettings from "./pages/admin/ShippingReturnsSettings.jsx";
 import PrivacyPolicySettings from "./pages/admin/PrivacyPolicySettings.jsx";
 import TermsSettings from "./pages/admin/TermsSettings.jsx";
 import ThemeSettingsPage from "./pages/ThemeSettingsPage.jsx";
+import AdminStocks from "./pages/admin/AdminStocks.jsx";
 
 // 👇 Global scroll handler
 import ScrollToTop from "./components/ScrollToTop.jsx";
@@ -109,6 +110,7 @@ export default function App() {
           <Route path="/admin/settings/about" element={<AboutSettingsPage />} />
           <Route path="/admin/settings/terms" element={<TermsSettings />} />
           <Route path="/admin/settings/theme" element={<ThemeSettingsPage />} />
+          <Route path="/admin/stocks" element={<AdminStocks />} />
           <Route
             path="/admin/settings/privacy"
             element={<PrivacyPolicySettings />}

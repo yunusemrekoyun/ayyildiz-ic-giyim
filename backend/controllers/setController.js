@@ -1,336 +1,201 @@
 // backend/controllers/setController.js
 import Set from "../models/Set.js";
 import Product from "../models/Product.js";
-import {
-  uploadBufferToCloudinary,
-  deleteFromCloudinary,
-} from "../utils/cloudinaryUpload.js";
-import { parseBoolean } from "../utils/productHelpers.js";
-import { shapeProduct } from "../utils/productHelpers.js";
-import {
-  fetchActiveDiscounts,
-  computeProductDiscountMap,
-  mapDiscountsToSets,
-  applyDiscount,
-} from "../utils/discountHelpers.js";
-import {
-  recalculateSetStock,
-  recalculateSetStockForSetIds,
-  computeSetStockSnapshot,
-} from "../utils/setStock.js";
+import { hydrateProductsWithInventory } from "../utils/stockItemHelpers.js";
 
-const isValidObjectId = (val) =>
-  typeof val === "string" && val.match(/^[0-9a-fA-F]{24}$/);
+const isId = (s) => typeof s === "string" && /^[0-9a-fA-F]{24}$/.test(s);
 
-function setId(doc) {
-  if (!doc) return null;
-  return (
-    doc._id?.toString?.() ||
-    doc.id?.toString?.() ||
-    (typeof doc === "string" ? doc : String(doc._id || doc.id || ""))
-  );
+async function uploadImages(files = []) {
+  return files.map((f) => ({
+    url: f.path || f.location || "",
+    publicId: f.filename || f.originalname || "",
+    width: undefined,
+    height: undefined,
+    format: undefined,
+  }));
 }
 
-// Sadece set'in kendi görselleri
-async function processImages(files = []) {
-  if (!files || !files.length) return [];
-  const uploads = files.map((file) =>
-    uploadBufferToCloudinary(file.buffer).then((result) => ({
-      url: result.secure_url,
-      publicId: result.public_id,
-      width: result.width,
-      height: result.height,
-      format: result.format,
-    }))
-  );
-  return Promise.all(uploads);
-}
-
-async function shapeSetsWithDiscounts(sets) {
-  if (!sets?.length) return [];
-  const activeDiscounts = await fetchActiveDiscounts();
-
-  let setDiscountMap = new Map();
-  let productDiscountMap = new Map();
-
-  if (activeDiscounts.length) {
-    setDiscountMap = mapDiscountsToSets(
-      activeDiscounts,
-      sets.map((set) => setId(set) || "")
-    );
-
-    const nestedProducts = [];
-    sets.forEach((set) => {
-      (set.products || []).forEach((entry) => {
-        if (entry?.product) nestedProducts.push(entry.product);
-      });
+async function parseSetProducts(value) {
+  if (!value) return [];
+  const payload = typeof value === "string" ? JSON.parse(value) : value;
+  if (!Array.isArray(payload)) throw new Error("products must be an array");
+  const out = [];
+  for (const row of payload) {
+    if (!row?.productId) throw new Error("Each item must include productId");
+    const prod = await Product.findById(row.productId);
+    if (!prod) throw new Error("Product not found: " + row.productId);
+    out.push({
+      product: prod._id,
+      quantity: Math.max(1, Number(row.quantity) || 1),
     });
-
-    if (nestedProducts.length) {
-      productDiscountMap = computeProductDiscountMap(
-        activeDiscounts,
-        nestedProducts
-      );
-    }
   }
-
-  return sets.map((set) => {
-    const id = setId(set) || "";
-    const discount = setDiscountMap.get(id) || null;
-    return shapeSet(set, { discount, productDiscountMap });
-  });
-}
-
-async function shapeSetWithDiscount(set) {
-  if (!set) return null;
-  const [shaped] = await shapeSetsWithDiscounts([set]);
-  return shaped || null;
+  return out;
 }
 
 export async function createSet(req, res) {
   try {
-    const { name, description = "", price, show = true } = req.body;
-    if (!name || price === undefined) {
+    const {
+      name,
+      description = "",
+      price,
+      show = true,
+      products = [],
+      sku,
+    } = req.body;
+    if (!name || price == null)
       return res.status(400).json({ message: "Name and price are required" });
-    }
-    const parsedPrice = Number(price);
-    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    const priceNum = Number(price);
+    if (!Number.isFinite(priceNum) || priceNum < 0)
       return res.status(400).json({ message: "Price must be a valid number" });
-    }
 
     const files = Array.isArray(req.files) ? req.files : [];
-    const setImageFiles = files.filter((f) => f.fieldname === "images");
+    const images = await uploadImages(
+      files.filter((f) => f.fieldname === "images")
+    );
+    const setProducts = await parseSetProducts(products);
 
-    const products = await resolveSetProducts(req.body.products);
-    const images = await processImages(setImageFiles);
-
-    let set = await Set.create({
-      name,
+    const doc = await Set.create({
+      name: String(name).trim(),
       description,
-      price: parsedPrice,
-      show: parseBoolean(show, true),
+      price: priceNum,
+      show: !!JSON.parse(String(show).toLowerCase() || "true"),
       images,
-      products,
+      products: setProducts,
+      sku: sku ? String(sku).trim().toUpperCase() : undefined,
     });
 
-    set = await recalculateSetStock(set);
-    await set.populate({
-      path: "products.product",
-      populate: { path: "category" },
-    });
-    res.status(201).json({ set: await shapeSetWithDiscount(set) });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+    await doc.populate({ path: "products.product" });
+    const componentProducts = doc.products
+      .map((entry) => entry?.product)
+      .filter(Boolean);
+    await hydrateProductsWithInventory(componentProducts);
+    doc.set("stock", null, { strict: false });
+    res.status(201).json({ set: doc });
+  } catch (err) {
+    if (err?.code === 11000 && err?.keyPattern?.sku)
+      return res.status(400).json({ message: "SKU already exists" });
+    res.status(400).json({ message: err.message || "Create failed" });
   }
 }
 
-export async function listSets(req, res) {
+export async function listSets(_req, res) {
   try {
-    const includeHidden = parseBoolean(req.query.includeHidden, false);
-    const filter = includeHidden ? {} : { show: true };
-
-    const sets = await Set.find(filter)
+    const sets = await Set.find({})
       .sort({ createdAt: -1 })
-      .populate({ path: "products.product", populate: { path: "category" } })
+      .populate({ path: "products.product" })
       .lean();
 
-    const hydrated = sets.map((set) => ({
-      ...set,
-      stock: computeSetStockSnapshot(set),
-    }));
-
-    res.json({ sets: await shapeSetsWithDiscounts(hydrated) });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const products = [];
+    sets.forEach((set) => {
+      (set.products || []).forEach((entry) => {
+        if (entry?.product) products.push(entry.product);
+      });
+      set.stock = null;
+    });
+    await hydrateProductsWithInventory(products);
+    res.json({ sets });
+  } catch (err) {
+    res.status(500).json({ message: err.message || "List failed" });
   }
 }
 
 export async function getSet(req, res) {
   try {
     const { idOrSlug } = req.params;
-    const set = isValidObjectId(idOrSlug)
+    const set = isId(idOrSlug)
       ? await Set.findById(idOrSlug)
       : await Set.findOne({ slug: idOrSlug });
-
     if (!set) return res.status(404).json({ message: "Set not found" });
-
-    const refreshed = await recalculateSetStock(set);
-    const workingSet = refreshed || set;
-
-    await workingSet.populate({
-      path: "products.product",
-      populate: { path: "category" },
-    });
-
-    res.json({ set: await shapeSetWithDiscount(workingSet) });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    await set.populate({ path: "products.product" });
+    const componentProducts = set.products
+      .map((entry) => entry?.product)
+      .filter(Boolean);
+    await hydrateProductsWithInventory(componentProducts);
+    set.set("stock", null, { strict: false });
+    res.json({ set });
+  } catch (err) {
+    res.status(500).json({ message: err.message || "Get failed" });
   }
 }
 
 export async function updateSet(req, res) {
   try {
     const { idOrSlug } = req.params;
-    const set = isValidObjectId(idOrSlug)
+    const set = isId(idOrSlug)
       ? await Set.findById(idOrSlug)
       : await Set.findOne({ slug: idOrSlug });
-
     if (!set) return res.status(404).json({ message: "Set not found" });
 
-    const { name, description, price, show } = req.body;
+    const {
+      name,
+      description,
+      price,
+      show,
+      products,
+      sku,
+      removeImagePublicIds,
+    } = req.body;
 
-    if (name !== undefined) set.name = name;
+    if (name !== undefined) set.name = String(name).trim();
     if (description !== undefined) set.description = description;
     if (price !== undefined) {
-      const parsedPrice = Number(price);
-      if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      const n = Number(price);
+      if (!Number.isFinite(n) || n < 0)
         return res
           .status(400)
           .json({ message: "Price must be a valid number" });
-      }
-      set.price = parsedPrice;
+      set.price = n;
     }
-    if (show !== undefined) set.show = parseBoolean(show, set.show);
+    if (show !== undefined)
+      set.show = !!JSON.parse(String(show).toLowerCase() || "true");
+    if (sku !== undefined)
+      set.sku = sku ? String(sku).trim().toUpperCase() : undefined;
+
+    if (products !== undefined) set.products = await parseSetProducts(products);
+
+    if (removeImagePublicIds) {
+      const ids = Array.isArray(removeImagePublicIds)
+        ? removeImagePublicIds
+        : String(removeImagePublicIds)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+      set.images = set.images.filter((img) => !ids.includes(img.publicId));
+      // storage temizliği burada yapılabilir
+    }
 
     const files = Array.isArray(req.files) ? req.files : [];
-    const setImageFiles = files.filter((f) => f.fieldname === "images");
-
-    if (req.body.products !== undefined) {
-      set.products = await resolveSetProducts(req.body.products);
-    }
-
-    const removeImageIds = parseIdList(req.body.removeImagePublicIds);
-    if (removeImageIds.length) {
-      await Promise.all(removeImageIds.map((id) => deleteFromCloudinary(id)));
-      set.images = set.images.filter(
-        (image) => !removeImageIds.includes(image.publicId)
-      );
-    }
-
-    if (setImageFiles.length) {
-      const newImages = await processImages(setImageFiles);
-      set.images.push(...newImages);
-    }
+    const newImgs = await uploadImages(
+      files.filter((f) => f.fieldname === "images")
+    );
+    if (newImgs.length) set.images.push(...newImgs);
 
     await set.save();
-    await recalculateSetStockForSetIds([set._id]);
-    await set.populate({
-      path: "products.product",
-      populate: { path: "category" },
-    });
-    res.json({ set: await shapeSetWithDiscount(set) });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+    await set.populate({ path: "products.product" });
+    const componentProducts = set.products
+      .map((entry) => entry?.product)
+      .filter(Boolean);
+    await hydrateProductsWithInventory(componentProducts);
+    set.set("stock", null, { strict: false });
+    res.json({ set });
+  } catch (err) {
+    if (err?.code === 11000 && err?.keyPattern?.sku)
+      return res.status(400).json({ message: "SKU already exists" });
+    res.status(400).json({ message: err.message || "Update failed" });
   }
 }
 
 export async function deleteSet(req, res) {
   try {
     const { idOrSlug } = req.params;
-    const set = isValidObjectId(idOrSlug)
+    const set = isId(idOrSlug)
       ? await Set.findById(idOrSlug)
       : await Set.findOne({ slug: idOrSlug });
-
     if (!set) return res.status(404).json({ message: "Set not found" });
-
-    await Promise.all(
-      set.images.map((img) => deleteFromCloudinary(img.publicId))
-    );
+    // set.images storage silme vs.
     await set.deleteOne();
     res.json({ ok: true });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message || "Delete failed" });
   }
-}
-
-async function resolveSetProducts(value) {
-  if (!value) return [];
-  let payload = value;
-  if (typeof value === "string") {
-    try {
-      payload = JSON.parse(value);
-    } catch {
-      throw new Error("Invalid products payload");
-    }
-  }
-  if (!Array.isArray(payload))
-    throw new Error("Products payload must be an array");
-
-  const products = [];
-  for (const item of payload) {
-    if (!item?.productId) {
-      throw new Error("Each product must include productId");
-    }
-    const product = await Product.findById(item.productId);
-    if (!product) throw new Error("Product not found: " + item.productId);
-    const quantity = Math.max(1, Number(item.quantity) || 1);
-    products.push({ product: product._id, quantity });
-  }
-  return products;
-}
-
-function shapeSet(
-  doc,
-  { discount = null, productDiscountMap = new Map() } = {}
-) {
-  if (!doc) return null;
-  const id = doc._id?.toString?.() || String(doc._id);
-
-  const normalizedDiscount = discount
-    ? {
-        id: discount.id || discount._id?.toString?.() || String(discount._id),
-        name: discount.name,
-        percentage: Number(discount.percentage) || 0,
-        description: discount.description || "",
-      }
-    : null;
-
-  const basePrice = Number(doc.price) || 0;
-  const { finalPrice } = applyDiscount(basePrice, normalizedDiscount);
-
-  return {
-    id,
-    name: doc.name,
-    slug: doc.slug,
-    description: doc.description,
-    price: basePrice,
-    finalPrice,
-    discount: normalizedDiscount,
-    hasDiscount: Boolean(normalizedDiscount) && basePrice !== finalPrice,
-    show: doc.show,
-    stock: doc.stock,
-    images: doc.images,
-    products: (doc.products || []).map((entry) => ({
-      quantity: entry.quantity,
-      product: entry.product
-        ? shapeProduct(entry.product, {
-            discount:
-              productDiscountMap.get(
-                entry.product?._id?.toString?.() ||
-                  entry.product?.id?.toString?.() ||
-                  ""
-              ) || null,
-          })
-        : entry.product,
-    })),
-    createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
-  };
-}
-
-function parseIdList(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed.filter(Boolean);
-    } catch {
-      return value
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-  }
-  return [];
 }

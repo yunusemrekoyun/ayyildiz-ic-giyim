@@ -17,6 +17,7 @@ import {
   Users,
   Percent,
   TicketPercent,
+  Boxes,
   // Megaphone,
   // MessageSquare,
   Settings,
@@ -83,6 +84,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
           { to: "/admin/media", label: "Medya Kütüphanesi", Icon: Image },
           { to: "/admin/discounts", label: "İndirimler", Icon: Percent },
           { to: "/admin/coupons", label: "Kuponlar", Icon: TicketPercent },
+           { to: "/admin/stocks", label: "Stok Yönetimi", Icon: Boxes },
         ],
       },
       {

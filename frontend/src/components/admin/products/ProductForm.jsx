@@ -3,9 +3,9 @@ import { ImagePlus, Upload } from "lucide-react";
 import AdminModal from "../common/AdminModal";
 import TagInput from "../common/TagInput";
 import ColorSelector from "./ColorSelector.jsx";
+import ColorBadge from "../common/ColorBadge.jsx";
 import {
   dedupeColors,
-  getColorInfo,
   normalizeColorValue,
 } from "../../../utils/colors.js";
 
@@ -17,6 +17,62 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 
 const makeKey = ({ color, size, attributeValue }) =>
   [color || "", size || "", attributeValue || ""].join("||");
+
+function normalizeDetailsList(details) {
+  if (!details) return [];
+  if (Array.isArray(details)) {
+    return details
+      .map((item) => String(item).trim())
+      .filter((item) => item.length);
+  }
+  if (typeof details === "string") {
+    const trimmed = details.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => String(item).trim())
+          .filter((item) => item.length);
+      }
+    } catch {
+      // fall through to newline split
+    }
+    return trimmed
+      .split(/\r?\n+/)
+      .map((item) => item.trim())
+      .filter((item) => item.length);
+  }
+  return [];
+}
+
+function normalizeOptionList(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item).trim())
+      .filter((item) => item.length);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => String(item).trim())
+          .filter((item) => item.length);
+      }
+    } catch {
+      // fall through to delimiter split
+    }
+    return trimmed
+      .split(/[,;\r?\n]+/)
+      .map((item) => item.trim())
+      .filter((item) => item.length);
+  }
+  return [];
+}
 
 export default function ProductForm({
   open,
@@ -56,7 +112,9 @@ export default function ProductForm({
     setCategoryId(resolveCategoryId(initialProduct?.category));
     setDescription(initialProduct?.description ?? "");
     setCareInstructions(initialProduct?.careInstructions ?? "");
-    setDetailsInput((initialProduct?.details || []).join("\n"));
+    setDetailsInput(normalizeDetailsList(initialProduct?.details).join("\n"));
+
+    // ✅ renk/beden/opsiyonlar product meta’dan geliyor
     const inv = initialProduct?.inventory || [];
     const invColors = dedupeColors(inv.map((i) => i.color).filter(Boolean));
     const invSizes = Array.from(
@@ -66,21 +124,29 @@ export default function ProductForm({
       new Set(inv.map((i) => i.attributeValue).filter(Boolean))
     );
 
+    const normalizedColors = normalizeOptionList(initialProduct?.colors);
+    const normalizedSizes = normalizeOptionList(initialProduct?.sizes);
+
     setColors(
       dedupeColors(
-        (initialProduct?.colors?.length ? initialProduct.colors : invColors) ||
-          []
+        normalizedColors.length ? normalizedColors : invColors
       )
     );
     setSizes(
-      (initialProduct?.sizes?.length ? initialProduct.sizes : invSizes) || []
+      normalizedSizes.length ? normalizedSizes : invSizes
     );
     setShowColors(initialProduct?.showColors ?? true);
     setShowSizes(initialProduct?.showSizes ?? true);
+
     const attr = initialProduct?.customAttribute || {};
+    const normalizedAttrValues = normalizeOptionList(attr.values);
     setAttributeTitle(attr.title || "");
-    setAttributeValues((attr.values?.length ? attr.values : invAttrs) || []);
+    setAttributeValues(
+      normalizedAttrValues.length ? normalizedAttrValues : invAttrs
+    );
     setShowAttribute(attr.show ?? false);
+
+    // ✅ stoklar artık sadece görsel tablo için; backend'e ayrı gönderilecek
     setInventory(
       (initialProduct?.inventory || []).map((item) => ({
         color: normalizeColorValue(item.color),
@@ -116,7 +182,6 @@ export default function ProductForm({
     if (!open) return;
     const inv = initialProduct?.inventory || [];
 
-    // Düzenleme modunda inventory'den fallback havuzları
     const invColors = Array.from(
       new Set(inv.map((i) => i?.color).filter(Boolean))
     );
@@ -127,10 +192,6 @@ export default function ProductForm({
       new Set(inv.map((i) => i?.attributeValue).filter(Boolean))
     );
 
-    // Listeleri şu öncelikle kur:
-    // 1) Kullanıcının seçtikleri
-    // 2) (Edit modunda) Inventory’den türeyenler
-    // 3) Hiçbiri yoksa [null] (Default varyant)
     const colorList = showColors
       ? colors.length
         ? colors
@@ -169,7 +230,6 @@ export default function ProductForm({
     });
 
     setInventory((prev) => {
-      // Mevcut stokları anahtara göre birleştir (renk/beden/opsiyon normalize!)
       const aggregated = new Map();
       prev.forEach((item) => {
         const colorValue = showColors ? normalizeColorValue(item.color) : null;
@@ -185,7 +245,6 @@ export default function ProductForm({
         aggregated.set(k, (aggregated.get(k) || 0) + (Number(item.stock) || 0));
       });
 
-      // Yeni kombinasyon listesine stokları dök
       return nextCombos.map((combo) => ({
         ...combo,
         stock: aggregated.get(makeKey(combo)) || 0,
@@ -275,9 +334,10 @@ export default function ProductForm({
     setError("");
 
     try {
-      const normalizedColors = dedupeColors(colors);
+    const normalizedColors = dedupeColors(normalizeOptionList(colors));
 
-      const payload = {
+      // ✅ ÜRÜN PAYLOAD (stok hariç!)
+      const productPayload = {
         name: name.trim(),
         price: priceValue,
         category: categoryId || "",
@@ -288,7 +348,7 @@ export default function ProductForm({
           .map((line) => line.trim())
           .filter(Boolean),
         colors: showColors ? normalizedColors : [],
-        sizes,
+        sizes: showSizes ? normalizeOptionList(sizes) : [],
         showColors,
         showSizes,
         customAttribute: {
@@ -299,20 +359,23 @@ export default function ProductForm({
             attributeTitle.trim() &&
             attributeValues.length > 0,
         },
-        inventory: inventory.map((item) => ({
-          color:
-            showColors && item.color ? normalizeColorValue(item.color) : null,
-          size: showSizes && item.size ? item.size : null,
-          attributeValue:
-            attributeActive && item.attributeValue ? item.attributeValue : null,
-          stock: Number(item.stock) || 0,
-        })),
         isActive,
         images: newImages.map((item) => item.file),
         removeImagePublicIds: removeImageIds,
       };
 
-      await onSubmit?.(payload);
+      // ✅ STOK SATIRLARI (StockItem.replace için)
+      const stockLines = inventory.map((item) => ({
+        color:
+          showColors && item.color ? normalizeColorValue(item.color) : null,
+        size: showSizes && item.size ? item.size : null,
+        attributeValue:
+          attributeActive && item.attributeValue ? item.attributeValue : null,
+        qtyOnHand: Number(item.stock) || 0,
+      }));
+
+      // Ürün + stok ayrı gönderilecek → üst komponentte stocksApi.replace çağrısı yapılır
+      await onSubmit?.({ productPayload, stockLines });
       onClose?.();
     } catch (err) {
       const message = extractMessage(err) || "Ürün kaydedilemedi";
@@ -347,7 +410,7 @@ export default function ProductForm({
   const renderVariantValue = (columnKey, combo) => {
     if (columnKey === "variant") return "Varsayılan";
     if (columnKey === "color") {
-      return <ColorBadge value={combo.color} />;
+      return <ColorBadge value={combo.color} className="text-sm" />;
     }
     return combo[columnKey] || "—";
   };
@@ -391,7 +454,10 @@ export default function ProductForm({
         onSubmit={handleSubmit}
         className="space-y-6"
       >
+        {/* ... form alanları aynı (ad/fiyat/kategori/açıklama/detaylar) ... */}
+
         <div className="grid gap-6 lg:grid-cols-2">
+          {/* sol taraf */}
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
@@ -463,6 +529,7 @@ export default function ProductForm({
             </div>
           </div>
 
+          {/* sağ taraf */}
           <div className="space-y-4">
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
@@ -507,6 +574,8 @@ export default function ProductForm({
             </label>
           </div>
         </div>
+
+        {/* Varyant eksenleri */}
         <div className="grid gap-4 lg:grid-cols-3">
           <SelectionCard
             title="Renkler"
@@ -568,7 +637,9 @@ export default function ProductForm({
               disabled={!showAttribute || !attributeTitle.trim()}
             />
           </SelectionCard>
-        </div>{" "}
+        </div>
+
+        {/* Stok yönetimi: sadece UI, kaydetme ayrı çağrı ile yapılır */}
         <div className="rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4 shadow-sm">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
@@ -633,6 +704,8 @@ export default function ProductForm({
             </div>
           )}
         </div>
+
+        {/* Medya */}
         <div>
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-[var(--color-text-admin)]">
@@ -703,6 +776,7 @@ export default function ProductForm({
             )}
           </div>
         </div>
+
         {error && (
           <div className="rounded-xl bg-[var(--color-bg-hover)] px-4 py-3 text-sm text-[var(--color-accent)]">
             {error}
@@ -731,8 +805,7 @@ function extractMessage(error) {
     try {
       const parsed = JSON.parse(error.message);
       if (parsed?.message) return parsed.message;
-    } catch (e) {
-      console.error(e);
+    } catch {
       /* ignore */
     }
     return error.message;
@@ -764,23 +837,5 @@ function SelectionCard({ title, description, checked, onToggle, children }) {
       </div>
       <div className="mt-3 space-y-3">{children}</div>
     </div>
-  );
-}
-
-function ColorBadge({ value }) {
-  const info = getColorInfo(value);
-  if (!info.value) {
-    return <span className="text-[var(--color-text-admin-muted)]">—</span>;
-  }
-
-  return (
-    <span className="inline-flex items-center gap-2 text-sm">
-      <span
-        className="h-4 w-4 rounded-full border border-white/70 shadow-inner"
-        style={{ background: info.swatch }}
-        aria-hidden="true"
-      />
-      <span>{info.label}</span>
-    </span>
   );
 }

@@ -16,16 +16,20 @@ export const productApi = {
   async list(params = {}) {
     const qs = toQueryString(params);
     const data = await http(`/products${qs}`, { auth: true });
-    return data;
+    return data; // { products, pagination, ... }
   },
+
   async get(idOrSlug) {
     const data = await http(`/products/${idOrSlug}`, { auth: true });
     return data.product;
   },
+
+  // payload = productPayload (stok HARİÇ!)
   async create(payload) {
     const form = new FormData();
-    form.append("name", payload.name.trim());
-    form.append("price", String(payload.price));
+    if (payload.name !== undefined) form.append("name", payload.name.trim());
+    if (payload.price !== undefined)
+      form.append("price", String(payload.price));
     if (payload.description)
       form.append("description", payload.description.trim());
     if (payload.careInstructions)
@@ -34,6 +38,7 @@ export const productApi = {
     if (payload.colors) form.append("colors", toJsonArray(payload.colors));
     if (payload.sizes) form.append("sizes", toJsonArray(payload.sizes));
     if (payload.category) form.append("category", payload.category);
+
     if (payload.isActive !== undefined)
       form.append("isActive", payload.isActive ? "true" : "false");
     if (payload.showColors !== undefined)
@@ -47,8 +52,8 @@ export const productApi = {
       );
     if (payload.customAttribute)
       form.append("customAttribute", JSON.stringify(payload.customAttribute));
-    if (Array.isArray(payload.inventory) && payload.inventory.length > 0)
-      form.append("inventory", JSON.stringify(payload.inventory));
+
+    // 🚫 Artık INVENTORY GÖNDERMEYİZ (stoklar ayrı endpoint ile yazılıyor)
     (payload.images || []).forEach((file) => form.append("images", file));
 
     const data = await http("/products", {
@@ -58,15 +63,17 @@ export const productApi = {
     });
     return data.product;
   },
+
+  // payload = productPayload (stok HARİÇ!)
   async update(idOrSlug, payload) {
     const form = new FormData();
     if (payload.name !== undefined) form.append("name", payload.name.trim());
     if (payload.price !== undefined)
       form.append("price", String(payload.price));
     if (payload.description !== undefined)
-      form.append("description", payload.description.trim());
+      form.append("description", (payload.description || "").trim());
     if (payload.careInstructions !== undefined)
-      form.append("careInstructions", payload.careInstructions.trim());
+      form.append("careInstructions", (payload.careInstructions || "").trim());
     if (payload.details !== undefined)
       form.append("details", toJsonArray(payload.details));
     if (payload.colors !== undefined)
@@ -75,6 +82,7 @@ export const productApi = {
       form.append("sizes", toJsonArray(payload.sizes));
     if (payload.category !== undefined)
       form.append("category", payload.category || "");
+
     if (payload.isActive !== undefined)
       form.append("isActive", payload.isActive ? "true" : "false");
     if (payload.showColors !== undefined)
@@ -88,15 +96,15 @@ export const productApi = {
       );
     if (payload.customAttribute !== undefined)
       form.append("customAttribute", JSON.stringify(payload.customAttribute));
+
     (payload.images || []).forEach((file) => form.append("images", file));
     if (payload.removeImagePublicIds?.length)
       form.append(
         "removeImagePublicIds",
         toJsonArray(payload.removeImagePublicIds)
       );
-    // ✅ STOK BOŞ GİTMESİN
-    if (Array.isArray(payload.inventory) && payload.inventory.length > 0)
-      form.append("inventory", JSON.stringify(payload.inventory));
+
+    // 🚫 INVENTORY YOK
 
     const data = await http(`/products/${idOrSlug}`, {
       method: "PUT",
@@ -105,6 +113,7 @@ export const productApi = {
     });
     return data.product;
   },
+
   async remove(idOrSlug) {
     return http(`/products/${idOrSlug}`, {
       method: "DELETE",

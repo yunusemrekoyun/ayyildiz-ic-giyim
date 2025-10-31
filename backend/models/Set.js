@@ -20,43 +20,49 @@ const SetProductSchema = new mongoose.Schema(
       ref: "Product",
       required: true,
     },
-    quantity: { type: Number, default: 1, min: 1 },
+    quantity: { type: Number, min: 1, default: 1 },
   },
   { _id: false }
 );
 
 const SetSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
+    name: { type: String, required: true, trim: true, maxlength: 160 },
     slug: { type: String, required: true, unique: true, lowercase: true },
     description: { type: String, default: "" },
     price: { type: Number, required: true, min: 0 },
     images: { type: [SetImageSchema], default: [] },
     show: { type: Boolean, default: true },
     products: { type: [SetProductSchema], default: [] },
-    stock: { type: Number, default: 0 },
+    sku: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true,
+    },
   },
   { timestamps: true }
 );
 
 SetSchema.index({ name: 1 }, { unique: true });
 SetSchema.index({ slug: 1 });
+SetSchema.index({ sku: 1 }, { unique: true, sparse: true });
 
 SetSchema.pre("validate", async function (next) {
   if (this.isModified("name") || !this.slug) {
-    const baseSlug = slugify(this.name, { lower: true, strict: true });
-    let slugCandidate = baseSlug;
-    let counter = 1;
+    const base =
+      slugify(this.name || "", { lower: true, strict: true }) || "set";
+    let s = base;
+    let k = 1;
     while (
-      await mongoose.models.Set.exists({
-        slug: slugCandidate,
-        _id: { $ne: this._id },
-      })
+      await mongoose.models.Set.exists({ slug: s, _id: { $ne: this._id } })
     ) {
-      slugCandidate = `${baseSlug}-${counter++}`;
+      s = `${base}-${k++}`;
     }
-    this.slug = slugCandidate;
+    this.slug = s;
   }
+  if (this.sku) this.sku = this.sku.trim().toUpperCase() || undefined;
   next();
 });
 

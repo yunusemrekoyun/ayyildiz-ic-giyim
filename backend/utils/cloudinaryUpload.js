@@ -11,7 +11,7 @@ export function uploadBufferToCloudinary(buffer, options = {}) {
 
     const uploadOptions = {
       folder,
-      resource_type: options.resource_type || "image", // "image" | "video"
+      resource_type: options.resource_type || "image",
       use_filename: true,
       unique_filename: true,
       overwrite: false,

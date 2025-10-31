@@ -77,7 +77,7 @@ export default function ProductTable({
               </td>
               <td className="px-4 py-3">
                 <span className="text-sm text-[var(--color-text-admin-muted)]">
-                  {product.category?.name || "—"}
+                  {product.category?.name || product.category?.label || "—"}
                 </span>
               </td>
               <td className="px-4 py-3">

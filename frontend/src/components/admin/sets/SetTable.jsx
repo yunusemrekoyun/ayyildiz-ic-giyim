@@ -10,7 +10,8 @@ const currency = new Intl.NumberFormat("en-US", {
 });
 
 const INFTY = Number.MAX_SAFE_INTEGER;
-const displaySetStock = (stock) => (stock >= INFTY ? "∞" : String(stock ?? 0));
+const displaySetStock = (stock) =>
+  Number.isFinite(stock) ? (stock >= INFTY ? "∞" : String(stock)) : "Varyantlara bağlı";
 
 export default function SetTable({
   sets = [],

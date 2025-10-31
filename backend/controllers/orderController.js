@@ -6,16 +6,14 @@ import Set from "../models/Set.js";
 import ShippingConfig from "../models/ShippingConfig.js";
 import Coupon from "../models/Coupon.js";
 import PayPalCheckout from "../models/PayPalCheckout.js";
+import StockItem from "../models/StockItem.js";
 import {
   fetchActiveDiscounts,
   computeProductDiscountMap,
   mapDiscountsToSets,
   applyDiscount,
 } from "../utils/discountHelpers.js";
-import {
-  recalculateSetStockForSetIds,
-  recalculateSetStockForProductIds,
-} from "../utils/setStock.js";
+import { hydrateProductsWithInventory } from "../utils/stockItemHelpers.js";
 import {
   paypalCreateOrder,
   paypalCaptureOrder,
@@ -332,6 +330,8 @@ async function buildOrderPreparation({
       : [],
   ]);
 
+  const productStockMap = await hydrateProductsWithInventory(products);
+
   const pMap = new Map(products.map((p) => [String(p._id), p]));
   const sMap = new Map(sets.map((s) => [String(s._id), s]));
 
@@ -575,6 +575,7 @@ async function buildOrderPreparation({
       catalogNeedMap,
       setNeedMap,
       productMap: pMap,
+      productStockMap,
     },
     normalizedItems,
   };
@@ -593,6 +594,7 @@ async function finalizeOrder(prepared, options = {}) {
     catalogNeedMap,
     setNeedMap,
     productMap,
+    productStockMap,
   } = prepared;
 
   if (!orderItems || orderItems.length === 0) {
@@ -601,64 +603,80 @@ async function finalizeOrder(prepared, options = {}) {
 
   const orderNumber = options.orderNumber || (await createOrderNumber());
 
-  const dirtyProductIds = [];
+  const stockUsage = new Map();
+
+  function queueStockUsage(productId, variantKey, amount) {
+    const qty = Math.max(0, Math.floor(Number(amount) || 0));
+    if (qty <= 0) return;
+    const pid = String(productId);
+    const key = String(variantKey || "");
+    const stockBucket = productStockMap?.get(pid);
+    if (!stockBucket) {
+      fail(400, "Stock not found for product", { productId: pid });
+    }
+    const stockDoc = stockBucket.itemMap.get(key);
+    if (!stockDoc) {
+      fail(400, "Variant not found for product", {
+        productId: pid,
+        variant: decodeVariantKey(key),
+      });
+    }
+    const stockId = stockDoc._id?.toString?.();
+    if (!stockId) {
+      fail(500, "Stock item is missing identifier", { productId: pid });
+    }
+    const current = stockUsage.get(stockId) || {
+      id: stockId,
+      productId: pid,
+      variantKey: key,
+      qty: 0,
+    };
+    current.qty += qty;
+    stockUsage.set(stockId, current);
+  }
 
   for (const [pid, variants] of catalogNeedMap.entries()) {
     if (!variants.size) continue;
-    const product = productMap.get(pid);
-    if (!product) continue;
-    const inv = Array.isArray(product.inventory) ? product.inventory : [];
-    let changed = false;
+    const pidStr = String(pid);
     for (const [vkey, entry] of variants.entries()) {
-      if (entry.index < 0) continue;
-      if (!inv[entry.index]) continue;
-      const row = inv[entry.index];
-      const available = getInventoryStock(row, "catalog");
-      const next = Math.max(0, available - entry.qty);
-      inv[entry.index] = setInventoryStock(row, "catalog", next);
-      changed = true;
-    }
-    if (changed) {
-      product.markModified("inventory");
-      if (!dirtyProductIds.includes(pid)) dirtyProductIds.push(pid);
+      const qty = Number(entry?.qty || 0);
+      if (qty <= 0) continue;
+      if (entry?.index === undefined || Number(entry.index) < 0) continue;
+      queueStockUsage(pidStr, vkey, qty);
     }
   }
 
   for (const [pid, variants] of setNeedMap.entries()) {
     if (!variants.size) continue;
-    const product = productMap.get(pid);
-    if (!product) continue;
-    const inv = Array.isArray(product.inventory) ? product.inventory : [];
-    let changed = false;
+    const pidStr = String(pid);
     for (const [vkey, needed] of variants.entries()) {
-      const idx = inv.findIndex((row) => variantKeyOf(row) === vkey);
-      if (idx < 0) continue;
-      const row = inv[idx];
-      const available = getInventoryStock(row, "set");
-      const next = Math.max(0, available - needed);
-      inv[idx] = setInventoryStock(row, "set", next);
-      changed = true;
-    }
-    if (changed) {
-      product.markModified("inventory");
-      if (!dirtyProductIds.includes(pid)) dirtyProductIds.push(pid);
+      const qty = Number(needed || 0);
+      if (qty <= 0) continue;
+      queueStockUsage(pidStr, vkey, qty);
     }
   }
 
-  if (dirtyProductIds.length) {
-    const uniqueProducts = dirtyProductIds
-      .map((pid) => productMap.get(pid))
-      .filter(Boolean);
-    await Promise.all(uniqueProducts.map((product) => product.save()));
-    await recalculateSetStockForProductIds(dirtyProductIds);
+  for (const usage of stockUsage.values()) {
+    const result = await StockItem.findOneAndUpdate(
+      { _id: usage.id, qtyOnHand: { $gte: usage.qty } },
+      { $inc: { qtyOnHand: -usage.qty } },
+      { new: true }
+    ).lean();
+
+    if (!result) {
+      fail(409, "Insufficient stock", {
+        productId: usage.productId,
+        variant: decodeVariantKey(usage.variantKey),
+        requested: usage.qty,
+      });
+    }
+
+    const bucket = productStockMap?.get(usage.productId);
+    if (bucket) {
+      bucket.itemMap.set(usage.variantKey, result);
+    }
   }
 
-  const impactedSetIds = new Set(
-    orderItems.filter((it) => it.kind === "set").map((it) => String(it.ref))
-  );
-  if (impactedSetIds.size) {
-    await recalculateSetStockForSetIds(Array.from(impactedSetIds));
-  }
 
   let payment;
   let status = options.statusOverride || "pending";
@@ -1294,20 +1312,6 @@ function getInventoryStock(row, pool = "catalog") {
   return 0;
 }
 
-function setInventoryStock(row, pool = "catalog", value = 0) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return row;
-  }
-  const safe = Number.isFinite(numeric)
-    ? Math.max(0, Math.floor(numeric))
-    : 0;
-  row.stockCatalog = safe;
-  row.stockSet = safe;
-  row.stock = safe;
-  return row;
-}
-
 function decodeVariantKey(key) {
   const [color = "", size = "", attribute = ""] = String(key || "")
     .split("||")
@@ -1343,6 +1347,7 @@ async function ensureProductLoaded(map, id) {
     product = await Product.findOne({ slug: key }).populate("category");
   }
   if (product) {
+    await hydrateProductsWithInventory([product]);
     const normalizedKey = String(product._id);
     map.set(normalizedKey, product);
     if (normalizedKey !== key) {

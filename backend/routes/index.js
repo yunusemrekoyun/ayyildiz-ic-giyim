@@ -20,6 +20,7 @@ import shippingReturnsRoute from "./shippingReturns.js";
 import privacyRoutes from "./privacy.js";
 import termsRoutes from "./terms.js";
 import themeRoutes from "./theme.js";
+import stocksRoutes from "./stocks.js";
 
 const router = Router();
 
@@ -46,5 +47,6 @@ router.use("/shipping-returns", shippingReturnsRoute);
 router.use("/privacy", privacyRoutes);
 router.use("/terms", termsRoutes);
 router.use("/theme", themeRoutes);
+router.use("/stocks", stocksRoutes);
 
 export default router;

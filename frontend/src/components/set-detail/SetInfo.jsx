@@ -37,20 +37,29 @@ export default function SetInfo({
         {showStrike && (
           <DiscountBadge percentage={discount} size="sm" />
         )}
-        <div
-          className={[
-            "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
-            stock > 0
-              ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-              : "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
-          ].join(" ")}
-        >
-          {stock > 0
-            ? `In stock: ${
-                stock >= Number.MAX_SAFE_INTEGER / 2 ? "∞" : stock
-              }`
-            : "Out of stock"}
-        </div>
+        {(() => {
+          if (stock === null || stock === undefined) {
+            return (
+              <div className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-sky-50 text-sky-700 ring-1 ring-sky-200">
+                Stok durumu varyantlara bağlı
+              </div>
+            );
+          }
+          if (stock > 0) {
+            const display =
+              stock >= Number.MAX_SAFE_INTEGER / 2 ? "∞" : stock;
+            return (
+              <div className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
+                In stock: {display}
+              </div>
+            );
+          }
+          return (
+            <div className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-rose-50 text-rose-700 ring-1 ring-rose-200">
+              Out of stock
+            </div>
+          );
+        })()}
       </div>
 
       {description && (
