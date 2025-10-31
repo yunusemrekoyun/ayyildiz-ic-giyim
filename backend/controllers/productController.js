@@ -1,6 +1,9 @@
 // backend/controllers/productController.js
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import Category from "../models/Category.js";
+import Set from "../models/Set.js";
+import StockItem from "../models/StockItem.js";
 import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
@@ -11,18 +14,44 @@ import { hydrateProductsWithInventory } from "../utils/stockItemHelpers.js";
 configureCloudinary();
 
 const isId = (s) => typeof s === "string" && /^[0-9a-fA-F]{24}$/.test(s);
-const normalizeArray = (v) =>
-  Array.isArray(v)
-    ? v
-        .map(String)
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : typeof v === "string"
-    ? v
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : [];
+
+// 🔁 ESKİ normalizeArray yerine biraz daha esnek hâli
+// (virgül, ; ve satır sonuna göre böler)
+const normalizeArray = (v) => {
+  if (Array.isArray(v)) {
+    return v
+      .map(String)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof v === "string") {
+    const trimmed = v.trim();
+
+    // 1) JSON array olarak geldiyse: '["#000000","red"]'
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map(String)
+            .map((s) => s.trim())
+            .filter(Boolean);
+        }
+      } catch (_err) {
+        // parse edemezsek normal yola düşsün
+      }
+    }
+
+    // 2) klasik "kırmızı,mavi" formatı
+    return trimmed
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
 
 function parseBool(v, def = true) {
   if (v === undefined) return def;
@@ -36,6 +65,76 @@ async function resolveCategory(category) {
   const doc = await Category.findOne(filter);
   if (!doc) throw new Error("Category not found");
   return doc;
+}
+
+function assignSetCount(target, count = 0) {
+  const safe = Number.isFinite(count) ? count : 0;
+  if (!target || typeof target !== "object") return;
+  if (typeof target.set === "function") {
+    target.set("setsCount", safe, { strict: false });
+  } else {
+    target.setsCount = safe;
+  }
+}
+
+async function annotateProductsWithSetUsage(products = []) {
+  if (!Array.isArray(products) || !products.length) return;
+
+  const idList = [];
+  products.forEach((product) => {
+    const id =
+      product?._id?.toString?.() ||
+      product?.id?.toString?.() ||
+      null;
+    if (id && mongoose.Types.ObjectId.isValid(id)) {
+      idList.push(id);
+    }
+    assignSetCount(product, product?.setsCount ?? 0);
+  });
+
+  if (!idList.length) return;
+
+  const objectIds = idList.map((id) => new mongoose.Types.ObjectId(id));
+  const stats = await Set.aggregate([
+    { $match: { "products.product": { $in: objectIds } } },
+    { $unwind: "$products" },
+    { $match: { "products.product": { $in: objectIds } } },
+    {
+      $group: {
+        _id: "$products.product",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const counts = new Map(
+    stats.map((row) => [row._id?.toString?.() || "", row.count || 0])
+  );
+
+  products.forEach((product) => {
+    const id =
+      product?._id?.toString?.() ||
+      product?.id?.toString?.() ||
+      null;
+    if (!id) return;
+    assignSetCount(product, counts.get(id) || 0);
+  });
+}
+
+async function fetchSetsForProduct(productId) {
+  if (!productId) return [];
+  const idStr = productId.toString();
+  if (!mongoose.Types.ObjectId.isValid(idStr)) return [];
+  const objectId = new mongoose.Types.ObjectId(idStr);
+  const sets = await Set.find({ "products.product": objectId })
+    .select("_id name slug products")
+    .lean();
+  return sets.map((set) => ({
+    id: set._id?.toString?.() || String(set._id),
+    name: set.name,
+    slug: set.slug,
+    productCount: Array.isArray(set.products) ? set.products.length : 0,
+  }));
 }
 
 // Cloudinary upload (buffer üzerinden)
@@ -97,6 +196,17 @@ export async function createProduct(req, res) {
     const files = Array.isArray(req.files) ? req.files : [];
     const images = await uploadImages(files, "products");
 
+    // 🔁 customAttribute’ı da normalize et
+    const rawAttr =
+      typeof customAttribute === "string"
+        ? JSON.parse(customAttribute || "{}")
+        : customAttribute || {};
+    const normalizedAttr = {
+      title: rawAttr.title ? String(rawAttr.title).trim() : "",
+      values: normalizeArray(rawAttr.values),
+      show: rawAttr.show === undefined ? false : !!rawAttr.show,
+    };
+
     const doc = await Product.create({
       name: String(name).trim(),
       price: priceNum,
@@ -108,10 +218,7 @@ export async function createProduct(req, res) {
       sizes: normalizeArray(sizes),
       showColors: parseBool(showColors, true),
       showSizes: parseBool(showSizes, true),
-      customAttribute:
-        typeof customAttribute === "string"
-          ? JSON.parse(customAttribute || "{}")
-          : customAttribute || {},
+      customAttribute: normalizedAttr,
       isActive: parseBool(isActive, true),
       listedInCatalog: parseBool(listedInCatalog, true),
       sku: sku ? String(sku).trim().toUpperCase() : undefined,
@@ -120,6 +227,7 @@ export async function createProduct(req, res) {
 
     const populated = await doc.populate("category");
     await hydrateProductsWithInventory([populated]);
+    await annotateProductsWithSetUsage([populated]);
     res.status(201).json({ product: populated.toObject() });
   } catch (err) {
     if (err?.code === 11000 && err?.keyPattern?.sku)
@@ -156,6 +264,7 @@ export async function listProducts(req, res) {
     ]);
 
     await hydrateProductsWithInventory(items);
+    await annotateProductsWithSetUsage(items);
 
     res.json({
       products: items,
@@ -190,6 +299,7 @@ export async function getProduct(req, res) {
       return res.status(404).json({ message: "Product not found" });
     }
     await hydrateProductsWithInventory([product]);
+    await annotateProductsWithSetUsage([product]);
     res.json({ product });
   } catch (err) {
     res.status(500).json({ message: err.message || "Get failed" });
@@ -240,11 +350,20 @@ export async function updateProduct(req, res) {
     if (showColors !== undefined)
       product.showColors = parseBool(showColors, true);
     if (showSizes !== undefined) product.showSizes = parseBool(showSizes, true);
-    if (customAttribute !== undefined)
-      product.customAttribute =
+
+    // 🔁 customAttribute güncellemesini de normalize et
+    if (customAttribute !== undefined) {
+      const rawAttr =
         typeof customAttribute === "string"
           ? JSON.parse(customAttribute || "{}")
           : customAttribute || {};
+      product.customAttribute = {
+        title: rawAttr.title ? String(rawAttr.title).trim() : "",
+        values: normalizeArray(rawAttr.values),
+        show: rawAttr.show === undefined ? false : !!rawAttr.show,
+      };
+    }
+
     if (isActive !== undefined) product.isActive = parseBool(isActive, true);
     if (listedInCatalog !== undefined)
       product.listedInCatalog = parseBool(listedInCatalog, true);
@@ -261,11 +380,9 @@ export async function updateProduct(req, res) {
             .filter(Boolean);
 
       if (ids.length) {
-        // DB’den çıkar
         product.images = product.images.filter(
           (img) => !ids.includes(img.publicId)
         );
-        // Cloudinary’den sil (best-effort)
         await Promise.allSettled(
           ids.map((pid) => deleteFromCloudinary(pid, "image"))
         );
@@ -282,6 +399,7 @@ export async function updateProduct(req, res) {
     await product.save();
     const populated = await product.populate("category");
     await hydrateProductsWithInventory([populated]);
+    await annotateProductsWithSetUsage([populated]);
     res.json({ product: populated });
   } catch (err) {
     if (err?.code === 11000 && err?.keyPattern?.sku)
@@ -296,21 +414,120 @@ export async function deleteProduct(req, res) {
     const product = isId(idOrSlug)
       ? await Product.findById(idOrSlug)
       : await Product.findOne({ slug: idOrSlug });
-    if (!product) return res.status(404).json({ message: "Product not found" });
+    if (!product)
+      return res.status(404).json({ message: "Product not found" });
 
-    // Cloudinary temizlik (best-effort)
-    const ids = (product.images || [])
+    const setActionRaw = req.query.setAction;
+    const setAction = setActionRaw
+      ? String(setActionRaw).trim().toLowerCase()
+      : null;
+
+    const relatedSets = await fetchSetsForProduct(product._id);
+    const responseMeta = {};
+
+    if (relatedSets.length) {
+      if (!setAction) {
+        return res.status(409).json({
+          message: "Ürün bazı setlerde kullanılıyor.",
+          requiresResolution: true,
+          sets: relatedSets,
+        });
+      }
+
+      if (!["delete_sets", "detach"].includes(setAction)) {
+        return res
+          .status(400)
+          .json({ message: "Geçersiz setAction parametresi" });
+      }
+
+      const setObjectIds = relatedSets
+        .map((set) => set.id)
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+
+      if (setAction === "delete_sets") {
+        if (setObjectIds.length) {
+          await Promise.all([
+            Set.deleteMany({ _id: { $in: setObjectIds } }),
+            StockItem.deleteMany({
+              ownerModel: "Set",
+              owner: { $in: setObjectIds },
+            }),
+          ]);
+        }
+        responseMeta.deletedSets = relatedSets;
+      } else if (setAction === "detach") {
+        if (setObjectIds.length) {
+          await Set.updateMany(
+            { _id: { $in: setObjectIds } },
+            { $pull: { products: { product: product._id } } }
+          );
+
+          const emptiedSets = await Set.find({
+            _id: { $in: setObjectIds },
+            $expr: { $eq: [{ $size: "$products" }, 0] },
+          })
+            .select("_id name slug")
+            .lean();
+
+          if (emptiedSets.length) {
+            const emptyIds = emptiedSets.map((set) => set._id);
+            await Promise.all([
+              Set.deleteMany({ _id: { $in: emptyIds } }),
+              StockItem.deleteMany({
+                ownerModel: "Set",
+                owner: { $in: emptyIds },
+              }),
+            ]);
+            responseMeta.deletedSets = (responseMeta.deletedSets || []).concat(
+              emptiedSets.map((set) => ({
+                id: set._id.toString(),
+                name: set.name,
+                slug: set.slug,
+              }))
+            );
+          }
+        }
+        responseMeta.detachedFromSets = relatedSets;
+      }
+    }
+
+    const imageIds = (product.images || [])
       .map((img) => img.publicId)
       .filter(Boolean);
-    if (ids.length) {
+    if (imageIds.length) {
       await Promise.allSettled(
-        ids.map((pid) => deleteFromCloudinary(pid, "image"))
+        imageIds.map((pid) => deleteFromCloudinary(pid, "image"))
       );
     }
 
+    await StockItem.deleteMany({ ownerModel: "Product", owner: product._id });
     await product.deleteOne();
-    res.json({ ok: true });
+    res.json({ ok: true, ...responseMeta });
   } catch (err) {
     res.status(500).json({ message: err.message || "Delete failed" });
+  }
+}
+
+export async function listProductSets(req, res) {
+  try {
+    const { idOrSlug } = req.params;
+    const product = isId(idOrSlug)
+      ? await Product.findById(idOrSlug)
+      : await Product.findOne({ slug: idOrSlug });
+    if (!product)
+      return res.status(404).json({ message: "Product not found" });
+
+    const sets = await fetchSetsForProduct(product._id);
+    res.json({
+      product: {
+        id: product._id.toString(),
+        name: product.name,
+        slug: product.slug,
+      },
+      sets,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message || "Unable to fetch sets" });
   }
 }

@@ -114,10 +114,16 @@ export const productApi = {
     return data.product;
   },
 
-  async remove(idOrSlug) {
-    return http(`/products/${idOrSlug}`, {
+  async remove(idOrSlug, params = {}) {
+    const qs = toQueryString(params);
+    return http(`/products/${idOrSlug}${qs}`, {
       method: "DELETE",
       auth: true,
     });
+  },
+
+  async sets(idOrSlug) {
+    const data = await http(`/products/${idOrSlug}/sets`, { auth: true });
+    return data?.sets || [];
   },
 };

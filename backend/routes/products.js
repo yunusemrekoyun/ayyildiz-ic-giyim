@@ -6,6 +6,7 @@ import {
   getProduct,
   updateProduct,
   deleteProduct,
+  listProductSets,
 } from "../controllers/productController.js";
 import { upload } from "../middleware/upload.js"; // ← tek noktadan multer (memoryStorage)
 
@@ -18,6 +19,8 @@ router.get("/", listProducts);
 router.post("/", upload.array("images", 8), createProduct);
 
 // Detay (id veya slug)
+router.get("/:idOrSlug/sets", listProductSets);
+
 router.get("/:idOrSlug", getProduct);
 
 // Güncelle (opsiyonel görsel ekleme/silme)

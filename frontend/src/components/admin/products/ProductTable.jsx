@@ -43,6 +43,7 @@ export default function ProductTable({
             <th className="px-4 py-3 text-left font-medium">Ürün</th>
             <th className="px-4 py-3 text-left font-medium">Kategori</th>
             <th className="px-4 py-3 text-left font-medium">Fiyat</th>
+            <th className="px-4 py-3 text-left font-medium">Setler</th>
             <th className="px-4 py-3 text-left font-medium">Durum</th>
             <th className="px-4 py-3 text-left font-medium">Güncellendi</th>
             <th className="px-4 py-3 text-right font-medium">İşlemler</th>
@@ -84,6 +85,9 @@ export default function ProductTable({
                 {formatter.format(product.price ?? 0)}
               </td>
               <td className="px-4 py-3">
+                <SetBadge count={product.setsCount} />
+              </td>
+              <td className="px-4 py-3">
                 <StatusBadge active={product.isActive} />
               </td>
               <td className="px-4 py-3 text-[var(--color-text-admin-muted)]">
@@ -123,6 +127,21 @@ function StatusBadge({ active }) {
       }`}
     >
       {active ? "Aktif" : "Gizli"}
+    </span>
+  );
+}
+
+function SetBadge({ count }) {
+  const numeric = Number(count) || 0;
+  const tone =
+    numeric > 0
+      ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+      : "bg-[var(--color-surface-light)] text-[var(--color-text-admin-muted)] border border-[var(--color-border-admin)]/60";
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${tone}`}
+    >
+      {numeric > 0 ? `${numeric} set` : "Bağlı set yok"}
     </span>
   );
 }

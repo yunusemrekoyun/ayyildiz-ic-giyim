@@ -27,6 +27,7 @@ export default function AdminProducts() {
   });
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState(null);
 
   useEffect(() => {
     loadCategories();
@@ -78,6 +79,7 @@ export default function AdminProducts() {
           images: p.images || p.media || [],
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
+          setsCount: Number(p.setsCount ?? p.setCount ?? 0) || 0,
         })) || [];
 
       setProducts(normalized);
@@ -168,7 +170,52 @@ export default function AdminProducts() {
       setBanner({ variant: "warning", message: "Ürün silindi" });
       await loadProducts(pagination.page);
     } catch (error) {
-      setBanner({ variant: "danger", message: extractMessage(error) });
+      const payload = parseErrorPayload(error);
+      if (payload?.requiresResolution && Array.isArray(payload.sets)) {
+        setDeleteDialog({
+          product,
+          sets: payload.sets,
+          loading: false,
+        });
+        return;
+      }
+      setBanner({
+        variant: "danger",
+        message: payload?.message || extractMessage(error),
+      });
+    }
+  };
+
+  const handleResolveDelete = async (action) => {
+    if (!deleteDialog) return;
+    if (action === "cancel") {
+      setDeleteDialog(null);
+      return;
+    }
+
+    const actionParam = action === "delete_sets" ? "delete_sets" : "detach";
+    setDeleteDialog((prev) => ({ ...prev, loading: true }));
+
+    try {
+      await productApi.remove(deleteDialog.product.id || deleteDialog.product.slug, {
+        setAction: actionParam,
+      });
+      setDeleteDialog(null);
+      setBanner({
+        variant: "success",
+        message:
+          actionParam === "delete_sets"
+            ? "Ürün ve bağlı setler silindi"
+            : "Ürün setlerden kaldırıldı ve silindi",
+      });
+      await loadProducts(pagination.page);
+    } catch (error) {
+      const payload = parseErrorPayload(error);
+      setBanner({
+        variant: "danger",
+        message: payload?.message || extractMessage(error),
+      });
+      setDeleteDialog(null);
     }
   };
 
@@ -329,6 +376,15 @@ export default function AdminProducts() {
         initialProduct={editingProduct}
         categories={categoryOptions}
       />
+
+      {deleteDialog && (
+        <DeleteProductResolutionModal
+          product={deleteDialog.product}
+          sets={deleteDialog.sets}
+          loading={deleteDialog.loading}
+          onResolve={handleResolveDelete}
+        />
+      )}
     </section>
   );
 }
@@ -340,6 +396,77 @@ function useDebounce(value, delay = 400) {
     return () => clearTimeout(timer);
   }, [value, delay]);
   return debounced;
+}
+
+function DeleteProductResolutionModal({ product, sets = [], loading = false, onResolve }) {
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-xl">
+        <header className="border-b border-[var(--color-border-admin)] px-5 py-4">
+          <h2 className="text-lg font-semibold text-[var(--color-text-admin)]">
+            Ürün setlerde kullanılıyor
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
+            “{product?.name || "Ürün"}” aşağıdaki setlere ekli. Devam etmek için bir seçenek belirleyin.
+          </p>
+        </header>
+
+        <div className="max-h-64 overflow-y-auto px-5 py-4">
+          {sets.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[var(--color-border-admin)] px-4 py-6 text-center text-sm text-[var(--color-text-admin-muted)]">
+              Bu ürün başka setlerde görünmüyor.
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {sets.map((set) => (
+                <li
+                  key={set.id || set.slug || set.name}
+                  className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-surface-light)] px-4 py-3"
+                >
+                  <div className="text-sm font-semibold text-[var(--color-text-admin)]">
+                    {set.name || "Set"}
+                  </div>
+                  <div className="text-xs text-[var(--color-text-admin-muted)]">
+                    {set.slug ? `/${set.slug}` : ""}
+                  </div>
+                  <div className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
+                    Ürün adedi: {set.productCount ?? "-"}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <footer className="flex flex-col gap-2 border-t border-[var(--color-border-admin)] bg-[var(--color-surface-light)] px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
+          <button
+            type="button"
+            onClick={() => onResolve?.("detach")}
+            disabled={loading}
+            className="inline-flex items-center justify-center rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
+          >
+            Ürünü setlerden çıkar
+          </button>
+          <button
+            type="button"
+            onClick={() => onResolve?.("delete_sets")}
+            disabled={loading}
+            className="inline-flex items-center justify-center rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-60"
+          >
+            Setleri de sil
+          </button>
+          <button
+            type="button"
+            onClick={() => onResolve?.("cancel")}
+            disabled={loading}
+            className="inline-flex items-center justify-center rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
+          >
+            Vazgeç
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
 }
 
 function normalizeOptionList(value) {
@@ -399,15 +526,27 @@ function normalizeDetailsList(details) {
 }
 
 function extractMessage(error) {
+  const payload = parseErrorPayload(error);
+  if (payload?.message) return payload.message;
   if (!error) return "Beklenmeyen hata";
   if (error instanceof Error) {
-    try {
-      const parsed = JSON.parse(error.message);
-      if (parsed?.message) return parsed.message;
-    } catch {
-      // ignore
-    }
     return error.message;
   }
   return String(error);
+}
+
+function parseErrorPayload(error) {
+  if (!error) return null;
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+      ? error
+      : null;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
