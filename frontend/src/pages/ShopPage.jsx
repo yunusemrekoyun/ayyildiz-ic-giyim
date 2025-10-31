@@ -5,8 +5,10 @@ import ShopPageFilter from "../components/shop/ShopPageFilter";
 import ShopPageProducts from "../components/shop/ShopPageProducts";
 import { categoryApi } from "../api/categories";
 import { productApi } from "../api/products";
+import { setApi } from "../api/sets";
 import { campaignApi } from "../api/campaigns";
 import { mapCategoryTree } from "../utils/catalog";
+import SetsSetItem from "../components/sets-sets/SetsSetItem";
 
 const isObjectId = (v) => typeof v === "string" && /^[0-9a-fA-F]{24}$/.test(v);
 
@@ -16,6 +18,8 @@ export default function ShopPage() {
 
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [matchingSets, setMatchingSets] = useState([]);
+  const [loadingSets, setLoadingSets] = useState(false);
 
   const [categoryTree, setCategoryTree] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -30,6 +34,7 @@ export default function ShopPage() {
   const [error, setError] = useState(null);
 
   const campaignId = searchParams.get("campaign");
+  const searchQuery = (searchParams.get("q") || "").trim();
 
   // Kampanya parametresi aşaması
   useEffect(() => {
@@ -79,25 +84,59 @@ export default function ShopPage() {
     };
   }, []);
 
-  // Ürünler
+  // Ürünler + set arama sonuçları
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         setLoadingProducts(true);
         if (campaignContext?.items) {
+          const items = campaignContext.items || [];
+          const filtered = searchQuery
+            ? items.filter((item) =>
+                String(item?.name || "")
+                  .toLowerCase()
+                  .includes(searchQuery.toLowerCase())
+              )
+            : items;
           if (!mounted) return;
-          setProducts(campaignContext.items || []);
+          setProducts(filtered);
+          setMatchingSets([]);
+          setLoadingSets(false);
         } else {
-          const { products: productList } = await productApi.list({
-            limit: 200,
-          });
+          const params = { limit: 200 };
+          if (searchQuery) params.search = searchQuery;
+          const { products: productList = [] } = await productApi.list(params);
           if (!mounted) return;
-          setProducts(productList || []);
+          setProducts(productList);
+
+          if (searchQuery) {
+            setLoadingSets(true);
+            try {
+              const setResponse = await setApi.list({
+                search: searchQuery,
+                limit: 60,
+              });
+              if (!mounted) return;
+              setMatchingSets(mapSetsToCards(setResponse));
+            } catch (setErr) {
+              if (!mounted) return;
+              console.error("set search failed", setErr);
+              setMatchingSets([]);
+            } finally {
+              if (mounted) setLoadingSets(false);
+            }
+          } else {
+            setMatchingSets([]);
+            setLoadingSets(false);
+          }
         }
       } catch (err) {
         if (!mounted) return;
         setError(extractMessage(err));
+        setProducts([]);
+        setMatchingSets([]);
+        setLoadingSets(false);
       } finally {
         if (mounted) setLoadingProducts(false);
       }
@@ -105,7 +144,7 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignContext]);
+  }, [campaignContext, searchQuery]);
 
   // Fiyat aralığı (ürünlere göre)
   const priceRange = useMemo(() => {
@@ -186,12 +225,21 @@ export default function ShopPage() {
 
   // Client-side filtreleme (ID uyumlu hale getirildi)
   const filteredProducts = useMemo(() => {
+    const normalizedQuery = searchQuery.toLowerCase();
     return (products || []).filter((product) => {
       if (!product) return false;
 
       // price
       const price = Number(product.finalPrice ?? product.price) || 0;
       if (selectedPrice && price > selectedPrice) return false;
+
+      if (normalizedQuery) {
+        const name = String(product.name || "").toLowerCase();
+        const slug = String(product.slug || "").toLowerCase();
+        if (!name.includes(normalizedQuery) && !slug.includes(normalizedQuery)) {
+          return false;
+        }
+      }
 
       // category (product.category id’sini normalize et)
       if (selectedCategory !== "all") {
@@ -225,7 +273,14 @@ export default function ShopPage() {
 
       return true;
     });
-  }, [products, selectedCategory, selectedColor, selectedSize, selectedPrice]);
+  }, [
+    products,
+    selectedCategory,
+    selectedColor,
+    selectedSize,
+    selectedPrice,
+    searchQuery,
+  ]);
 
   const activeCampaign = campaignContext?.campaign || null;
 
@@ -339,6 +394,38 @@ export default function ShopPage() {
             products={filteredProducts}
             loading={loadingProducts}
           />
+
+          {searchQuery && (
+            <div className="mt-12">
+              <h2 className="text-2xl font-semibold text-primary">
+                Matching Sets
+              </h2>
+              <p className="mt-1 text-sm text-secondary">
+                Results for “{searchQuery}” across trousseau packages.
+              </p>
+
+              {loadingSets ? (
+                <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="h-64 rounded-xl bg-white/70 ring-1 ring-black/5 animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : matchingSets.length ? (
+                <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {matchingSets.map((setCard) => (
+                    <SetsSetItem key={setCard.id || setCard.to} {...setCard} />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-6 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-secondary">
+                  No sets match this search.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>
@@ -357,4 +444,39 @@ function extractMessage(error) {
     return error.message;
   }
   return String(error);
+}
+
+function mapSetsToCards(sets) {
+  return (Array.isArray(sets) ? sets : []).map((set) => {
+    const image = set?.images?.[0]?.url || "/set-placeholder.jpg";
+    const title = set?.name || "Untitled Set";
+    const desc = set?.description || "";
+    const productNames = (set?.products || [])
+      .map((entry) => entry?.product?.name)
+      .filter(Boolean);
+    const includes = productNames.length
+      ? productNames.slice(0, 3).join(", ") +
+        (productNames.length > 3 ? ` +${productNames.length - 3}` : "")
+      : "";
+
+    const rawId = set?._id?.toString?.() || set?.id || set?.slug || "";
+    const slugOrId = set?.slug || rawId;
+    const to = slugOrId ? `/set/${slugOrId}` : "#";
+
+    const price = Number(set?.price ?? 0);
+    const finalPrice = Number(set?.finalPrice ?? price);
+    const discount = set?.discount?.percentage;
+
+    return {
+      id: rawId || slugOrId || to,
+      image,
+      title,
+      desc,
+      includes,
+      to,
+      price,
+      finalPrice,
+      discount,
+    };
+  });
 }

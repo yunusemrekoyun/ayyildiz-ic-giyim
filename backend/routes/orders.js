@@ -7,9 +7,11 @@ import {
   listOrders,
   adminGetOrder,
   updateOrderStatus,
+} from "../controllers/orderController.js";
+import {
   createPayPalCheckout,
   capturePayPalCheckout,
-} from "../controllers/orderController.js";
+} from "../controllers/paymentController.js";
 import { requireRole } from "../middleware/roles.js";
 
 const router = Router();

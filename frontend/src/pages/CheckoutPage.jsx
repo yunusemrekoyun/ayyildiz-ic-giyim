@@ -8,9 +8,52 @@ import { useCart } from "../hooks/useCart";
 import { userDetailsApi } from "../api/userDetails";
 import { orderApi } from "../api/orders";
 import { loadPayPalSdk } from "../utils/paypal.js";
+import { getAccessToken } from "../api/client";
+
+function parseError(error) {
+  if (!error) return { message: "", status: null };
+  let message = "";
+  let status = null;
+
+  const unwrap = (raw) => {
+    if (typeof raw !== "string") return { msg: raw, status: null };
+    let msg = raw;
+    let stat = null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        stat =
+          parsed.status ??
+          parsed.statusCode ??
+          parsed.code ??
+          parsed.errorCode ??
+          null;
+        msg = parsed.message || msg;
+      }
+    } catch {
+      /* ignore */
+    }
+    return { msg, status: stat };
+  };
+
+  if (error instanceof Error) {
+    const { msg, status: stat } = unwrap(error.message);
+    message = typeof msg === "string" ? msg : String(msg);
+    status = stat;
+  } else if (typeof error === "string") {
+    const { msg, status: stat } = unwrap(error);
+    message = typeof msg === "string" ? msg : String(msg);
+    status = stat;
+  } else {
+    message = String(error);
+  }
+
+  return { message, status };
+}
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Cart verisini oku
   const cart = useCart() || {};
@@ -25,6 +68,15 @@ export default function CheckoutPage() {
     clearCart = () => {},
     clearCoupon = () => {},
   } = cart;
+
+  useEffect(() => {
+    const token = getAccessToken();
+    if (!token) {
+      navigate(`/auth?view=login&redirect=/checkout`, { replace: true });
+      return;
+    }
+    setAuthChecked(true);
+  }, [navigate]);
 
   const checkoutItems = useMemo(
     () =>
@@ -140,9 +192,15 @@ export default function CheckoutPage() {
     [lines]
   );
   const subtotal = Number(subTotal ?? computedSubtotal) || 0;
-  const shippingFee = shippingInfo?.fee ?? 0;
+  const shippingFee = Number(shippingInfo?.fee ?? 0) || 0;
   const shippingName = shippingInfo?.name || "Shipping";
-  const totalDue = Number(grandTotal || total || subtotal + shippingFee) || 0;
+  const normalizedCouponDiscount = Number(couponDiscount) || 0;
+  const derivedTotal = Math.max(0, subtotal + shippingFee - normalizedCouponDiscount);
+  const totalDue = Number.isFinite(Number(grandTotal))
+    ? Number(grandTotal)
+    : Number.isFinite(Number(total))
+    ? Number(total)
+    : derivedTotal;
 
   // Sipariş başarı takip
   const orderPlacedRef = useRef(false);
@@ -167,15 +225,56 @@ export default function CheckoutPage() {
   const [paypalLoading, setPayPalLoading] = useState(false);
   const [paypalSummary, setPayPalSummary] = useState(null);
 
+  const hasItems = checkoutItems.length > 0;
+  const hasAddress = Boolean(addressId);
+  const canPlaceOrder =
+    paymentMethod === "cod" && hasAddress && hasItems && !placing && authChecked;
+  const canUsePayPal =
+    paymentMethod === "paypal" &&
+    paypalEnabled &&
+    hasAddress &&
+    hasItems &&
+    authChecked;
+
   // Adresleri çek
   useEffect(() => {
+    if (!authChecked) return;
     let mounted = true;
     (async () => {
       try {
+        setLoading(true);
         const list = await userDetailsApi.listAddresses();
         if (!mounted) return;
         setAddresses(list);
         setAddressId(list.find((a) => a.isDefault)?.id || list[0]?.id || "");
+        if (!list.length) {
+          setBanner((prev) =>
+            prev?.variant === "danger"
+              ? prev
+              : {
+                  variant: "warning",
+                  message:
+                    "Please add a delivery address before placing an order.",
+                }
+          );
+        } else {
+          setBanner((prev) =>
+            prev?.variant === "warning" ? null : prev
+          );
+        }
+      } catch (error) {
+        if (!mounted) return;
+        const { status, message } = parseError(error);
+        if (status === 401) {
+          navigate(`/auth?view=login&redirect=/checkout`, { replace: true });
+          return;
+        }
+        setAddresses([]);
+        setAddressId("");
+        setBanner({
+          variant: "danger",
+          message: message || "Unable to load saved addresses.",
+        });
       } finally {
         if (mounted) setLoading(false);
       }
@@ -183,17 +282,20 @@ export default function CheckoutPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [authChecked, navigate]);
 
   // Sepet boşsa karta geri dön
   useEffect(() => {
+    if (!authChecked) return;
     if (orderPlacedRef.current) return;
     if (!loading && lines.length === 0) {
       navigate("/cart", { replace: true });
     }
-  }, [lines.length, loading, navigate]);
+  }, [authChecked, lines.length, loading, navigate]);
 
   useEffect(() => {
+    if (!authChecked) return;
+
     if (paymentMethod !== "paypal") {
       setPayPalError(null);
       setPayPalSummary(null);
@@ -346,6 +448,7 @@ export default function CheckoutPage() {
       }
     };
   }, [
+    authChecked,
     paymentMethod,
     paypalEnabled,
     paypalClientId,
@@ -361,6 +464,10 @@ export default function CheckoutPage() {
     navigate,
   ]);
 
+  if (!authChecked) {
+    return null;
+  }
+
   if (loading) {
     return (
       <section className="bg-surface-light/60">
@@ -371,27 +478,26 @@ export default function CheckoutPage() {
     );
   }
 
-  const hasItems = checkoutItems.length > 0;
-  const hasAddress = Boolean(addressId);
-  const canPlaceOrder =
-    paymentMethod === "cod" && hasAddress && hasItems && !placing;
-  const canUsePayPal =
-    paymentMethod === "paypal" && paypalEnabled && hasAddress && hasItems;
-
   const getErrorMessage = (error, fallback = "Unexpected error") => {
-    let message = error?.message || fallback;
-    if (typeof message === "string") {
-      try {
-        const parsed = JSON.parse(message);
-        message = parsed?.message || message;
-      } catch {
-        // ignore
-      }
-    }
-    return message;
+    const { message } = parseError(error);
+    return message || fallback;
   };
 
   const placeOrder = async () => {
+    if (!hasAddress) {
+      setBanner({
+        variant: "warning",
+        message: "Please add a delivery address before placing an order.",
+      });
+      return;
+    }
+    if (!hasItems) {
+      setBanner({
+        variant: "warning",
+        message: "Your cart is empty.",
+      });
+      return;
+    }
     try {
       setPlacing(true);
       const order = await orderApi.create({
@@ -406,15 +512,15 @@ export default function CheckoutPage() {
       clearCoupon();
       navigate(`/checkout/success?order=${order.id}`, { replace: true });
     } catch (e) {
-      const message = getErrorMessage(e);
+      const { status, message } = parseError(e);
       // 401 ise login’e gönder
-      if (String(e?.message || "").includes("401")) {
+      if (status === 401) {
         navigate(`/account?view=login&redirect=/checkout`, { replace: true });
         return;
       }
       setBanner({
         variant: "danger",
-        message: `Order failed: ${message}`,
+        message: `Order failed: ${message || "Unexpected error"}`,
       });
     } finally {
       setPlacing(false);
@@ -538,7 +644,7 @@ export default function CheckoutPage() {
               {coupon && (
                 <div className="flex justify-between text-rose-600">
                   <span className="text-sm">Coupon ({coupon.code})</span>
-                  <span>– €{couponDiscount.toFixed(2)}</span>
+                  <span>– €{normalizedCouponDiscount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-base font-semibold">
@@ -548,10 +654,15 @@ export default function CheckoutPage() {
             </div>
 
             <div className="mt-6">
-              <h3 className="text-lg font-semibold text-primary">
-                Payment Method
-              </h3>
-              <div className="mt-3 space-y-2 text-sm text-secondary">
+            <h3 className="text-lg font-semibold text-primary">
+              Payment Method
+            </h3>
+            {!hasAddress && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                Add a delivery address to enable checkout options.
+              </div>
+            )}
+            <div className="mt-3 space-y-2 text-sm text-secondary">
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
@@ -559,7 +670,7 @@ export default function CheckoutPage() {
                     value="paypal"
                     checked={paymentMethod === "paypal"}
                     onChange={() => setPaymentMethod("paypal")}
-                    disabled={!paypalEnabled}
+                    disabled={!paypalEnabled || !hasAddress}
                   />
                   <span className="flex-1">
                     PayPal (Germany)

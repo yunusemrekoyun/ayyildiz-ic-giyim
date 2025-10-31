@@ -5,6 +5,15 @@ import { hydrateProductsWithInventory } from "../utils/stockItemHelpers.js";
 
 const isId = (s) => typeof s === "string" && /^[0-9a-fA-F]{24}$/.test(s);
 
+function parseBool(value, fallback = false) {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "boolean") return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "off"].includes(normalized)) return false;
+  return fallback;
+}
+
 async function uploadImages(files = []) {
   return files.map((f) => ({
     url: f.path || f.location || "",
@@ -78,10 +87,24 @@ export async function createSet(req, res) {
   }
 }
 
-export async function listSets(_req, res) {
+export async function listSets(req, res) {
   try {
-    const sets = await Set.find({})
+    const search = String(req.query.search || "").trim();
+    const includeHidden = parseBool(req.query.includeHidden, false);
+    const limit = Math.min(
+      500,
+      Math.max(1, Number(req.query.limit || (search ? 60 : 200)))
+    );
+
+    const filter = {};
+    if (!includeHidden) filter.show = true;
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    const sets = await Set.find(filter)
       .sort({ createdAt: -1 })
+      .limit(limit)
       .populate({ path: "products.product" })
       .lean();
 

@@ -16,6 +16,7 @@ import {
   mapDiscountsToSets,
   applyDiscount,
 } from "../utils/discountHelpers.js";
+import { hydrateProductsWithInventory } from "../utils/stockItemHelpers.js";
 
 const isValidObjectId = (value) =>
   typeof value === "string" && /^[0-9a-fA-F]{24}$/.test(value);
@@ -270,6 +271,7 @@ async function resolveProductCampaignItems(campaign) {
   })
     .populate("category")
     .lean();
+  await hydrateProductsWithInventory(products);
 
   const activeDiscounts = await fetchActiveDiscounts();
   const discountMap = activeDiscounts.length
@@ -320,6 +322,14 @@ async function resolveSetCampaignItems(campaign) {
       populate: { path: "category" },
     })
     .lean();
+  const componentProducts = sets
+    .flatMap((set) =>
+      (set.products || []).map((entry) => entry.product).filter(Boolean)
+    )
+    .filter(Boolean);
+  if (componentProducts.length) {
+    await hydrateProductsWithInventory(componentProducts);
+  }
 
   const activeDiscounts = await fetchActiveDiscounts();
   const setDiscountMap = activeDiscounts.length

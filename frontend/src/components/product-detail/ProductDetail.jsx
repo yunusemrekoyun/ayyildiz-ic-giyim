@@ -19,6 +19,7 @@ const pillIdle = "border-border bg-white text-primary hover:bg-surface-hover";
 export default function ProductDetail({ product = {} }) {
   const navigate = useNavigate();
   const [isFav, setIsFav] = useState(false);
+  const productId = product?.id || product?._id || null;
 
   const gallery = useMemo(() => {
     const imgs = (product.images || [])
@@ -112,7 +113,7 @@ export default function ProductDetail({ product = {} }) {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (!product?.id) return;
+      if (!productId) return;
       if (!getAccessToken()) {
         if (mounted) setIsFav(false);
         return;
@@ -122,7 +123,7 @@ export default function ProductDetail({ product = {} }) {
         const favIds = new Set(
           (favs.products || []).map((p) => p.id || p._id || p)
         );
-        if (mounted) setIsFav(favIds.has(product.id));
+        if (mounted) setIsFav(favIds.has(productId));
       } catch {
         /* ignore */
       }
@@ -130,18 +131,18 @@ export default function ProductDetail({ product = {} }) {
     return () => {
       mounted = false;
     };
-  }, [product?.id]);
+  }, [productId]);
 
   // Favori toggle
   const toggleFav = async () => {
-    if (!product?.id) return;
+    if (!productId) return;
     if (!getAccessToken()) {
       // login sayfasına yönlendir (istersen ?next= ekleyebilirsin)
       navigate("/auth");
       return;
     }
     try {
-      await userDetailsApi.toggleFavorite({ type: "product", id: product.id });
+      await userDetailsApi.toggleFavorite({ type: "product", id: productId });
       setIsFav((v) => !v);
     } catch (e) {
       console.error(e);
@@ -154,7 +155,7 @@ export default function ProductDetail({ product = {} }) {
     setSelectedColor(colorOptions[0]?.value ?? null);
     setSelectedSize(sizeOptions[0] ?? null);
     setSelectedAttribute(attribute?.values?.[0] ?? null);
-  }, [product.id, colorOptions, sizeOptions, attribute?.values]);
+  }, [productId, colorOptions, sizeOptions, attribute?.values]);
 
   const currentStock = useMemo(() => {
     if (!inventory.length) {
