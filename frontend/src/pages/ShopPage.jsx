@@ -9,6 +9,7 @@ import { setApi } from "../api/sets";
 import { campaignApi } from "../api/campaigns";
 import { mapCategoryTree } from "../utils/catalog";
 import SetsSetItem from "../components/sets-sets/SetsSetItem";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 const isObjectId = (v) => typeof v === "string" && /^[0-9a-fA-F]{24}$/.test(v);
 
@@ -32,6 +33,7 @@ export default function ShopPage() {
   const [campaignError, setCampaignError] = useState("");
 
   const [error, setError] = useState(null);
+  const { lang } = useStorefrontLang();
 
   const campaignId = searchParams.get("campaign");
   const searchQuery = (searchParams.get("q") || "").trim();
@@ -48,7 +50,7 @@ export default function ShopPage() {
     (async () => {
       try {
         setCampaignError("");
-        const data = await campaignApi.resolve(campaignId);
+        const data = await campaignApi.resolve(campaignId, lang);
         if (!mounted) return;
         if (data.targetType === "SETS") {
           navigate(`/sets?campaign=${campaignId}`, { replace: true });
@@ -64,14 +66,14 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignId, navigate]);
+  }, [campaignId, lang, navigate]);
 
   // Kategori ağacı
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const treeRes = await categoryApi.tree();
+        const treeRes = await categoryApi.tree(lang);
         if (!mounted) return;
         setCategoryTree(mapCategoryTree(treeRes));
       } catch (err) {
@@ -82,7 +84,7 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [lang]);
 
   // Ürünler + set arama sonuçları
   useEffect(() => {
@@ -106,7 +108,10 @@ export default function ShopPage() {
         } else {
           const params = { limit: 200 };
           if (searchQuery) params.search = searchQuery;
-          const { products: productList = [] } = await productApi.list(params);
+          const { products: productList = [] } = await productApi.list(
+            params,
+            lang
+          );
           if (!mounted) return;
           setProducts(productList);
 
@@ -116,7 +121,7 @@ export default function ShopPage() {
               const setResponse = await setApi.list({
                 search: searchQuery,
                 limit: 60,
-              });
+              }, lang);
               if (!mounted) return;
               setMatchingSets(mapSetsToCards(setResponse));
             } catch (setErr) {
@@ -144,7 +149,7 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignContext, searchQuery]);
+  }, [campaignContext, lang, searchQuery]);
 
   // Fiyat aralığı (ürünlere göre)
   const priceRange = useMemo(() => {
@@ -171,7 +176,7 @@ export default function ShopPage() {
       } else {
         // slug -> id çöz
         try {
-          const cat = await categoryApi.get(categoryParam); // id veya slug kabul ediyor
+          const cat = await categoryApi.get(categoryParam, lang); // id veya slug kabul ediyor
           if (!mounted) return;
           const resolvedId = cat?.id || cat?._id || "";
           setSelectedCategory(resolvedId || "all");
@@ -195,7 +200,7 @@ export default function ShopPage() {
       mounted = false;
     };
     // priceRange.max değiştiğinde de başlangıç değeri ayarlansın
-  }, [searchParams, priceRange.max]);
+  }, [lang, priceRange.max, searchParams]);
 
   // Renk/S beden seçenekleri
   const availableColors = useMemo(() => {

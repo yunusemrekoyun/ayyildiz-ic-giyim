@@ -35,17 +35,52 @@ const CtaSchema = new mongoose.Schema(
       type: String,
       enum: ["primary", "secondary"],
       default: "primary",
-    }, // UI'da buton stili seçmek için
+    },
+  },
+  { _id: false }
+);
+
+const DotBlockTranslationSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true },
+    text: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const StatTranslationSchema = new mongoose.Schema(
+  {
+    label: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const CtaTranslationSchema = new mongoose.Schema(
+  {
+    text: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const AboutTranslationSchema = new mongoose.Schema(
+  {
+    heroTitle: { type: String, trim: true },
+    heroSubtitle: { type: String, trim: true },
+    dotBlocks: { type: [DotBlockTranslationSchema], default: undefined },
+    stats: { type: [StatTranslationSchema], default: undefined },
+    materialsTitle: { type: String, trim: true },
+    materialsText: { type: String, trim: true },
+    materialsBullets: { type: [String], default: undefined },
+    ctaTitle: { type: String, trim: true },
+    ctaSubtitle: { type: String, trim: true },
+    ctas: { type: [CtaTranslationSchema], default: undefined },
   },
   { _id: false }
 );
 
 const AboutSchema = new mongoose.Schema(
   {
-    // Singleton kontrolü için
     key: { type: String, unique: true, default: "about", index: true },
-
-    // Hero
     heroTitle: { type: String, default: "About Evim & Stil" },
     heroSubtitle: {
       type: String,
@@ -53,11 +88,7 @@ const AboutSchema = new mongoose.Schema(
         "Discover the story behind our passion for bringing elegant lingerie and home textiles to the heart of the community—crafted with care, rooted in quality, and designed to feel like home.",
     },
     heroImage: { type: ImageSchema, default: null },
-
-    // Sol görsel (Story/Vision kolonunda)
     leftImage: { type: ImageSchema, default: null },
-
-    // Sağ taraftaki timeline tarzı bloklar
     dotBlocks: {
       type: [DotBlockSchema],
       default: [
@@ -75,8 +106,6 @@ const AboutSchema = new mongoose.Schema(
         },
       ],
     },
-
-    // İstatistik kutuları
     stats: {
       type: [StatSchema],
       default: [
@@ -86,8 +115,6 @@ const AboutSchema = new mongoose.Schema(
         { value: "80%", label: "Eco Fabrics" },
       ],
     },
-
-    // Materials & Responsibility
     materialsTitle: {
       type: String,
       default: "Materials & Responsibility",
@@ -107,8 +134,6 @@ const AboutSchema = new mongoose.Schema(
       ],
     },
     materialsImage: { type: ImageSchema, default: null },
-
-    // CTA/şerit
     ctaTitle: { type: String, default: "Visit Our Boutique in Berlin" },
     ctaSubtitle: {
       type: String,
@@ -121,6 +146,17 @@ const AboutSchema = new mongoose.Schema(
         { text: "Explore Packages", to: "/sets", variant: "primary" },
         { text: "Contact Us", to: "/contact", variant: "secondary" },
       ],
+    },
+    translations: {
+      type: new mongoose.Schema(
+        {
+          tr: { type: AboutTranslationSchema, default: () => ({}) },
+          en: { type: AboutTranslationSchema, default: () => ({}) },
+          de: { type: AboutTranslationSchema, default: () => ({}) },
+        },
+        { _id: false }
+      ),
+      default: () => ({ tr: {} }),
     },
   },
   { timestamps: true }

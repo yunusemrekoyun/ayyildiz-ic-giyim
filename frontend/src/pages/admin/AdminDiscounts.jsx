@@ -9,6 +9,7 @@ import DiscountForm from "../../components/admin/discounts/DiscountForm.jsx";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { flattenCategoryTree } from "../../utils/catalog.js";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
+import { useAdminLang } from "../../context/LangContext.jsx";
 
 const currency = new Intl.NumberFormat("tr-TR", {
   style: "currency",
@@ -30,16 +31,17 @@ export default function AdminDiscounts() {
   const [editingDiscount, setEditingDiscount] = useState(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [conflictState, setConflictState] = useState(null);
+  const { adminLang } = useAdminLang();
 
   useEffect(() => {
     loadDiscounts();
     loadOptions();
-  }, []);
+  }, [adminLang]);
 
   const loadDiscounts = async () => {
     setLoading(true);
     try {
-      const data = await discountApi.list();
+      const data = await discountApi.list(adminLang);
       setDiscounts(data);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -51,9 +53,9 @@ export default function AdminDiscounts() {
   const loadOptions = async () => {
     try {
       const [productRes, setRes, categoryRes] = await Promise.all([
-        productApi.list({ limit: 500, includeHidden: true }),
-        setApi.list({ includeHidden: true }),
-        categoryApi.tree(),
+        productApi.list({ limit: 500, includeHidden: true }, adminLang),
+        setApi.list({ includeHidden: true }, adminLang),
+        categoryApi.tree(adminLang),
       ]);
 
       const mappedProducts = (productRes.products || []).map((product) => ({

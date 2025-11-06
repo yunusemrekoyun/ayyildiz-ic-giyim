@@ -1,5 +1,6 @@
 // src/api/privacy.js
-import { http } from "./client";
+import { http, toQueryString } from "./client";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 const EMPTY = {
   heroTitle: "",
@@ -11,18 +12,21 @@ const EMPTY = {
 };
 
 export const privacyApi = {
-  async public() {
-    const data = await http("/privacy");
+  async public(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/privacy${qs}`);
     return data?.privacy || EMPTY;
   },
 
-  async manage() {
-    const data = await http("/privacy/manage", { auth: true });
+  async manage(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/privacy/manage${qs}`, { auth: true });
     return data?.privacy || EMPTY;
   },
 
-  async upsert(payload) {
-    const data = await http("/privacy", {
+  async upsert(payload, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/privacy${qs}`, {
       method: "PUT",
       body: payload,
       auth: true,
@@ -30,7 +34,7 @@ export const privacyApi = {
     if (data?.privacy) return data.privacy;
     // backend bir şey döndürmediyse güncel halini al
     try {
-      const fallback = await this.manage();
+      const fallback = await this.manage(lang);
       return fallback;
     } catch {
       return null;

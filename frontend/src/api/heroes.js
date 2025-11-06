@@ -1,8 +1,12 @@
-import { http } from "./client.js";
+import { http, toQueryString } from "./client.js";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 export const heroApi = {
-  async list({ includeInactive = false } = {}) {
-    const qs = includeInactive ? `?includeInactive=true` : "";
+  async list({ includeInactive = false } = {}, lang = DEFAULT_LANG) {
+    const qs = toQueryString({
+      includeInactive: includeInactive ? "true" : undefined,
+      lang: lang ?? DEFAULT_LANG,
+    });
     const data = await http(`/heroes${qs}`, { auth: includeInactive });
     return data.heroes || [];
   },
@@ -15,7 +19,8 @@ export const heroApi = {
     isActive = true,
     sortOrder = 0,
     file,
-  }) {
+  },
+  lang = DEFAULT_LANG) {
     const form = new FormData();
     form.append("title", String(title).trim());
     form.append("subtitle", String(subtitle).trim());
@@ -28,7 +33,8 @@ export const heroApi = {
     }
     if (file) form.append("media", file);
 
-    const data = await http(`/heroes`, {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/heroes${qs}`, {
       method: "POST",
       body: form,
       auth: true,
@@ -47,7 +53,8 @@ export const heroApi = {
       sortOrder,
       file,
       removeMedia,
-    }
+    },
+    lang = DEFAULT_LANG
   ) {
     const form = new FormData();
     if (title !== undefined) form.append("title", String(title));
@@ -64,7 +71,8 @@ export const heroApi = {
     if (file) form.append("media", file);
     if (removeMedia) form.append("removeMedia", "true");
 
-    const data = await http(`/heroes/${id}`, {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/heroes/${id}${qs}`, {
       method: "PUT",
       body: form,
       auth: true,

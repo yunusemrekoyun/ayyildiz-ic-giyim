@@ -6,6 +6,8 @@ import MegaMenu from "./MegaMenu";
 import { categoryApi } from "../../api/categories";
 import { mapCategoryTree } from "../../utils/catalog";
 import { useCart } from "../../hooks/useCart";
+import LanguageSwitcher from "../LanguageSwitcher.jsx";
+import { useStorefrontLang } from "../../context/LangContext.jsx";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -13,14 +15,17 @@ export default function Header() {
   const [categoryTree, setCategoryTree] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [navError, setNavError] = useState(null);
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     let mounted = true;
+    setLoadingCategories(true);
     (async () => {
       try {
-        const tree = await categoryApi.tree();
+        const tree = await categoryApi.tree(lang);
         if (!mounted) return;
         setCategoryTree(mapCategoryTree(tree));
+        setNavError(null);
       } catch (error) {
         if (mounted) setNavError(error);
       } finally {
@@ -30,7 +35,7 @@ export default function Header() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [lang]);
 
   const navigationItems = useMemo(() => {
     return (categoryTree || []).map((node) => ({
@@ -106,6 +111,7 @@ export default function Header() {
 
             {/* SAĞ: İkonlar */}
             <div className="flex items-center justify-end gap-2 sm:gap-3">
+              <LanguageSwitcher className="hidden md:inline-flex" />
               <Link
                 to="/cart"
                 className="relative inline-flex rounded-full p-2 hover:bg-surface-hover"
@@ -129,6 +135,7 @@ export default function Header() {
               >
                 <User className="h-6 w-6 text-secondary" />
               </Link>
+              <LanguageSwitcher className="md:hidden inline-flex" />
             </div>
           </div>
         </div>

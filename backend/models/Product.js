@@ -22,6 +22,25 @@ const AttributeSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const AttributeTranslationSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true },
+    values: { type: [String], default: undefined },
+  },
+  { _id: false }
+);
+
+const ProductTranslationSchema = new mongoose.Schema(
+  {
+    name: { type: String, trim: true, maxlength: 160 },
+    description: { type: String, trim: true },
+    careInstructions: { type: String, trim: true },
+    details: { type: [String], default: undefined },
+    customAttribute: { type: AttributeTranslationSchema, default: undefined },
+  },
+  { _id: false }
+);
+
 const ProductSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 160 },
@@ -57,6 +76,17 @@ const ProductSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: true },
     listedInCatalog: { type: Boolean, default: true },
+    translations: {
+      type: new mongoose.Schema(
+        {
+          tr: { type: ProductTranslationSchema, default: () => ({}) },
+          en: { type: ProductTranslationSchema, default: () => ({}) },
+          de: { type: ProductTranslationSchema, default: () => ({}) },
+        },
+        { _id: false }
+      ),
+      default: () => ({ tr: {} }),
+    },
   },
   { timestamps: true }
 );

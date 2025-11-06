@@ -1,6 +1,6 @@
 // frontend/src/components/admin/sets/SetTable.jsx
 import { useMemo, useState } from "react";
-import { Edit3, Trash2, Search } from "lucide-react";
+import { Edit3, Trash2, Search, Languages } from "lucide-react";
 import { getColorInfo } from "../../../utils/colors.js";
 
 const currency = new Intl.NumberFormat("en-US", {
@@ -18,6 +18,7 @@ export default function SetTable({
   loading = false,
   onEdit,
   onDelete,
+  onTranslate,
 }) {
   const [inspectOpen, setInspectOpen] = useState(false);
   const [inspectSet, setInspectSet] = useState(null);
@@ -114,6 +115,12 @@ export default function SetTable({
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => onTranslate?.(set)}
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                    >
+                      <Languages className="h-4 w-4" /> Dil varyantı
+                    </button>
                     <button
                       onClick={() => onEdit?.(set)}
                       className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"

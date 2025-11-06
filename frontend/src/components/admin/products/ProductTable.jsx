@@ -1,4 +1,4 @@
-import { Edit3, Trash2 } from "lucide-react";
+import { Edit3, Trash2, Languages } from "lucide-react";
 
 const formatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -11,6 +11,7 @@ export default function ProductTable({
   loading = false,
   onEdit,
   onDelete,
+  onTranslate,
 }) {
   if (loading) {
     return (
@@ -97,6 +98,12 @@ export default function ProductTable({
               </td>
               <td className="px-4 py-3 text-right">
                 <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => onTranslate?.(product)}
+                    className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                  >
+                    <Languages className="h-4 w-4" /> Dil varyantı
+                  </button>
                   <button
                     onClick={() => onEdit?.(product)}
                     className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"

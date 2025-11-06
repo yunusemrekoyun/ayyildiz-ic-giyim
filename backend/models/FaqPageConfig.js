@@ -31,6 +31,44 @@ const SeoSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const FaqItemTranslationSchema = new mongoose.Schema(
+  {
+    _id: { type: mongoose.Schema.Types.ObjectId },
+    question: { type: String, trim: true },
+    answer: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const FaqSectionTranslationSchema = new mongoose.Schema(
+  {
+    _id: { type: mongoose.Schema.Types.ObjectId },
+    title: { type: String, trim: true },
+    subtitle: { type: String, trim: true },
+    items: { type: [FaqItemTranslationSchema], default: undefined },
+  },
+  { _id: false }
+);
+
+const FaqSeoTranslationSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true },
+    description: { type: String, trim: true },
+    keywords: { type: [String], default: undefined },
+  },
+  { _id: false }
+);
+
+const FaqPageTranslationSchema = new mongoose.Schema(
+  {
+    heroTitle: { type: String, trim: true },
+    heroIntro: { type: String, trim: true },
+    sections: { type: [FaqSectionTranslationSchema], default: undefined },
+    seo: { type: FaqSeoTranslationSchema, default: undefined },
+  },
+  { _id: false }
+);
+
 // Tek belge konfig
 const FaqPageConfigSchema = new mongoose.Schema(
   {
@@ -53,6 +91,17 @@ const FaqPageConfigSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
+    },
+    translations: {
+      type: new mongoose.Schema(
+        {
+          tr: { type: FaqPageTranslationSchema, default: () => ({}) },
+          en: { type: FaqPageTranslationSchema, default: () => ({}) },
+          de: { type: FaqPageTranslationSchema, default: () => ({}) },
+        },
+        { _id: false }
+      ),
+      default: () => ({ tr: {} }),
     },
   },
   { timestamps: true }

@@ -449,12 +449,17 @@ export default function ProductForm({
         </>
       }
     >
-      <form
-        id="admin-product-form"
-        onSubmit={handleSubmit}
-        className="space-y-6"
-      >
+      <div className="space-y-6">
+        <form
+          id="admin-product-form"
+          onSubmit={handleSubmit}
+          className="space-y-6"
+        >
         {/* ... form alanları aynı (ad/fiyat/kategori/açıklama/detaylar) ... */}
+
+        <div className="rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]/80 px-4 py-3 text-xs text-[var(--color-text-admin-muted)]">
+          Bu form ürünün ana (Türkçe) içeriğini günceller. Fiyat, stok ve görseller tüm dillerde aynıdır.
+        </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* sol taraf */}
@@ -782,8 +787,270 @@ export default function ProductForm({
             {error}
           </div>
         )}
-      </form>
+        </form>
+
+      </div>
     </AdminModal>
+  );
+}
+
+function ProductTranslationEditors({
+  langs,
+  drafts,
+  onFieldChange,
+  onCopyFromBase,
+  onReset,
+  onSave,
+  savingMap,
+  baseDraft,
+  savedDrafts,
+  hasCustomAttribute,
+}) {
+  const [openStates, setOpenStates] = useState(() => {
+    const initial = {};
+    langs.forEach(({ value }) => {
+      initial[value] = false;
+    });
+    return initial;
+  });
+
+  useEffect(() => {
+    const reset = {};
+    langs.forEach(({ value }) => {
+      reset[value] = false;
+    });
+    setOpenStates(reset);
+  }, [langs, savedDrafts]);
+
+  const defaultDraft = {
+    name: "",
+    description: "",
+    careInstructions: "",
+    details: "",
+    customAttributeTitle: "",
+    customAttributeValues: "",
+  };
+
+  return (
+    <section className="space-y-4">
+      <header>
+        <h4 className="text-lg font-semibold text-[var(--color-text-admin)]">
+          Çeviri varyantları
+        </h4>
+        <p className="text-sm text-[var(--color-text-admin-muted)]">
+          Buradaki metinler seçilen dil için kaydedilir. Boş bıraktığınız alanlar
+          otomatik olarak Türkçe içeriği gösterir.
+        </p>
+      </header>
+
+      <div className="space-y-4">
+        {langs.map(({ value, label }) => {
+          const draft = drafts?.[value] || defaultDraft;
+          const savedDraft = savedDrafts?.[value] || defaultDraft;
+          const isOpen = openStates[value];
+          const isSaving = Boolean(savingMap?.[value]);
+          const isDirty =
+            (draft.name ?? "") !== (savedDraft.name ?? "") ||
+            (draft.description ?? "") !== (savedDraft.description ?? "") ||
+            (draft.careInstructions ?? "") !==
+              (savedDraft.careInstructions ?? "") ||
+            (draft.details ?? "") !== (savedDraft.details ?? "") ||
+            (draft.customAttributeTitle ?? "") !==
+              (savedDraft.customAttributeTitle ?? "") ||
+            (draft.customAttributeValues ?? "") !==
+              (savedDraft.customAttributeValues ?? "");
+
+          const summary = savedDraft.name
+            ? savedDraft.name
+            : "Türkçe metin kullanılıyor";
+
+          const toggleOpen = () =>
+            setOpenStates((prev) => ({
+              ...prev,
+              [value]: !prev[value],
+            }));
+
+          const handleCopy = () => {
+            onCopyFromBase(value);
+            setOpenStates((prev) => ({ ...prev, [value]: true }));
+          };
+
+          return (
+            <div
+              key={value}
+              className="rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]"
+            >
+              <div className="flex flex-col gap-3 border-b border-[var(--color-border-admin)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--color-text-admin)]">
+                    {label}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-admin-muted)]">
+                    Kaydedilen: {summary}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleOpen}
+                    className="rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                  >
+                    {isOpen ? "Kapat" : "Çeviri düzenle"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
+                    disabled={!baseDraft}
+                  >
+                    TR'den kopyala
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onReset(value)}
+                    className="rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
+                    disabled={!isDirty}
+                  >
+                    Kaydedileni geri al
+                  </button>
+                </div>
+              </div>
+
+              {isOpen && (
+                <div className="space-y-4 px-4 py-4">
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
+                      Ürün adı ({label})
+                    </span>
+                    <input
+                      value={draft.name}
+                      onChange={(event) =>
+                        onFieldChange(value, "name", event.target.value)
+                      }
+                      className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                      placeholder="Lüks İpek Pijama"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
+                      Açıklama
+                    </span>
+                    <textarea
+                      rows={3}
+                      value={draft.description}
+                      onChange={(event) =>
+                        onFieldChange(value, "description", event.target.value)
+                      }
+                      className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                      placeholder="Ürün sayfasında gösterilen kısa tanıtım."
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
+                      Bakım talimatları
+                    </span>
+                    <textarea
+                      rows={3}
+                      value={draft.careInstructions}
+                      onChange={(event) =>
+                        onFieldChange(
+                          value,
+                          "careInstructions",
+                          event.target.value
+                        )
+                      }
+                      className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                      placeholder="Örneğin: Elde soğuk yıkayın, kurutma makinesi kullanmayın"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
+                      Detaylar (her satır bir madde)
+                    </span>
+                    <textarea
+                      rows={4}
+                      value={draft.details}
+                      onChange={(event) =>
+                        onFieldChange(value, "details", event.target.value)
+                      }
+                      className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                      placeholder={"Her satıra bir madde yazın"}
+                    />
+                  </label>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
+                        Özellik başlığı
+                      </span>
+                      <input
+                        value={draft.customAttributeTitle}
+                        onChange={(event) =>
+                          onFieldChange(
+                            value,
+                            "customAttributeTitle",
+                            event.target.value
+                          )
+                        }
+                        className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] disabled:opacity-60"
+                        placeholder="Örn. Malzeme"
+                        disabled={!hasCustomAttribute}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
+                        Özellik değerleri (her satır bir seçenek)
+                      </span>
+                      <textarea
+                        rows={hasCustomAttribute ? 3 : 1}
+                        value={draft.customAttributeValues}
+                        onChange={(event) =>
+                          onFieldChange(
+                            value,
+                            "customAttributeValues",
+                            event.target.value
+                          )
+                        }
+                        className="w-full rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] disabled:opacity-60"
+                        placeholder="Örn. Pamuk, Saten"
+                        disabled={!hasCustomAttribute}
+                      />
+                    </label>
+                  </div>
+                  {!hasCustomAttribute && (
+                    <p className="text-xs text-[var(--color-text-admin-muted)]">
+                      Bu üründe özel özellik seçeneği kullanılmıyor; başlık ve değerler boş bırakılabilir.
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => onReset(value)}
+                      className="rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
+                      disabled={!isDirty}
+                    >
+                      Kaydedileni geri al
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSave(value)}
+                      className="rounded-full bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-60"
+                      disabled={!isDirty || isSaving}
+                    >
+                      {isSaving ? "Kaydediliyor" : "Kaydet"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

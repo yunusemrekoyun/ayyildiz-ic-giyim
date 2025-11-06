@@ -4,6 +4,7 @@ import BreadCrumb from "../components/shop/BreadCrumb";
 import SetsSets from "../components/sets-sets/SetsSets";
 import { setApi } from "../api/sets";
 import { campaignApi } from "../api/campaigns";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 export default function SetsPage() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ export default function SetsPage() {
   const [loading, setLoading] = useState(true);
   const [campaignContext, setCampaignContext] = useState(null);
   const [campaignError, setCampaignError] = useState("");
+  const { lang } = useStorefrontLang();
 
   const campaignId = searchParams.get("campaign");
 
@@ -25,11 +27,11 @@ export default function SetsPage() {
           const mapped = mapSetsToCards(campaignContext.items);
           if (mounted) setItems(mapped);
         } else {
-          let res = await setApi.list();
+          let res = await setApi.list({}, lang);
           let sets = normalizeSetsResponse(res);
 
           if (!sets.length) {
-            const res2 = await setApi.list({ includeHidden: true });
+            const res2 = await setApi.list({ includeHidden: true }, lang);
             sets = normalizeSetsResponse(res2);
           }
 
@@ -46,7 +48,7 @@ export default function SetsPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignContext]);
+  }, [campaignContext, lang]);
 
   useEffect(() => {
     if (!campaignId) {
@@ -59,7 +61,7 @@ export default function SetsPage() {
     (async () => {
       try {
         setCampaignError("");
-        const data = await campaignApi.resolve(campaignId);
+        const data = await campaignApi.resolve(campaignId, lang);
         if (!mounted) return;
         if (data.targetType === "PRODUCTS") {
           navigate(`/shop?campaign=${campaignId}`, { replace: true });
@@ -76,7 +78,7 @@ export default function SetsPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignId, navigate]);
+  }, [campaignId, lang, navigate]);
 
   const tabs = useMemo(() => {
     const tagSet = new Set();

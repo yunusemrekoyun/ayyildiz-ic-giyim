@@ -12,6 +12,13 @@ const ImageSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const CategoryTranslationSchema = new mongoose.Schema(
+  {
+    name: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
 const CategorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -29,6 +36,17 @@ const CategorySchema = new mongoose.Schema(
       },
     ],
     image: { type: ImageSchema, default: null },
+    translations: {
+      type: new mongoose.Schema(
+        {
+          tr: { type: CategoryTranslationSchema, default: () => ({}) },
+          en: { type: CategoryTranslationSchema, default: () => ({}) },
+          de: { type: CategoryTranslationSchema, default: () => ({}) },
+        },
+        { _id: false }
+      ),
+      default: () => ({ tr: {} }),
+    },
   },
   { timestamps: true }
 );

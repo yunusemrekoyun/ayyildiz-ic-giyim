@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { shippingReturnsApi } from "../../api/shippingReturns";
+import { useAdminLang } from "../../context/LangContext.jsx";
 import { Link } from "react-router-dom";
 import {
   Loader2,
@@ -37,6 +38,7 @@ export default function ShippingReturnsSettings() {
   const [banner, setBanner] = useState(null);
 
   const [form, setForm] = useState(EMPTY_MODEL);
+  const { adminLang } = useAdminLang();
 
   function deepMergeKeepDraft(prev, srv) {
     // Basit alanlar
@@ -123,9 +125,10 @@ export default function ShippingReturnsSettings() {
   // Yükleme
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
-        const data = await shippingReturnsApi.manage();
+        const data = await shippingReturnsApi.manage(adminLang);
         if (!mounted) return;
         setForm(normalizeIncoming(data));
       } catch (e) {
@@ -141,7 +144,7 @@ export default function ShippingReturnsSettings() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [adminLang]);
 
   const canSave = useMemo(() => {
     if (!form.heroTitle?.trim()) return false;
@@ -152,7 +155,7 @@ export default function ShippingReturnsSettings() {
     setSaving(true);
     try {
       const payload = normalizeOutgoing(form);
-      const updated = await shippingReturnsApi.upsert(payload);
+      const updated = await shippingReturnsApi.upsert(payload, adminLang);
       if (updated) {
         const srv = normalizeIncoming(updated);
         setForm((prev) => deepMergeKeepDraft(prev, srv));

@@ -19,6 +19,27 @@ const BlockSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const BlockTranslationSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true },
+    lines: { type: [String], default: undefined },
+  },
+  { _id: false }
+);
+
+const ContactTranslationSchema = new mongoose.Schema(
+  {
+    heroTitle: { type: String, trim: true },
+    heroSubtitle: { type: String, trim: true },
+    addressBlock: { type: BlockTranslationSchema, default: undefined },
+    hoursBlock: { type: BlockTranslationSchema, default: undefined },
+    emailBlock: { type: BlockTranslationSchema, default: undefined },
+    phoneBlock: { type: BlockTranslationSchema, default: undefined },
+    successMessage: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
 const ContactConfigSchema = new mongoose.Schema(
   {
     // Singleton’ı sabitlemek için key
@@ -57,6 +78,17 @@ const ContactConfigSchema = new mongoose.Schema(
       type: String,
       default:
         "Thank you for your message. We have received your enquiry and will reply via e-mail shortly. If you need immediate assistance, call us on the number below.",
+    },
+    translations: {
+      type: new mongoose.Schema(
+        {
+          tr: { type: ContactTranslationSchema, default: () => ({}) },
+          en: { type: ContactTranslationSchema, default: () => ({}) },
+          de: { type: ContactTranslationSchema, default: () => ({}) },
+        },
+        { _id: false }
+      ),
+      default: () => ({ tr: {} }),
     },
   },
   { timestamps: true }

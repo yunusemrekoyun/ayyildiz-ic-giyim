@@ -11,6 +11,7 @@ import CampaignCard from "../../components/admin/campaigns/CampaignCard.jsx";
 import CampaignForm from "../../components/admin/campaigns/CampaignForm.jsx";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
+import { useAdminLang } from "../../context/LangContext.jsx";
 
 const currency = new Intl.NumberFormat("tr-TR", {
   style: "currency",
@@ -20,6 +21,7 @@ const currency = new Intl.NumberFormat("tr-TR", {
 
 export default function AdminCampaigns() {
   const confirm = useConfirm();
+  const { adminLang } = useAdminLang();
   const [campaigns, setCampaigns] = useState([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [banner, setBanner] = useState(null);
@@ -35,9 +37,10 @@ export default function AdminCampaigns() {
   const [formSubmitting, setFormSubmitting] = useState(false);
 
   useEffect(() => {
-    loadCampaigns();
-    loadOptions();
-  }, []);
+    loadCampaigns(adminLang);
+    loadOptions(adminLang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminLang]);
 
   const sortedCampaigns = useMemo(
     () =>
@@ -52,10 +55,10 @@ export default function AdminCampaigns() {
     [campaigns]
   );
 
-  async function loadCampaigns() {
+  async function loadCampaigns(lang = adminLang) {
     setLoadingCampaigns(true);
     try {
-      const data = await campaignApi.listManage({ includeInactive: true });
+      const data = await campaignApi.listManage({ includeInactive: true }, lang);
       setCampaigns(data);
     } catch (error) {
       setBanner({
@@ -67,14 +70,14 @@ export default function AdminCampaigns() {
     }
   }
 
-  async function loadOptions() {
+  async function loadOptions(lang = adminLang) {
     setLoadingOptions(true);
     try {
       const [productRes, setRes, categoryRes, discountRes] = await Promise.all([
-        productApi.list({ limit: 500, includeHidden: true }),
-        setApi.list({ includeHidden: true }),
-        categoryApi.tree(),
-        discountApi.list(),
+        productApi.list({ limit: 500, includeHidden: true }, lang),
+        setApi.list({ includeHidden: true }, lang),
+        categoryApi.tree(lang),
+        discountApi.list(lang),
       ]);
 
       const mappedProducts = (productRes.products || []).map((product) => ({
@@ -140,9 +143,13 @@ export default function AdminCampaigns() {
 
   async function handleToggleActive(campaign) {
     try {
-      const updated = await campaignApi.update(campaign.id, {
-        isActive: !campaign.isActive,
-      });
+      const updated = await campaignApi.update(
+        campaign.id,
+        {
+          isActive: !campaign.isActive,
+        },
+        adminLang
+      );
       setCampaigns((prev) =>
         prev.map((item) => (item.id === updated.id ? updated : item))
       );
@@ -211,7 +218,7 @@ export default function AdminCampaigns() {
       );
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
-      loadCampaigns();
+      loadCampaigns(adminLang);
     }
   }
 
@@ -219,7 +226,7 @@ export default function AdminCampaigns() {
     setFormSubmitting(true);
     try {
       if (formMode === "create") {
-        const created = await campaignApi.create(payload);
+        const created = await campaignApi.create(payload, adminLang);
         setCampaigns((prev) => [...prev, created]);
         setBanner({
           variant: "success",
@@ -227,7 +234,11 @@ export default function AdminCampaigns() {
         });
         openCreateForm();
       } else if (editingCampaign?.id) {
-        const updated = await campaignApi.update(editingCampaign.id, payload);
+        const updated = await campaignApi.update(
+          editingCampaign.id,
+          payload,
+          adminLang
+        );
         setCampaigns((prev) =>
           prev.map((item) => (item.id === updated.id ? updated : item))
         );
@@ -300,7 +311,7 @@ export default function AdminCampaigns() {
               </div>
               <button
                 type="button"
-                onClick={loadCampaigns}
+                onClick={() => loadCampaigns(adminLang)}
                 className="text-xs text-[var(--color-text-admin-muted)] underline-offset-2 hover:underline"
               >
                 Yenile
@@ -355,6 +366,7 @@ export default function AdminCampaigns() {
             setOptions={setOptions}
             categoryOptions={categoryOptions}
             discountOptions={discountOptions}
+            contentLang={adminLang}
           />
 
           {loadingOptions && (

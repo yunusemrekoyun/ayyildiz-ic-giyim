@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { contactPageApi } from "../../api/contact";
+import { useAdminLang } from "../../context/LangContext.jsx";
+import { DEFAULT_LANG } from "../../constants/lang.js";
 import {
   MapPin,
   Mail,
@@ -147,6 +149,8 @@ function getMessage(err) {
 }
 
 export default function AdminContactSettingsPageInner() {
+  const { adminLang } = useAdminLang();
+  const languageLabel = (adminLang || DEFAULT_LANG).toUpperCase();
   const [data, setData] = useState(() => deepClone(emptyConfig));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -157,7 +161,7 @@ export default function AdminContactSettingsPageInner() {
     (async () => {
       setLoading(true);
       try {
-        const conf = await contactPageApi.get();
+        const conf = await contactPageApi.get(adminLang);
         if (!active) return;
         setData(normalizeState(conf));
       } catch (err) {
@@ -171,7 +175,8 @@ export default function AdminContactSettingsPageInner() {
     return () => {
       active = false;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminLang]);
 
   const canSave = useMemo(() => !saving && !loading, [saving, loading]);
   const disabled = loading || saving;
@@ -217,7 +222,7 @@ export default function AdminContactSettingsPageInner() {
     setBanner(null);
     try {
       const payload = sanitizePayload(data);
-      const saved = await contactPageApi.upsert(payload);
+      const saved = await contactPageApi.upsert(payload, adminLang);
       setData(normalizeState(saved || payload));
       setBanner({
         variant: "success",
@@ -235,7 +240,7 @@ export default function AdminContactSettingsPageInner() {
     setLoading(true);
     setBanner(null);
     try {
-      const conf = await contactPageApi.get();
+      const conf = await contactPageApi.get(adminLang);
       setData(normalizeState(conf));
     } catch (err) {
       setBanner({ variant: "danger", message: getMessage(err) });
@@ -257,6 +262,9 @@ export default function AdminContactSettingsPageInner() {
             <h2 className="text-2xl font-semibold">İletişim Sayfası İçeriği</h2>
             <p className="text-sm text-[var(--color-text-admin-muted)]">
               Kahraman metnini, kenar çubuğu bloklarını ve form davranışını düzenleyin.
+            </p>
+            <p className="rounded-xl border border-[var(--color-border-admin)]/60 bg-[var(--color-bg-admin)]/40 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+              Başlıklar ve metinler <span className="font-semibold text-[var(--color-text-admin)]">{languageLabel}</span> dili için kaydedilir. Görsel, form durumu ve iletişim kanalları tüm dillerde ortak kullanılır.
             </p>
           </div>
 

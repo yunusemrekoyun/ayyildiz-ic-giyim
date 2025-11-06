@@ -1,4 +1,5 @@
-import { http } from "./client.js";
+import { http, toQueryString } from "./client.js";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 function extractIds(values) {
   if (!Array.isArray(values)) return [];
@@ -76,25 +77,31 @@ function buildFormData(
 }
 
 export const campaignApi = {
-  async listHome() {
-    const data = await http("/campaigns");
+  async listHome(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/campaigns${qs}`);
     return data.campaigns || [];
   },
 
-  async listManage({ includeInactive = true } = {}) {
-    const qs = includeInactive ? "?includeInactive=true" : "";
+  async listManage({ includeInactive = true } = {}, lang = DEFAULT_LANG) {
+    const qs = toQueryString({
+      includeInactive: includeInactive ? "true" : undefined,
+      lang: lang ?? DEFAULT_LANG,
+    });
     const data = await http(`/campaigns/manage${qs}`, { auth: true });
     return data.campaigns || [];
   },
 
-  async get(id) {
-    const data = await http(`/campaigns/${id}`, { auth: true });
+  async get(id, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/campaigns/${id}${qs}`, { auth: true });
     return data.campaign;
   },
 
-  async create(payload) {
+  async create(payload, lang = DEFAULT_LANG) {
     const form = buildFormData(payload, { includeImage: true });
-    const data = await http("/campaigns", {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/campaigns${qs}`, {
       method: "POST",
       body: form,
       auth: true,
@@ -102,9 +109,10 @@ export const campaignApi = {
     return data.campaign;
   },
 
-  async update(id, payload) {
+  async update(id, payload, lang = DEFAULT_LANG) {
     const form = buildFormData(payload, { includeImage: payload.image !== undefined });
-    const data = await http(`/campaigns/${id}`, {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/campaigns/${id}${qs}`, {
       method: "PUT",
       body: form,
       auth: true,
@@ -126,8 +134,9 @@ export const campaignApi = {
     return true;
   },
 
-  async resolve(id) {
-    const data = await http(`/campaigns/${id}/resolve`);
+  async resolve(id, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/campaigns/${id}/resolve${qs}`);
     return data;
   },
 };

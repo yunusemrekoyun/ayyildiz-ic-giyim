@@ -2,19 +2,23 @@
 import { useEffect, useState, useMemo } from "react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { termsApi } from "../api/terms";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 export default function TermsPage() {
   const [data, setData] = useState(null); // { heroTitle, heroIntro, sections, footerNote, isActive }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
-        const res = await termsApi.public(); // GET /terms
+        const res = await termsApi.public(lang); // GET /terms
         if (!mounted) return;
         setData(safeIncoming(res));
+        setError("");
       } catch (e) {
         if (!mounted) return;
         setError(extractMessage(e));
@@ -25,7 +29,7 @@ export default function TermsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [lang]);
 
   // Fallback başlık/intro — stil korunur
   const title = useMemo(

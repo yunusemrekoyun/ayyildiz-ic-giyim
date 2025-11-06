@@ -4,6 +4,14 @@ import {
   uploadBufferToCloudinary,
   deleteFromCloudinary,
 } from "../utils/cloudinaryUpload.js";
+import {
+  DEFAULT_LANG,
+  normalizeLang,
+  resolveTranslation,
+  pickLocalizedPayload,
+  syncDocTranslations,
+  composeResponseTranslations,
+} from "../utils/i18n.js";
 
 // küçük yardımcılar
 const parseBool = (v, fb = false) => {
@@ -39,7 +47,7 @@ const normalizeLines = (val) => {
 };
 
 async function getOrCreateConfig() {
-  let cfg = await ContactConfig.findOne({ key: "default" }).lean();
+  let cfg = await ContactConfig.findOne({ key: "default" });
   if (!cfg) {
     cfg = await ContactConfig.create({
       key: "default",
@@ -70,9 +78,57 @@ async function getOrCreateConfig() {
         ],
       },
     });
-    cfg = cfg.toObject();
   }
   return cfg;
+}
+
+function buildContactTrTranslation(doc) {
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  const safeBlock = (block = {}) => ({
+    title: block?.title ?? "",
+    lines: Array.isArray(block?.lines) ? [...block.lines] : [],
+  });
+
+  return {
+    heroTitle: plain.heroTitle ?? "",
+    heroSubtitle: plain.heroSubtitle ?? "",
+    addressBlock: safeBlock(plain.addressBlock),
+    hoursBlock: safeBlock(plain.hoursBlock),
+    emailBlock: safeBlock(plain.emailBlock),
+    phoneBlock: safeBlock(plain.phoneBlock),
+    successMessage: plain.successMessage ?? "",
+  };
+}
+
+function applyContactTrTranslation(doc, translation = {}) {
+  if (!translation || typeof translation !== "object") return;
+
+  if (translation.heroTitle !== undefined) {
+    doc.heroTitle = translation.heroTitle;
+  }
+  if (translation.heroSubtitle !== undefined) {
+    doc.heroSubtitle = translation.heroSubtitle;
+  }
+  if (translation.successMessage !== undefined) {
+    doc.successMessage = translation.successMessage;
+  }
+
+  const applyBlock = (path, value) => {
+    if (value === undefined) return;
+    const target = doc[path] ?? {};
+    if (value.title !== undefined) {
+      target.title = value.title;
+    }
+    if (value.lines !== undefined) {
+      target.lines = normalizeLines(value.lines);
+    }
+    doc[path] = target;
+  };
+
+  applyBlock("addressBlock", translation.addressBlock);
+  applyBlock("hoursBlock", translation.hoursBlock);
+  applyBlock("emailBlock", translation.emailBlock);
+  applyBlock("phoneBlock", translation.phoneBlock);
 }
 
 /** PUBLIC: Contact config getir
@@ -80,8 +136,14 @@ async function getOrCreateConfig() {
  */
 export async function getContact(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const cfg = await getOrCreateConfig();
-    res.json({ contact: cfg });
+    const resolved = resolveTranslation(cfg, lang);
+    resolved.translations = composeResponseTranslations(
+      cfg,
+      buildContactTrTranslation
+    );
+    res.json({ contact: resolved });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -96,6 +158,7 @@ export async function getContact(req, res) {
  */
 export async function updateContact(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const {
       heroTitle,
       heroSubtitle,
@@ -110,43 +173,74 @@ export async function updateContact(req, res) {
 
     let cfg = await ContactConfig.findOne({ key: "default" });
     if (!cfg) cfg = new ContactConfig({ key: "default" });
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    const ensureLangBucket = () => {
+      const bucketLang = normalizeLang(lang);
+      incomingTranslations[bucketLang] = {
+        ...(incomingTranslations[bucketLang] || {}),
+      };
+      return incomingTranslations[bucketLang];
+    };
 
-    if (heroTitle !== undefined) cfg.heroTitle = String(heroTitle);
-    if (heroSubtitle !== undefined) cfg.heroSubtitle = String(heroSubtitle);
-    if (successMessage !== undefined)
-      cfg.successMessage = String(successMessage);
+    const parseBlockPayload = (raw) => {
+      let value = raw;
+      if (typeof value === "string") {
+        try {
+          value = JSON.parse(value);
+        } catch {
+          value = {};
+        }
+      }
+      return {
+        title: value?.title != null ? String(value.title) : "",
+        lines: normalizeLines(value?.lines),
+      };
+    };
+
+    if (heroTitle !== undefined) {
+      const normalizedTitle = String(heroTitle);
+      if (lang === DEFAULT_LANG) {
+        cfg.heroTitle = normalizedTitle;
+      } else {
+        ensureLangBucket().heroTitle = normalizedTitle;
+      }
+    }
+    if (heroSubtitle !== undefined) {
+      const normalizedSubtitle = String(heroSubtitle);
+      if (lang === DEFAULT_LANG) {
+        cfg.heroSubtitle = normalizedSubtitle;
+      } else {
+        ensureLangBucket().heroSubtitle = normalizedSubtitle;
+      }
+    }
+    if (successMessage !== undefined) {
+      const normalizedMessage = String(successMessage);
+      if (lang === DEFAULT_LANG) {
+        cfg.successMessage = normalizedMessage;
+      } else {
+        ensureLangBucket().successMessage = normalizedMessage;
+      }
+    }
     if (formEnabled !== undefined)
       cfg.formEnabled = parseBool(formEnabled, cfg.formEnabled);
 
-    // bloklar (hem object hem JSON/string hem de sadece lines/title kabul)
-    if (addressBlock !== undefined) {
-      const blk =
-        typeof addressBlock === "string"
-          ? JSON.parse(addressBlock)
-          : addressBlock;
-      cfg.addressBlock.title = String(
-        blk?.title || cfg.addressBlock.title || ""
-      );
-      cfg.addressBlock.lines = normalizeLines(blk?.lines);
-    }
-    if (hoursBlock !== undefined) {
-      const blk =
-        typeof hoursBlock === "string" ? JSON.parse(hoursBlock) : hoursBlock;
-      cfg.hoursBlock.title = String(blk?.title || cfg.hoursBlock.title || "");
-      cfg.hoursBlock.lines = normalizeLines(blk?.lines);
-    }
-    if (emailBlock !== undefined) {
-      const blk =
-        typeof emailBlock === "string" ? JSON.parse(emailBlock) : emailBlock;
-      cfg.emailBlock.title = String(blk?.title || cfg.emailBlock.title || "");
-      cfg.emailBlock.lines = normalizeLines(blk?.lines);
-    }
-    if (phoneBlock !== undefined) {
-      const blk =
-        typeof phoneBlock === "string" ? JSON.parse(phoneBlock) : phoneBlock;
-      cfg.phoneBlock.title = String(blk?.title || cfg.phoneBlock.title || "");
-      cfg.phoneBlock.lines = normalizeLines(blk?.lines);
-    }
+    const updateBlock = (key, raw) => {
+      const parsed = parseBlockPayload(raw);
+      if (lang === DEFAULT_LANG) {
+        const target = cfg[key] || {};
+        target.title = parsed.title;
+        target.lines = parsed.lines;
+        cfg[key] = target;
+      } else {
+        const bucket = ensureLangBucket();
+        bucket[key] = parsed;
+      }
+    };
+
+    if (addressBlock !== undefined) updateBlock("addressBlock", addressBlock);
+    if (hoursBlock !== undefined) updateBlock("hoursBlock", hoursBlock);
+    if (emailBlock !== undefined) updateBlock("emailBlock", emailBlock);
+    if (phoneBlock !== undefined) updateBlock("phoneBlock", phoneBlock);
 
     // heroImage upload: ya dosya gelir (upload.single) ya da body’de url/publicId verilir
     if (req.file) {
@@ -176,8 +270,21 @@ export async function updateContact(req, res) {
       };
     }
 
+    syncDocTranslations(
+      cfg,
+      incomingTranslations,
+      buildContactTrTranslation,
+      applyContactTrTranslation
+    );
+
     await cfg.save();
-    res.json({ contact: cfg.toObject() });
+
+    const resolved = resolveTranslation(cfg, lang);
+    resolved.translations = composeResponseTranslations(
+      cfg,
+      buildContactTrTranslation
+    );
+    res.json({ contact: resolved });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

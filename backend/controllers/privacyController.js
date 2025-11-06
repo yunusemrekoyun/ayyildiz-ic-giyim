@@ -1,5 +1,13 @@
 // backend/controllers/privacyController.js
 import PrivacyPolicy from "../models/PrivacyPolicy.js";
+import {
+  DEFAULT_LANG,
+  normalizeLang,
+  resolveTranslation,
+  pickLocalizedPayload,
+  syncDocTranslations,
+  composeResponseTranslations,
+} from "../utils/i18n.js";
 
 /* helpers */
 const ensureArray = (v) => {
@@ -22,10 +30,63 @@ const sanitizeSection = (s = {}) => {
   return { id, title, content };
 };
 
-const shape = (doc) => {
+const sanitizeSeo = (seo = {}) => ({
+  title: String(seo?.title ?? "").trim(),
+  description: String(seo?.description ?? "").trim(),
+  keywords: ensureArray(seo?.keywords),
+});
+
+function buildPrivacyTrTranslation(doc) {
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  return {
+    heroTitle: plain.heroTitle ?? "",
+    heroIntro: plain.heroIntro ?? "",
+    sections: Array.isArray(plain.sections)
+      ? plain.sections.map((section) => ({
+          id: section?.id ?? "",
+          title: section?.title ?? "",
+          content: Array.isArray(section?.content)
+            ? [...section.content]
+            : [],
+        }))
+      : [],
+    footerHtml: plain.footerHtml ?? "",
+    seo: {
+      title: plain.seo?.title ?? "",
+      description: plain.seo?.description ?? "",
+      keywords: Array.isArray(plain.seo?.keywords)
+        ? [...plain.seo.keywords]
+        : [],
+    },
+  };
+}
+
+function applyPrivacyTrTranslation(doc, translation = {}) {
+  if (!translation || typeof translation !== "object") return;
+  if (translation.heroTitle !== undefined) {
+    doc.heroTitle = String(translation.heroTitle);
+  }
+  if (translation.heroIntro !== undefined) {
+    doc.heroIntro = String(translation.heroIntro);
+  }
+  if (Array.isArray(translation.sections)) {
+    doc.sections = translation.sections.map(sanitizeSection);
+  }
+  if (translation.footerHtml !== undefined) {
+    doc.footerHtml = String(translation.footerHtml ?? "");
+  }
+  if (translation.seo) {
+    doc.seo = sanitizeSeo({
+      ...doc.seo,
+      ...translation.seo,
+    });
+  }
+}
+
+const shape = (doc, { includeTranslations = false } = {}, translations = null) => {
   if (!doc) return null;
   const d = typeof doc.toObject === "function" ? doc.toObject() : doc;
-  return {
+  const shaped = {
     id: d._id?.toString?.() || d.id,
     heroTitle: d.heroTitle || "Privacy Policy",
     heroIntro: d.heroIntro || "",
@@ -40,14 +101,18 @@ const shape = (doc) => {
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
+  if (includeTranslations) {
+    shaped.translations = translations ?? d.translations ?? {};
+  }
+  return shaped;
 };
 
 /* PUBLIC — GET /api/privacy */
 export async function getPublicPrivacy(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const doc =
-      (await PrivacyPolicy.findOne({ singleton: "privacy_policy" }).lean()) ||
-      null;
+      (await PrivacyPolicy.findOne({ singleton: "privacy_policy" })) || null;
 
     if (!doc || doc.isActive === false) {
       return res.json({
@@ -63,7 +128,8 @@ export async function getPublicPrivacy(req, res) {
       });
     }
 
-    return res.json({ privacy: shape(doc) });
+    const localized = resolveTranslation(doc, lang);
+    return res.json({ privacy: shape(localized) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -72,9 +138,9 @@ export async function getPublicPrivacy(req, res) {
 /* ADMIN — GET /api/privacy/manage */
 export async function getManagePrivacy(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const doc =
-      (await PrivacyPolicy.findOne({ singleton: "privacy_policy" }).lean()) ||
-      null;
+      (await PrivacyPolicy.findOne({ singleton: "privacy_policy" })) || null;
 
     if (!doc) {
       return res.json({
@@ -89,7 +155,13 @@ export async function getManagePrivacy(req, res) {
       });
     }
 
-    res.json({ privacy: shape(doc) });
+    const localized = resolveTranslation(doc, lang);
+    const shaped = shape(
+      localized,
+      { includeTranslations: true },
+      composeResponseTranslations(doc, buildPrivacyTrTranslation)
+    );
+    res.json({ privacy: shaped });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -98,35 +170,90 @@ export async function getManagePrivacy(req, res) {
 /* ADMIN — PUT /api/privacy */
 export async function upsertPrivacy(req, res) {
   try {
-    const p = req.body || {};
-    const heroTitle = String(p.heroTitle ?? "Privacy Policy").trim();
-    const heroIntro = String(p.heroIntro ?? "").trim();
-    const sectionsRaw = Array.isArray(p.sections) ? p.sections : [];
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
+    const isDefaultLang = lang === DEFAULT_LANG;
+    const body = req.body || {};
+    const heroTitle = String(body.heroTitle ?? "Privacy Policy").trim();
+    const heroIntro = String(body.heroIntro ?? "").trim();
+    const sectionsRaw = Array.isArray(body.sections) ? body.sections : [];
     const sections = sectionsRaw.map(sanitizeSection);
-    const footerHtml = String(p.footerHtml ?? "");
-    const isActive = p.isActive === undefined ? true : Boolean(p.isActive);
-    const seo = {
-      title: String(p?.seo?.title ?? "").trim(),
-      description: String(p?.seo?.description ?? "").trim(),
-      keywords: ensureArray(p?.seo?.keywords),
+    const footerHtml = String(body.footerHtml ?? "");
+    const isActive =
+      body.isActive === undefined ? true : Boolean(body.isActive);
+    const seo = sanitizeSeo(body?.seo);
+
+    let doc = await PrivacyPolicy.findOne({ singleton: "privacy_policy" });
+    if (!doc) {
+      if (!isDefaultLang) {
+        return res.status(400).json({
+          message:
+            "Önce Türkçe (TR) gizlilik politikasını oluşturun, ardından diğer diller için çeviri ekleyin.",
+        });
+      }
+      doc = new PrivacyPolicy({
+        singleton: "privacy_policy",
+        heroTitle,
+        heroIntro,
+        sections,
+        footerHtml,
+        isActive,
+        seo,
+      });
+    } else {
+      doc.isActive = isActive;
+      if (isDefaultLang) {
+        doc.heroTitle = heroTitle;
+        doc.heroIntro = heroIntro;
+        doc.sections = sections;
+        doc.footerHtml = footerHtml;
+        doc.seo = seo;
+      }
+    }
+
+    const incomingTranslations = {
+      ...pickLocalizedPayload(body),
     };
 
-    const update = {
-      heroTitle,
-      heroIntro,
-      sections,
-      footerHtml,
-      isActive,
-      seo,
-    };
+    if (!isDefaultLang) {
+      const ensureLangBucket = () => {
+        const bucket = incomingTranslations[lang] || {};
+        incomingTranslations[lang] = bucket;
+        return bucket;
+      };
+      if (Object.prototype.hasOwnProperty.call(body, "heroTitle")) {
+        ensureLangBucket().heroTitle = String(body.heroTitle ?? "").trim();
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "heroIntro")) {
+        ensureLangBucket().heroIntro = String(body.heroIntro ?? "").trim();
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "sections")) {
+        ensureLangBucket().sections = sectionsRaw.map(sanitizeSection);
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "footerHtml")) {
+        ensureLangBucket().footerHtml = String(body.footerHtml ?? "");
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "seo")) {
+        ensureLangBucket().seo = sanitizeSeo(body.seo || {});
+      }
+    }
 
-    const doc = await PrivacyPolicy.findOneAndUpdate(
-      { singleton: "privacy_policy" },
-      { $set: update },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+    syncDocTranslations(
+      doc,
+      incomingTranslations,
+      buildPrivacyTrTranslation,
+      applyPrivacyTrTranslation
     );
 
-    res.json({ privacy: shape(doc) });
+    await doc.save();
+
+    const localized = resolveTranslation(doc, lang);
+    const shaped = shape(
+      localized,
+      { includeTranslations: true },
+      composeResponseTranslations(doc, buildPrivacyTrTranslation)
+    );
+
+    res.json({ privacy: shaped });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

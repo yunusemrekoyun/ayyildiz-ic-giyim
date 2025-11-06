@@ -3,23 +3,33 @@ import { useEffect, useState } from "react";
 import { aboutApi } from "../../api/about";
 import { Loader2, Save, Image as ImageIcon, X } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAdminLang } from "../../context/LangContext.jsx";
 
 export default function AboutSettingsPage() {
   const [data, setData] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [files, setFiles] = useState({});
+  const { adminLang } = useAdminLang();
 
   useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setFiles({});
     (async () => {
       try {
-        const res = await aboutApi.get();
-        setData(res.about);
+        const res = await aboutApi.get(adminLang);
+        if (mounted) setData(res.about);
+      } catch (err) {
+        if (mounted) toast.error(err?.message || "Veri yüklenemedi");
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     })();
-  }, []);
+    return () => {
+      mounted = false;
+    };
+  }, [adminLang]);
 
   if (loading)
     return (
@@ -49,7 +59,7 @@ export default function AboutSettingsPage() {
         if (file) form.append(k, file);
       });
 
-      const res = await aboutApi.update(form);
+      const res = await aboutApi.update(form, adminLang);
       setData(res.about);
       toast.success("Hakkımızda sayfası güncellendi");
     } catch (err) {

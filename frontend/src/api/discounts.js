@@ -1,4 +1,5 @@
-import { http } from "./client.js";
+import { http, toQueryString } from "./client.js";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 // Backend düz alanlar bekliyor: products, sets, categories (+resolve opsiyonel)
 function normalizeDiscountPayload(payload = {}) {
@@ -39,13 +40,15 @@ function normalizeDiscountPayload(payload = {}) {
 }
 
 export const discountApi = {
-  async list() {
-    const data = await http("/discounts", { auth: true });
+  async list(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/discounts${qs}`, { auth: true });
     return data.discounts || [];
   },
 
-  async create(payload) {
-    const data = await http("/discounts", {
+  async create(payload, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/discounts${qs}`, {
       method: "POST",
       body: normalizeDiscountPayload(payload),
       auth: true,
@@ -53,8 +56,9 @@ export const discountApi = {
     return data.discount;
   },
 
-  async update(id, payload) {
-    const data = await http(`/discounts/${id}`, {
+  async update(id, payload, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/discounts/${id}${qs}`, {
       method: "PATCH",
       body: normalizeDiscountPayload(payload),
       auth: true,

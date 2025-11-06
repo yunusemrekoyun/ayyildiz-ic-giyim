@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { termsApi } from "../../api/terms";
+import { useAdminLang } from "../../context/LangContext.jsx";
 import { Link } from "react-router-dom";
 import {
   Loader2,
@@ -34,12 +35,14 @@ export default function TermsSettings() {
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
   const [form, setForm] = useState(EMPTY_MODEL);
+  const { adminLang } = useAdminLang();
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
-        const data = await termsApi.manage();
+        const data = await termsApi.manage(adminLang);
         if (!mounted) return;
         setForm(normalizeIncoming(data));
       } catch (e) {
@@ -55,7 +58,7 @@ export default function TermsSettings() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [adminLang]);
 
   const canSave = useMemo(() => {
     if (!form.heroTitle?.trim()) return false;
@@ -67,7 +70,7 @@ export default function TermsSettings() {
     setSaving(true);
     try {
       const payload = normalizeOutgoing(form);
-      const updated = await termsApi.upsert(payload);
+      const updated = await termsApi.upsert(payload, adminLang);
 
       if (updated) {
         const srv = normalizeIncoming(updated);

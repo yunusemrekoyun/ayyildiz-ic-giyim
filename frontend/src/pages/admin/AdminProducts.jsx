@@ -6,9 +6,108 @@ import { productApi } from "../../api/products";
 import { stocksApi } from "../../api/stocks"; // ✅ yeni: stokları buradan okuyacağız
 import ProductTable from "../../components/admin/products/ProductTable";
 import ProductForm from "../../components/admin/products/ProductForm";
+import ProductTranslationModal from "../../components/admin/products/ProductTranslationModal.jsx";
 import { flattenCategoryTree } from "../../utils/catalog.js";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
+import { buildProductState } from "../../components/admin/products/productTranslationUtils.js";
+
+const BASE_LANG = "tr";
+const TRANSLATION_LANGS = [
+  { value: "en", label: "English (EN)" },
+  { value: "de", label: "Deutsch (DE)" },
+];
+
+function resolveProductIdentifier(product) {
+  if (!product) return null;
+
+  if (typeof product.slug === "string" && product.slug.trim()) {
+    return product.slug.trim();
+  }
+
+  let raw =
+    product.id ??
+    product._id ??
+    product.productId ??
+    (product.product &&
+      (product.product.id ||
+        product.product._id ||
+        (typeof product.product.toHexString === "function"
+          ? product.product.toHexString()
+          : null)));
+
+  if (!raw && typeof product.toHexString === "function") {
+    raw = product.toHexString();
+  }
+
+  if (!raw && typeof product.toString === "function") {
+    const asString = product.toString();
+    if (asString && asString !== "[object Object]") {
+      raw = asString;
+    }
+  }
+
+  if (!raw) return null;
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    return trimmed && trimmed !== "[object Object]" ? trimmed : null;
+  }
+
+  if (typeof raw === "number") {
+    return String(raw);
+  }
+
+  if (typeof raw === "object") {
+    if (typeof raw._id === "string" && raw._id.trim()) return raw._id.trim();
+    if (typeof raw.id === "string" && raw.id.trim()) return raw.id.trim();
+    if (typeof raw.toHexString === "function") return raw.toHexString();
+    if (
+      typeof raw.toString === "function" &&
+      raw.toString !== Object.prototype.toString
+    ) {
+      const str = raw.toString();
+      if (str && str !== "[object Object]") return str;
+    }
+  }
+
+  const fallback = String(raw).trim();
+  return fallback && fallback !== "[object Object]" ? fallback : null;
+}
+
+const resolveProductObjectId = (input) => {
+  if (!input || typeof input !== "object") return "";
+
+  const candidates = [
+    input.id,
+    input._id,
+    input.productId,
+    input?.product?.id,
+    input?.product?._id,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    let value = candidate;
+    if (typeof value === "object") {
+      if (typeof value._id === "string") value = value._id;
+      else if (typeof value.id === "string") value = value.id;
+      else if (typeof value.toHexString === "function")
+        value = value.toHexString();
+      else if (
+        typeof value.toString === "function" &&
+        value.toString !== Object.prototype.toString
+      ) {
+        const str = value.toString().trim();
+        if (str && str !== "[object Object]") value = str;
+      }
+    }
+    if (typeof value === "string" && /^[0-9a-fA-F]{24}$/.test(value.trim())) {
+      return value.trim();
+    }
+  }
+  return "";
+};
 
 export default function AdminProducts() {
   const confirm = useConfirm();
@@ -28,15 +127,22 @@ export default function AdminProducts() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState(null);
+  const [translationState, setTranslationState] = useState({
+    open: false,
+    loading: false,
+    product: null,
+    error: null,
+  });
 
   useEffect(() => {
     loadCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     loadProducts(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, categoryFilter]);
+  }, [debouncedSearch, categoryFilter, pagination.limit]);
 
   const categoryOptions = useMemo(() => {
     const flattened = flattenCategoryTree(categoryTree);
@@ -49,7 +155,7 @@ export default function AdminProducts() {
 
   const loadCategories = async () => {
     try {
-      const data = await categoryApi.tree();
+      const data = await categoryApi.tree(BASE_LANG);
       setCategoryTree(data);
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
@@ -59,28 +165,38 @@ export default function AdminProducts() {
   const loadProducts = async (page = 1) => {
     setLoading(true);
     try {
-      const data = await productApi.list({
-        page,
-        limit: pagination.limit,
-        search: debouncedSearch,
-        category: categoryFilter,
-        includeHidden: true,
-      });
+      const data = await productApi.list(
+        {
+          page,
+          limit: pagination.limit,
+          search: debouncedSearch,
+          category: categoryFilter,
+          includeHidden: true,
+        },
+        BASE_LANG
+      );
 
       // Yeni backend ile shape farklılıklarını normalize et
       const normalized =
-        (data.products || []).map((p) => ({
-          id: p.id || p._id,
-          name: p.name,
-          slug: p.slug,
-          price: p.price,
-          isActive: p.isActive,
-          category: p.category || p.categoryId || null,
-          images: p.images || p.media || [],
-          createdAt: p.createdAt,
-          updatedAt: p.updatedAt,
-          setsCount: Number(p.setsCount ?? p.setCount ?? 0) || 0,
-        })) || [];
+        (data.products || []).map((p) => {
+          const safeId =
+            resolveProductIdentifier(p) ||
+            p.slug ||
+            (p._id ? String(p._id) : null) ||
+            null;
+          return {
+            id: safeId,
+            name: p.name,
+            slug: typeof p.slug === "string" ? p.slug : safeId,
+            price: p.price,
+            isActive: p.isActive,
+            category: p.category || p.categoryId || null,
+            images: p.images || p.media || [],
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+            setsCount: Number(p.setsCount ?? p.setCount ?? 0) || 0,
+          };
+        }) || [];
 
       setProducts(normalized);
       setPagination(
@@ -105,43 +221,25 @@ export default function AdminProducts() {
 
   const handleEditProduct = async (product) => {
     try {
-      const full = await productApi.get(product.id || product.slug);
-      const normalizedColors = normalizeOptionList(full.colors);
-      const normalizedSizes = normalizeOptionList(full.sizes);
-      const attrObj = full.customAttribute || {
-        title: "",
-        values: [],
-        show: false,
-      };
-      const attrValues = normalizeOptionList(attrObj.values);
-      const fullNormalized = {
-        id: full.id || full._id,
-        name: full.name,
-        slug: full.slug,
-        price: full.price,
-        isActive: full.isActive,
-        description: full.description || "",
-        careInstructions: full.careInstructions || "",
-        details: normalizeDetailsList(full.details),
-        colors: normalizedColors,
-        sizes: normalizedSizes,
-        showColors: full.showColors ?? true,
-        showSizes: full.showSizes ?? true,
-        customAttribute: {
-          title: attrObj.title || "",
-          values: attrValues,
-          show: attrObj.show ?? false,
-        },
-        category: full.category || full.categoryId || "",
-        images: full.images || full.media || [],
-        // inventory artık product’ın içinde değil; aşağıda stok API’den okuyoruz
-      };
+      const identifier = resolveProductIdentifier(product);
+      if (!identifier) {
+        setBanner({
+          variant: "danger",
+          message: "Ürün kimliği okunamadı. Lütfen sayfayı yenileyin.",
+        });
+        return;
+      }
+      const full = await productApi.get(identifier, BASE_LANG);
 
       // ✅ stokları StockItem tablosundan çek
-      const stockRes = await stocksApi.list({
-        ownerModel: "Product",
-        owner: fullNormalized.id,
-      });
+      const ownerId =
+        resolveProductObjectId(full) || resolveProductObjectId(product);
+      const stockRes = ownerId
+        ? await stocksApi.list({
+            ownerModel: "Product",
+            owner: ownerId,
+          })
+        : { items: [] };
       const inventory = (stockRes.items || []).map((it) => ({
         color: it.color ?? null,
         size: it.size ?? null,
@@ -149,7 +247,8 @@ export default function AdminProducts() {
         stock: Number(it.qtyOnHand) || 0,
       }));
 
-      setEditingProduct({ ...fullNormalized, inventory });
+      const normalized = buildProductState(full, inventory);
+      setEditingProduct(normalized);
       setModalOpen(true);
     } catch (err) {
       console.error("Product load failed:", err);
@@ -166,7 +265,15 @@ export default function AdminProducts() {
     });
     if (!ok) return;
     try {
-      await productApi.remove(product.id || product.slug);
+      const identifier = resolveProductIdentifier(product);
+      if (!identifier) {
+        setBanner({
+          variant: "danger",
+          message: "Ürün kimliği okunamadı. Lütfen sayfayı yenileyin.",
+        });
+        return;
+      }
+      await productApi.remove(identifier);
       setBanner({ variant: "warning", message: "Ürün silindi" });
       await loadProducts(pagination.page);
     } catch (error) {
@@ -197,7 +304,16 @@ export default function AdminProducts() {
     setDeleteDialog((prev) => ({ ...prev, loading: true }));
 
     try {
-      await productApi.remove(deleteDialog.product.id || deleteDialog.product.slug, {
+      const identifier = resolveProductIdentifier(deleteDialog.product);
+      if (!identifier) {
+        setBanner({
+          variant: "danger",
+          message: "Ürün kimliği okunamadı. Lütfen sayfayı yenileyin.",
+        });
+        setDeleteDialog(null);
+        return;
+      }
+      await productApi.remove(identifier, {
         setAction: actionParam,
       });
       setDeleteDialog(null);
@@ -219,31 +335,98 @@ export default function AdminProducts() {
     }
   };
 
+  const openTranslationModal = async (product) => {
+    const identifier = resolveProductIdentifier(product);
+    if (!identifier) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        product: null,
+        error: "Ürün kimliği okunamadı. Lütfen sayfayı yenileyin.",
+      });
+      return;
+    }
+    setTranslationState({
+      open: true,
+      loading: true,
+      product: null,
+      error: null,
+    });
+    try {
+      const detail = await productApi.get(identifier, BASE_LANG);
+      const normalized = buildProductState(detail, detail?.inventory || []);
+      setTranslationState({
+        open: true,
+        loading: false,
+        product: normalized,
+        error: null,
+      });
+    } catch (error) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        product: null,
+        error: extractMessage(error),
+      });
+    }
+  };
+
+  const closeTranslationModal = () => {
+    setTranslationState({
+      open: false,
+      loading: false,
+      product: null,
+      error: null,
+    });
+  };
+
+  const handleTranslationsUpdated = async () => {
+    await loadProducts(pagination.page);
+  };
+
   // ✅ Form’dan gelen kaydetme artık stokları ayrı kaydeder
   const handleSaveProduct = async ({ productPayload, stockLines }) => {
     // productPayload: sadece ürün alanları (stok hariç)
     // stockLines: [{ color, size, attributeValue, qtyOnHand }, ...]
-    if (editingProduct?.id) {
+    if (editingProduct) {
+      const identifier = resolveProductIdentifier(editingProduct);
+      if (!identifier) {
+        setBanner({
+          variant: "danger",
+          message: "Ürün kimliği okunamadı. Lütfen sayfayı yenileyin.",
+        });
+        return;
+      }
+
       const updated = await productApi.update(
-        editingProduct.id,
-        productPayload
+        identifier,
+        productPayload,
+        BASE_LANG
       );
-      // Stok replace
-      await stocksApi.replace({
-        ownerModel: "Product",
-        owner: editingProduct.id,
-        items: stockLines,
-      });
+
+      if (updated) {
+        const ownerId =
+          resolveProductObjectId(editingProduct) ||
+          resolveProductObjectId(updated) ||
+          null;
+        if (ownerId) {
+          await stocksApi.replace({
+            ownerModel: "Product",
+            owner: ownerId,
+            items: stockLines,
+          });
+        }
+      }
       setBanner({ variant: "success", message: "Ürün güncellendi" });
       await loadProducts(pagination.page);
+      setModalOpen(false);
+      setEditingProduct(null);
     } else {
-      const created = await productApi.create(productPayload);
+      const created = await productApi.create(productPayload, BASE_LANG);
       // ✅ Cevap şekline göre ID yakala (çeşitli backend varyantlarına dayanıklı)
       const newId =
-        created?.id ||
-        created?._id ||
-        created?.product?.id ||
-        created?.product?._id ||
+        resolveProductObjectId(created) ||
+        resolveProductObjectId(created?.product) ||
         null;
 
       let ownerId = newId;
@@ -254,8 +437,8 @@ export default function AdminProducts() {
           created?.data?.slug ||
           null;
         if (slug) {
-          const full = await productApi.get(slug);
-          ownerId = full?.id || full?._id || null;
+          const full = await productApi.get(slug, BASE_LANG);
+          ownerId = resolveProductObjectId(full);
         }
       }
 
@@ -268,6 +451,8 @@ export default function AdminProducts() {
       }
       setBanner({ variant: "success", message: "Ürün oluşturuldu" });
       await loadProducts(1);
+      setModalOpen(false);
+      setEditingProduct(null);
     }
   };
 
@@ -348,6 +533,7 @@ export default function AdminProducts() {
         loading={loading}
         onEdit={handleEditProduct}
         onDelete={handleDeleteProduct}
+        onTranslate={openTranslationModal}
       />
 
       {pagination.pages > 1 && (
@@ -371,10 +557,24 @@ export default function AdminProducts() {
 
       <ProductForm
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingProduct(null);
+        }}
         onSubmit={handleSaveProduct} // ✅ artık product+stock ayrı gelecek
         initialProduct={editingProduct}
         categories={categoryOptions}
+      />
+
+      <ProductTranslationModal
+        open={translationState.open}
+        loading={translationState.loading}
+        error={translationState.error}
+        product={translationState.product}
+        baseLang={BASE_LANG}
+        langs={TRANSLATION_LANGS}
+        onClose={closeTranslationModal}
+        onUpdated={handleTranslationsUpdated}
       />
 
       {deleteDialog && (
@@ -398,7 +598,12 @@ function useDebounce(value, delay = 400) {
   return debounced;
 }
 
-function DeleteProductResolutionModal({ product, sets = [], loading = false, onResolve }) {
+function DeleteProductResolutionModal({
+  product,
+  sets = [],
+  loading = false,
+  onResolve,
+}) {
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4">
       <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-xl">
@@ -407,7 +612,8 @@ function DeleteProductResolutionModal({ product, sets = [], loading = false, onR
             Ürün setlerde kullanılıyor
           </h2>
           <p className="mt-1 text-sm text-[var(--color-text-admin-muted)]">
-            “{product?.name || "Ürün"}” aşağıdaki setlere ekli. Devam etmek için bir seçenek belirleyin.
+            “{product?.name || "Ürün"}” aşağıdaki setlere ekli. Devam etmek için
+            bir seçenek belirleyin.
           </p>
         </header>
 
@@ -467,62 +673,6 @@ function DeleteProductResolutionModal({ product, sets = [], loading = false, onR
       </div>
     </div>
   );
-}
-
-function normalizeOptionList(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => String(item).trim())
-      .filter((item) => item.length);
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return [];
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return parsed
-          .map((item) => String(item).trim())
-          .filter((item) => item.length);
-      }
-    } catch {
-      // fall back to delimiter split
-    }
-    return trimmed
-      .split(/[,;\r?\n]+/)
-      .map((item) => item.trim())
-      .filter((item) => item.length);
-  }
-  return [];
-}
-
-function normalizeDetailsList(details) {
-  if (!details) return [];
-  if (Array.isArray(details)) {
-    return details
-      .map((item) => String(item).trim())
-      .filter((item) => item.length);
-  }
-  if (typeof details === "string") {
-    const trimmed = details.trim();
-    if (!trimmed) return [];
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return parsed
-          .map((item) => String(item).trim())
-          .filter((item) => item.length);
-      }
-    } catch {
-      // fall back to newline split
-    }
-    return trimmed
-      .split(/\r?\n+/)
-      .map((item) => item.trim())
-      .filter((item) => item.length);
-  }
-  return [];
 }
 
 function extractMessage(error) {

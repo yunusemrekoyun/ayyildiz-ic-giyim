@@ -1,9 +1,11 @@
 // src/api/shippingReturns.js
-import { http } from "./client";
+import { http, toQueryString } from "./client";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 export const shippingReturnsApi = {
-  async get() {
-    const data = await http(`/shipping-returns?_=${Date.now()}`);
+  async get(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG, _: Date.now() });
+    const data = await http(`/shipping-returns${qs}`);
     return (
       data?.page || {
         heroTitle: "",
@@ -16,8 +18,9 @@ export const shippingReturnsApi = {
     );
   },
 
-  async manage() {
-    const data = await http("/shipping-returns/manage", { auth: true });
+  async manage(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/shipping-returns/manage${qs}`, { auth: true });
     return (
       data?.page || {
         heroTitle: "",
@@ -30,8 +33,9 @@ export const shippingReturnsApi = {
     );
   },
 
-  async upsert(payload) {
-    const data = await http("/shipping-returns", {
+  async upsert(payload, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/shipping-returns${qs}`, {
       method: "PUT",
       body: payload,
       auth: true,
@@ -39,7 +43,7 @@ export const shippingReturnsApi = {
     if (data?.page) return data.page;
     if (data?.success || data?.ok) {
       // hemen ardından yönetim endpoint'inden güncel içeriği çek
-      const refreshed = await this.manage().catch(() => null);
+      const refreshed = await this.manage(lang).catch(() => null);
       return refreshed || payload; // hiçbir şey dönmezse son payload’ı koru
     }
     // fallback

@@ -1,15 +1,18 @@
-import { http } from "./client";
+import { http, toQueryString } from "./client";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 const CONTACT_ENDPOINT = "/contact";
 
 export const contactConfigApi = {
-  async get() {
-    const data = await http(CONTACT_ENDPOINT);
+  async get(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`${CONTACT_ENDPOINT}${qs}`);
     return data?.contact || null;
   },
 
-  async update(payload) {
-    const data = await http(CONTACT_ENDPOINT, {
+  async update(payload, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`${CONTACT_ENDPOINT}${qs}`, {
       method: "PUT",
       body: payload,
       auth: true,

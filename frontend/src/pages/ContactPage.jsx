@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Mail, Phone, MapPin, Clock, Send, Loader2, AlertCircle } from "lucide-react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { contactPageApi, contactMessageApi } from "../api/contact";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 const makeBlock = (title = "", lines = []) => ({
   title,
@@ -110,13 +111,14 @@ export default function ContactPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         setLoading(true);
-        const response = await contactPageApi.get();
+        const response = await contactPageApi.get(lang);
         if (!active) return;
         setConfig(mergeConfig(response));
         setLoadError(null);
@@ -131,7 +133,7 @@ export default function ContactPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [lang]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;

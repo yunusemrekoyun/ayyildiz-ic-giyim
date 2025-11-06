@@ -37,6 +37,55 @@ const SeoSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const ListBlockTranslationSchema = new mongoose.Schema(
+  {
+    heading: { type: String, trim: true },
+    items: { type: [String], default: undefined },
+  },
+  { _id: false }
+);
+
+const SectionTranslationSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true },
+    paragraphs: { type: [String], default: undefined },
+    list: { type: ListBlockTranslationSchema, default: undefined },
+  },
+  { _id: false }
+);
+
+const SidebarContactTranslationSchema = new mongoose.Schema(
+  {
+    hoursText: { type: String, trim: true },
+    note: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const SeoTranslationSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true },
+    description: { type: String, trim: true },
+    keywords: { type: [String], default: undefined },
+  },
+  { _id: false }
+);
+
+const ShippingReturnsTranslationSchema = new mongoose.Schema(
+  {
+    heroTitle: { type: String, trim: true },
+    heroIntro: { type: String, trim: true },
+    sections: { type: [SectionTranslationSchema], default: undefined },
+    quickFacts: { type: [String], default: undefined },
+    sidebarContact: {
+      type: SidebarContactTranslationSchema,
+      default: undefined,
+    },
+    seo: { type: SeoTranslationSchema, default: undefined },
+  },
+  { _id: false }
+);
+
 const ShippingReturnsSchema = new mongoose.Schema(
   {
     // singleton kilidi
@@ -61,6 +110,26 @@ const ShippingReturnsSchema = new mongoose.Schema(
     // durum/seo
     isActive: { type: Boolean, default: true, index: true },
     seo: { type: SeoSchema, default: () => ({}) },
+    translations: {
+      type: new mongoose.Schema(
+        {
+          tr: {
+            type: ShippingReturnsTranslationSchema,
+            default: () => ({}),
+          },
+          en: {
+            type: ShippingReturnsTranslationSchema,
+            default: () => ({}),
+          },
+          de: {
+            type: ShippingReturnsTranslationSchema,
+            default: () => ({}),
+          },
+        },
+        { _id: false }
+      ),
+      default: () => ({ tr: {} }),
+    },
   },
   { timestamps: true }
 );

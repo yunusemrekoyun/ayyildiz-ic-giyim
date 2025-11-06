@@ -10,6 +10,14 @@ import {
 } from "../utils/cloudinaryUpload.js";
 import cloudinary, { configureCloudinary } from "../config/cloudinary.js";
 import { hydrateProductsWithInventory } from "../utils/stockItemHelpers.js";
+import {
+  DEFAULT_LANG,
+  normalizeLang,
+  resolveTranslation,
+  pickLocalizedPayload,
+  syncDocTranslations,
+  composeResponseTranslations,
+} from "../utils/i18n.js";
 
 configureCloudinary();
 
@@ -137,6 +145,50 @@ async function fetchSetsForProduct(productId) {
   }));
 }
 
+function buildProductTrTranslation(doc) {
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  return {
+    name: plain.name ?? "",
+    description: plain.description ?? "",
+    careInstructions: plain.careInstructions ?? "",
+    details: Array.isArray(plain.details) ? [...plain.details] : [],
+    customAttribute: plain.customAttribute
+      ? {
+          title: plain.customAttribute.title ?? "",
+          values: Array.isArray(plain.customAttribute.values)
+            ? [...plain.customAttribute.values]
+            : [],
+        }
+      : { title: "", values: [] },
+  };
+}
+
+function applyProductTrTranslation(doc, translation = {}) {
+  if (!translation || typeof translation !== "object") return;
+  if (translation.name !== undefined) {
+    doc.name = String(translation.name).trim();
+  }
+  if (translation.description !== undefined) {
+    doc.description = translation.description ?? "";
+  }
+  if (translation.careInstructions !== undefined) {
+    doc.careInstructions = translation.careInstructions ?? "";
+  }
+  if (translation.details !== undefined) {
+    doc.details = normalizeArray(translation.details);
+  }
+  if (translation.customAttribute && typeof translation.customAttribute === "object") {
+    const target = doc.customAttribute || {};
+    if (translation.customAttribute.title !== undefined) {
+      target.title = String(translation.customAttribute.title || "").trim();
+    }
+    if (translation.customAttribute.values !== undefined) {
+      target.values = normalizeArray(translation.customAttribute.values);
+    }
+    doc.customAttribute = target;
+  }
+}
+
 // Cloudinary upload (buffer üzerinden)
 async function uploadImages(files = [], folderHint = "products") {
   if (!Array.isArray(files) || !files.length) return [];
@@ -164,10 +216,17 @@ async function uploadImages(files = [], folderHint = "products") {
 
 export async function createProduct(req, res) {
   try {
-    const {
-      name,
-      price,
-      description,
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
+    if (lang !== DEFAULT_LANG) {
+      return res.status(400).json({
+        message:
+          "New products must be created in the default language (tr). Please switch to TR to create the product, then edit translations in other languages.",
+      });
+    }
+  const {
+    name,
+    price,
+    description,
       careInstructions,
       details,
       category,
@@ -207,7 +266,7 @@ export async function createProduct(req, res) {
       show: rawAttr.show === undefined ? false : !!rawAttr.show,
     };
 
-    const doc = await Product.create({
+    const doc = new Product({
       name: String(name).trim(),
       price: priceNum,
       description: description ?? "",
@@ -225,10 +284,28 @@ export async function createProduct(req, res) {
       images, // ← artık {url, publicId, ...} dolu
     });
 
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    syncDocTranslations(
+      doc,
+      incomingTranslations,
+      buildProductTrTranslation,
+      applyProductTrTranslation
+    );
+
+    await doc.save();
+
     const populated = await doc.populate("category");
     await hydrateProductsWithInventory([populated]);
     await annotateProductsWithSetUsage([populated]);
-    res.status(201).json({ product: populated.toObject() });
+    const localized = resolveTranslation(populated, lang);
+    if (populated.category && typeof populated.category === "object") {
+      localized.category = resolveTranslation(populated.category, lang);
+    }
+    localized.translations = composeResponseTranslations(
+      populated,
+      buildProductTrTranslation
+    );
+    res.status(201).json({ product: localized });
   } catch (err) {
     if (err?.code === 11000 && err?.keyPattern?.sku)
       return res.status(400).json({ message: "SKU already exists" });
@@ -238,6 +315,7 @@ export async function createProduct(req, res) {
 
 export async function listProducts(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const page = Math.max(1, Number(req.query.page || 1));
     const limit = Math.min(100, Math.max(1, Number(req.query.limit || 20)));
     const search = req.query.search?.trim();
@@ -267,7 +345,17 @@ export async function listProducts(req, res) {
     await annotateProductsWithSetUsage(items);
 
     res.json({
-      products: items,
+      products: items.map((item) => {
+        const localized = resolveTranslation(item, lang);
+        if (item.category && typeof item.category === "object") {
+          localized.category = resolveTranslation(item.category, lang);
+        }
+        localized.translations = composeResponseTranslations(
+          item,
+          buildProductTrTranslation
+        );
+        return localized;
+      }),
       pagination: {
         page,
         limit,
@@ -282,6 +370,7 @@ export async function listProducts(req, res) {
 
 export async function getProduct(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const { idOrSlug } = req.params;
     const includeHidden = parseBool(req.query.includeHidden, false);
     const isAdmin = Boolean(req.user?.role === "admin");
@@ -300,7 +389,15 @@ export async function getProduct(req, res) {
     }
     await hydrateProductsWithInventory([product]);
     await annotateProductsWithSetUsage([product]);
-    res.json({ product });
+    const localized = resolveTranslation(product, lang);
+    if (product.category && typeof product.category === "object") {
+      localized.category = resolveTranslation(product.category, lang);
+    }
+    localized.translations = composeResponseTranslations(
+      product,
+      buildProductTrTranslation
+    );
+    res.json({ product: localized });
   } catch (err) {
     res.status(500).json({ message: err.message || "Get failed" });
   }
@@ -308,6 +405,7 @@ export async function getProduct(req, res) {
 
 export async function updateProduct(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const { idOrSlug } = req.params;
     const product = isId(idOrSlug)
       ? await Product.findById(idOrSlug)
@@ -328,11 +426,24 @@ export async function updateProduct(req, res) {
       customAttribute,
       isActive,
       listedInCatalog,
-      sku,
-      removeImagePublicIds,
-    } = req.body;
+    sku,
+    removeImagePublicIds,
+  } = req.body;
 
-    if (name !== undefined) product.name = String(name).trim();
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    const ensureLangBucket = () => {
+      if (!incomingTranslations[lang]) incomingTranslations[lang] = {};
+      return incomingTranslations[lang];
+    };
+
+    if (name !== undefined) {
+      const normalizedName = String(name).trim();
+      if (lang === DEFAULT_LANG) {
+        product.name = normalizedName;
+      } else {
+        ensureLangBucket().name = normalizedName;
+      }
+    }
     if (price !== undefined) {
       const n = Number(price);
       if (!Number.isFinite(n) || n < 0)
@@ -341,10 +452,30 @@ export async function updateProduct(req, res) {
           .json({ message: "Price must be a valid number" });
       product.price = n;
     }
-    if (description !== undefined) product.description = description;
-    if (careInstructions !== undefined)
-      product.careInstructions = careInstructions;
-    if (details !== undefined) product.details = normalizeArray(details);
+    if (description !== undefined) {
+      const normalizedDescription = description == null ? "" : String(description);
+      if (lang === DEFAULT_LANG) {
+        product.description = normalizedDescription;
+      } else {
+        ensureLangBucket().description = normalizedDescription;
+      }
+    }
+    if (careInstructions !== undefined) {
+      const normalizedCare = careInstructions == null ? "" : String(careInstructions);
+      if (lang === DEFAULT_LANG) {
+        product.careInstructions = normalizedCare;
+      } else {
+        ensureLangBucket().careInstructions = normalizedCare;
+      }
+    }
+    if (details !== undefined) {
+      const normalizedDetails = normalizeArray(details);
+      if (lang === DEFAULT_LANG) {
+        product.details = normalizedDetails;
+      } else {
+        ensureLangBucket().details = normalizedDetails;
+      }
+    }
     if (colors !== undefined) product.colors = normalizeArray(colors);
     if (sizes !== undefined) product.sizes = normalizeArray(sizes);
     if (showColors !== undefined)
@@ -357,11 +488,26 @@ export async function updateProduct(req, res) {
         typeof customAttribute === "string"
           ? JSON.parse(customAttribute || "{}")
           : customAttribute || {};
-      product.customAttribute = {
+      const parsedAttr = {
         title: rawAttr.title ? String(rawAttr.title).trim() : "",
         values: normalizeArray(rawAttr.values),
         show: rawAttr.show === undefined ? false : !!rawAttr.show,
       };
+      product.customAttribute = product.customAttribute || {
+        title: "",
+        values: [],
+        show: parsedAttr.show,
+      };
+      product.customAttribute.show = parsedAttr.show;
+      if (lang === DEFAULT_LANG) {
+        product.customAttribute.title = parsedAttr.title;
+        product.customAttribute.values = parsedAttr.values;
+      } else {
+        const bucket = ensureLangBucket();
+        bucket.customAttribute = bucket.customAttribute || {};
+        bucket.customAttribute.title = parsedAttr.title;
+        bucket.customAttribute.values = parsedAttr.values;
+      }
     }
 
     if (isActive !== undefined) product.isActive = parseBool(isActive, true);
@@ -396,11 +542,26 @@ export async function updateProduct(req, res) {
       product.images.push(...imgs);
     }
 
+    syncDocTranslations(
+      product,
+      incomingTranslations,
+      buildProductTrTranslation,
+      applyProductTrTranslation
+    );
+
     await product.save();
     const populated = await product.populate("category");
     await hydrateProductsWithInventory([populated]);
     await annotateProductsWithSetUsage([populated]);
-    res.json({ product: populated });
+    const localized = resolveTranslation(populated, lang);
+    if (populated.category && typeof populated.category === "object") {
+      localized.category = resolveTranslation(populated.category, lang);
+    }
+    localized.translations = composeResponseTranslations(
+      populated,
+      buildProductTrTranslation
+    );
+    res.json({ product: localized });
   } catch (err) {
     if (err?.code === 11000 && err?.keyPattern?.sku)
       return res.status(400).json({ message: "SKU already exists" });
@@ -511,6 +672,7 @@ export async function deleteProduct(req, res) {
 
 export async function listProductSets(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const { idOrSlug } = req.params;
     const product = isId(idOrSlug)
       ? await Product.findById(idOrSlug)
@@ -519,11 +681,12 @@ export async function listProductSets(req, res) {
       return res.status(404).json({ message: "Product not found" });
 
     const sets = await fetchSetsForProduct(product._id);
+    const localizedProduct = resolveTranslation(product, lang);
     res.json({
       product: {
         id: product._id.toString(),
-        name: product.name,
-        slug: product.slug,
+        name: localizedProduct.name,
+        slug: localizedProduct.slug,
       },
       sets,
     });

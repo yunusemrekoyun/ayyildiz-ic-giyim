@@ -1,14 +1,17 @@
 // src/api/terms.js
-import { http } from "./client";
+import { http, toQueryString } from "./client";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 export const termsApi = {
-  async public() {
-    const data = await http("/terms");
+  async public(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/terms${qs}`);
     // { terms: {...} } şeklinde geliyor
     return data?.terms || null;
   },
-  async manage() {
-    const data = await http("/terms/manage", { auth: true });
+  async manage(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/terms/manage${qs}`, { auth: true });
     return (
       data?.terms || {
         heroTitle: "Terms of Service",
@@ -20,8 +23,9 @@ export const termsApi = {
       }
     );
   },
-  async upsert(payload) {
-    const data = await http("/terms", {
+  async upsert(payload, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/terms${qs}`, {
       method: "PUT",
       body: payload,
       auth: true,

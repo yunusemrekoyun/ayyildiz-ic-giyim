@@ -4,6 +4,7 @@ import BreadCrumb from "../components/shop/BreadCrumb";
 import SetDetail from "../components/set-detail/SetDetail";
 import SimilarSets from "../components/set-detail/SimilarSets";
 import { setApi } from "../api/sets";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 export default function SetDetailsPage() {
   const { slug } = useParams();
@@ -12,6 +13,7 @@ export default function SetDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [error, setError] = useState(null);
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     if (!slug) return;
@@ -23,7 +25,7 @@ export default function SetDetailsPage() {
     (async () => {
       try {
         // ---- normalize get response
-        const resp = await setApi.get(slug);
+        const resp = await setApi.get(slug, lang);
         const detail = resp?.set ?? resp;
         if (!mounted) return;
         if (!detail) throw new Error("Set not found");
@@ -32,7 +34,7 @@ export default function SetDetailsPage() {
         // ---- similar
         setLoadingSimilar(true);
         try {
-          const allResp = await setApi.list();
+          const allResp = await setApi.list({}, lang);
           const allSets = Array.isArray(allResp)
             ? allResp
             : allResp?.sets || [];
@@ -73,7 +75,7 @@ export default function SetDetailsPage() {
     return () => {
       mounted = false;
     };
-  }, [slug]);
+  }, [lang, slug]);
 
   const breadcrumbItems = useMemo(() => {
     const tags = extractSetTags(setDoc);

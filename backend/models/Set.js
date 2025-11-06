@@ -25,6 +25,14 @@ const SetProductSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const SetTranslationSchema = new mongoose.Schema(
+  {
+    name: { type: String, trim: true, maxlength: 160 },
+    description: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
 const SetSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 160 },
@@ -40,6 +48,17 @@ const SetSchema = new mongoose.Schema(
       sparse: true,
       uppercase: true,
       trim: true,
+    },
+    translations: {
+      type: new mongoose.Schema(
+        {
+          tr: { type: SetTranslationSchema, default: () => ({}) },
+          en: { type: SetTranslationSchema, default: () => ({}) },
+          de: { type: SetTranslationSchema, default: () => ({}) },
+        },
+        { _id: false }
+      ),
+      default: () => ({ tr: {} }),
     },
   },
   { timestamps: true }

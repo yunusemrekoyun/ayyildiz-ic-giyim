@@ -6,6 +6,14 @@ import {
   deleteFromCloudinary,
 } from "../utils/cloudinaryUpload.js";
 import { configureCloudinary } from "../config/cloudinary.js";
+import {
+  DEFAULT_LANG,
+  normalizeLang,
+  resolveTranslation,
+  pickLocalizedPayload,
+  syncDocTranslations,
+  composeResponseTranslations,
+} from "../utils/i18n.js";
 
 const isValidObjectId = (val) =>
   typeof val === "string" && /^[0-9a-fA-F]{24}$/.test(val);
@@ -42,7 +50,11 @@ const resolveFolder = () => {
   return `${base}/heroes`;
 };
 
-const shapeHero = (doc) => {
+const shapeHero = (
+  doc,
+  { includeTranslations = false } = {},
+  translations = null
+) => {
   const id = doc._id;
 
   // SHOP => /shop, CATEGORIES => /shop?category=<firstId>
@@ -53,7 +65,7 @@ const shapeHero = (doc) => {
     computedLink = `/shop?category=${encoded}`;
   }
 
-  return {
+  const shaped = {
     id,
     title: doc.title,
     subtitle: doc.subtitle,
@@ -70,6 +82,12 @@ const shapeHero = (doc) => {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
+
+  if (includeTranslations) {
+    shaped.translations = translations ?? doc.translations ?? {};
+  }
+
+  return shaped;
 };
 
 async function uploadMedia(file) {
@@ -122,10 +140,39 @@ async function ensureCategoriesExist(ids = []) {
   return validIds;
 }
 
+function buildHeroTrTranslation(doc) {
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  return {
+    title: plain.title ?? "",
+    subtitle: plain.subtitle ?? "",
+    buttonText: plain.buttonText ?? "",
+  };
+}
+
+function applyHeroTrTranslation(doc, translation = {}) {
+  if (!translation || typeof translation !== "object") return;
+  if (translation.title !== undefined) {
+    doc.title = String(translation.title);
+  }
+  if (translation.subtitle !== undefined) {
+    doc.subtitle = String(translation.subtitle);
+  }
+  if (translation.buttonText !== undefined) {
+    doc.buttonText = translation.buttonText ?? "";
+  }
+}
+
 /* --------- CRUD --------- */
 
 export async function createHero(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
+    if (lang !== DEFAULT_LANG) {
+      return res.status(400).json({
+        message:
+          "New hero slides must be created in the default language (tr). Please switch to TR to create the hero, then edit translations in other languages.",
+      });
+    }
     const { title, subtitle, buttonText, targetType = "SHOP" } = req.body;
 
     if (!title || !subtitle) {
@@ -169,7 +216,7 @@ export async function createHero(req, res) {
     }
     const { image, video } = await uploadMedia(req.file);
 
-    const hero = await Hero.create({
+    const hero = new Hero({
       title,
       subtitle,
       buttonText: buttonText || "",
@@ -180,7 +227,25 @@ export async function createHero(req, res) {
       sortOrder: Number(req.body.sortOrder || 0),
     });
 
-    res.status(201).json({ hero: shapeHero(hero) });
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    syncDocTranslations(
+      hero,
+      incomingTranslations,
+      buildHeroTrTranslation,
+      applyHeroTrTranslation
+    );
+
+    await hero.save();
+
+    const localized = resolveTranslation(hero, lang);
+    const translations = composeResponseTranslations(
+      hero,
+      buildHeroTrTranslation
+    );
+
+    res.status(201).json({
+      hero: shapeHero(localized, { includeTranslations: true }, translations),
+    });
   } catch (e) {
     res.status(400).json({ message: e.message });
   }
@@ -188,13 +253,25 @@ export async function createHero(req, res) {
 
 export async function listHeroes(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const includeInactive =
       String(req.query.includeInactive || "").toLowerCase() === "true";
     const filter = includeInactive ? {} : { isActive: true };
-    const heroes = await Hero.find(filter)
-      .sort({ sortOrder: 1, createdAt: -1 })
-      .lean();
-    res.json({ heroes: heroes.map(shapeHero) });
+    const heroes = await Hero.find(filter).sort({ sortOrder: 1, createdAt: -1 });
+    res.json({
+      heroes: heroes.map((heroDoc) => {
+        const localized = resolveTranslation(heroDoc, lang);
+        const translations = composeResponseTranslations(
+          heroDoc,
+          buildHeroTrTranslation
+        );
+        return shapeHero(
+          localized,
+          { includeTranslations: true },
+          translations
+        );
+      }),
+    });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -202,10 +279,22 @@ export async function listHeroes(req, res) {
 
 export async function getHero(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const { id } = req.params;
     const hero = await Hero.findById(id);
     if (!hero) return res.status(404).json({ message: "Hero not found" });
-    res.json({ hero: shapeHero(hero) });
+    const localized = resolveTranslation(hero, lang);
+    const translations = composeResponseTranslations(
+      hero,
+      buildHeroTrTranslation
+    );
+    res.json({
+      hero: shapeHero(
+        localized,
+        { includeTranslations: true },
+        translations
+      ),
+    });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -213,14 +302,46 @@ export async function getHero(req, res) {
 
 export async function updateHero(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const { id } = req.params;
     const hero = await Hero.findById(id);
     if (!hero) return res.status(404).json({ message: "Hero not found" });
 
     const { title, subtitle, buttonText, targetType } = req.body;
-    if (title !== undefined) hero.title = String(title).trim();
-    if (subtitle !== undefined) hero.subtitle = String(subtitle).trim();
-    if (buttonText !== undefined) hero.buttonText = String(buttonText);
+
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    const ensureLangBucket = () => {
+      const bucketLang = normalizeLang(lang);
+      incomingTranslations[bucketLang] = {
+        ...(incomingTranslations[bucketLang] || {}),
+      };
+      return incomingTranslations[bucketLang];
+    };
+
+    if (title !== undefined) {
+      const normalizedTitle = String(title).trim();
+      if (lang === DEFAULT_LANG) {
+        hero.title = normalizedTitle;
+      } else {
+        ensureLangBucket().title = normalizedTitle;
+      }
+    }
+    if (subtitle !== undefined) {
+      const normalizedSubtitle = String(subtitle).trim();
+      if (lang === DEFAULT_LANG) {
+        hero.subtitle = normalizedSubtitle;
+      } else {
+        ensureLangBucket().subtitle = normalizedSubtitle;
+      }
+    }
+    if (buttonText !== undefined) {
+      const normalizedButtonText = buttonText == null ? "" : String(buttonText);
+      if (lang === DEFAULT_LANG) {
+        hero.buttonText = normalizedButtonText;
+      } else {
+        ensureLangBucket().buttonText = normalizedButtonText;
+      }
+    }
 
     if (targetType !== undefined) {
       const t = String(targetType).toUpperCase();
@@ -292,9 +413,26 @@ export async function updateHero(req, res) {
     if (req.body.sortOrder !== undefined) {
       hero.sortOrder = Number(req.body.sortOrder) || 0;
     }
+    syncDocTranslations(
+      hero,
+      incomingTranslations,
+      buildHeroTrTranslation,
+      applyHeroTrTranslation
+    );
 
     await hero.save();
-    res.json({ hero: shapeHero(hero) });
+    const localized = resolveTranslation(hero, lang);
+    const translations = composeResponseTranslations(
+      hero,
+      buildHeroTrTranslation
+    );
+    res.json({
+      hero: shapeHero(
+        localized,
+        { includeTranslations: true },
+        translations
+      ),
+    });
   } catch (e) {
     res.status(400).json({ message: e.message });
   }

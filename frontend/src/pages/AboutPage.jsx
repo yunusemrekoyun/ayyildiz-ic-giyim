@@ -3,16 +3,19 @@ import BreadCrumb from "../components/shop/BreadCrumb";
 import { Link } from "react-router-dom";
 import { aboutApi } from "../api/about";
 import { Loader2 } from "lucide-react";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 export default function AboutPage() {
   const [about, setAbout] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
-        const res = await aboutApi.get();
+        const res = await aboutApi.get(lang);
         if (mounted) setAbout(res.about);
       } catch (err) {
         console.error("About fetch error:", err);
@@ -20,8 +23,10 @@ export default function AboutPage() {
         if (mounted) setLoading(false);
       }
     })();
-    return () => (mounted = false);
-  }, []);
+    return () => {
+      mounted = false;
+    };
+  }, [lang]);
 
   if (loading)
     return (

@@ -1,5 +1,13 @@
 import mongoose from "mongoose";
 
+const DiscountTranslationSchema = new mongoose.Schema(
+  {
+    name: { type: String, trim: true },
+    description: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
 const DiscountSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -13,6 +21,17 @@ const DiscountSchema = new mongoose.Schema(
     active: { type: Boolean, default: true },
     startsAt: { type: Date, default: null },
     endsAt: { type: Date, default: null },
+    translations: {
+      type: new mongoose.Schema(
+        {
+          tr: { type: DiscountTranslationSchema, default: () => ({}) },
+          en: { type: DiscountTranslationSchema, default: () => ({}) },
+          de: { type: DiscountTranslationSchema, default: () => ({}) },
+        },
+        { _id: false }
+      ),
+      default: () => ({ tr: {} }),
+    },
   },
   { timestamps: true }
 );

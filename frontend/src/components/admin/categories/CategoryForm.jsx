@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { ImagePlus, Trash2, Upload } from "lucide-react";
-
 export default function CategoryForm({
   category,
   parentOptions = [],
@@ -17,7 +16,6 @@ export default function CategoryForm({
   const [removeImage, setRemoveImage] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [error, setError] = useState("");
-
   useEffect(() => {
     setName(category?.name ?? "");
     setParent(category?.parent ?? "");
@@ -25,7 +23,7 @@ export default function CategoryForm({
     setImageFile(null);
     setPreviewUrl(category?.image?.url ?? "");
     setError("");
-  }, [category?.id]);
+  }, [category]);
 
   useEffect(() => {
     if (!imageFile) return undefined;
@@ -60,15 +58,7 @@ export default function CategoryForm({
     if (imageFile) payload.image = imageFile;
     if (isEditing && removeImage && !imageFile) payload.removeImage = true;
 
-    await onSubmit?.(payload, {
-      reset: () => {
-        setName("");
-        setParent("");
-        setImageFile(null);
-        setRemoveImage(false);
-        setPreviewUrl("");
-      },
-    });
+    await onSubmit?.(payload);
   };
 
   const handleImageChange = (event) => {
@@ -122,6 +112,9 @@ export default function CategoryForm({
           </div>
         ) : (
           <>
+            <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]/80 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+              Bu form yalnızca Türkçe (TR) ana içerik için kullanılır. Hiyerarşi ve görseller tüm dillerde ortaktır; diğer diller için aşağıdaki çeviri panellerini kullanın.
+            </div>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
                 Kategori adı

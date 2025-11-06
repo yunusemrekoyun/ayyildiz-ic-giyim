@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { authApi } from "../../api/auth";
 import { getUser as getUserCache } from "../../api/client";
+import AdminLanguageSwitcher from "../admin/AdminLanguageSwitcher.jsx";
 
 export default function AdminLayout({ children, title, subtitle, actions }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -271,6 +272,7 @@ function TopBar({ breadcrumbs, onMenuToggle, me, onLogout }) {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <AdminLanguageSwitcher className="max-sm:px-1 max-sm:py-1" />
           <div className="hidden lg:flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-1.5">
             <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
             <input

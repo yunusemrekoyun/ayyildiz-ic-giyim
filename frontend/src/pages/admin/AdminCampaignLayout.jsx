@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { campaignApi } from "../../api/campaigns";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
+import { useAdminLang } from "../../context/LangContext.jsx";
 
 const SLOT_CONFIG = [
   {
@@ -48,6 +49,7 @@ const SLOT_CONFIG = [
 ];
 
 export default function AdminCampaignLayout() {
+  const { adminLang } = useAdminLang();
   const [campaigns, setCampaigns] = useState([]);
   const [assignments, setAssignments] = useState({});
   const [loading, setLoading] = useState(true);
@@ -57,13 +59,14 @@ export default function AdminCampaignLayout() {
   const [dragOverSlot, setDragOverSlot] = useState(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(adminLang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminLang]);
 
-  const loadData = async () => {
+  const loadData = async (lang = adminLang) => {
     setLoading(true);
     try {
-      const list = await campaignApi.listManage({ includeInactive: true });
+      const list = await campaignApi.listManage({ includeInactive: true }, lang);
       setCampaigns(list);
       setAssignments(deriveAssignments(list));
     } catch (error) {
@@ -132,7 +135,7 @@ export default function AdminCampaignLayout() {
             updates.push(
               campaignApi.update(id, {
                 layout: slot.layout,
-              })
+              }, adminLang)
             );
           }
         });
@@ -146,7 +149,7 @@ export default function AdminCampaignLayout() {
             updates.push(
               campaignApi.update(campaign.id, {
                 layout: "SMALL",
-              })
+              }, adminLang)
             );
           }
         });
@@ -186,14 +189,14 @@ export default function AdminCampaignLayout() {
           variant: "danger",
           message: extractMessage(error),
         });
-        await loadData();
+        await loadData(adminLang);
       } finally {
         setSaving(false);
         setDragOverSlot(null);
         setDraggingId(null);
       }
     },
-    [campaignMap, campaigns]
+    [adminLang, campaignMap, campaigns]
   );
 
   const handleDropToSlot = useCallback(

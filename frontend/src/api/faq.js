@@ -1,10 +1,12 @@
 // src/api/faq.js
-import { http } from "./client";
+import { http, toQueryString } from "./client";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 export const faqApi = {
   // 🔹 Admin: FAQ içeriğini yönetim panelinde görüntülemek için
-  async manage() {
-    const data = await http("/faq/manage", { auth: true });
+  async manage(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/faq/manage${qs}`, { auth: true });
     return (
       data?.faq || {
         heroTitle: "",
@@ -17,8 +19,9 @@ export const faqApi = {
   },
 
   // 🔹 Admin: FAQ içeriğini kaydetmek/güncellemek için
-  async upsert(payload) {
-    const data = await http("/faq", {
+  async upsert(payload, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/faq${qs}`, {
       method: "PUT",
       body: payload,
       auth: true,
@@ -27,8 +30,9 @@ export const faqApi = {
   },
 
   // 🔹 Public: Kullanıcıların sitede gördüğü dinamik FAQ verisini çekmek için
-  async public() {
-    const data = await http("/faq", { auth: false });
+  async public(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/faq${qs}`, { auth: false });
     return (
       data?.faq || {
         isActive: false,

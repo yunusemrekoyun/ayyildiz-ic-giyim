@@ -3,19 +3,23 @@ import { useEffect, useState } from "react";
 import { ChevronDown, HelpCircle } from "lucide-react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { faqApi } from "../api/faq";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 export default function FAQPage() {
   const [data, setData] = useState(null); // { heroTitle, heroIntro, sections: [...], isActive }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
-        const res = await faqApi.public(); // GET /faq
+        const res = await faqApi.public(lang); // GET /faq
         if (!mounted) return;
         setData(res || null);
+        setError("");
       } catch (e) {
         if (!mounted) return;
         setError(extractMessage(e));
@@ -26,7 +30,7 @@ export default function FAQPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [lang]);
 
   const title = data?.heroTitle?.trim() || "Frequently Asked Questions";
   const intro = data?.heroIntro?.trim() || "";

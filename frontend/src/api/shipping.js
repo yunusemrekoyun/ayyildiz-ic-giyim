@@ -1,8 +1,10 @@
-import { http } from "./client.js";
+import { http, toQueryString } from "./client.js";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 export const shippingApi = {
-  async getConfig() {
-    const data = await http("/shipping");
+  async getConfig(lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/shipping${qs}`);
     return (
       data?.shipping || {
         name: "Standard Shipping",
@@ -11,8 +13,9 @@ export const shippingApi = {
       }
     );
   },
-  async updateConfig(payload) {
-    const data = await http("/shipping", {
+  async updateConfig(payload, lang = DEFAULT_LANG) {
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    const data = await http(`/shipping${qs}`, {
       method: "PUT",
       body: payload,
       auth: true,

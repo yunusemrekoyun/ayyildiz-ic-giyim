@@ -17,6 +17,14 @@ import {
   applyDiscount,
 } from "../utils/discountHelpers.js";
 import { hydrateProductsWithInventory } from "../utils/stockItemHelpers.js";
+import {
+  DEFAULT_LANG,
+  normalizeLang,
+  resolveTranslation,
+  pickLocalizedPayload,
+  syncDocTranslations,
+  composeResponseTranslations,
+} from "../utils/i18n.js";
 
 const isValidObjectId = (value) =>
   typeof value === "string" && /^[0-9a-fA-F]{24}$/.test(value);
@@ -53,6 +61,29 @@ function normalizeIds(input) {
     return normalizeIds(String(input.id));
   }
   return [];
+}
+
+function buildCampaignTrTranslation(doc) {
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  return {
+    name: plain.name ?? "",
+    description: plain.description ?? "",
+    badge: plain.badge ?? "",
+    ctaText: plain.ctaText ?? "",
+  };
+}
+
+function applyCampaignTrTranslationToDoc(doc, translation = {}) {
+  if (!translation || typeof translation !== "object") return;
+  ["name", "description", "badge", "ctaText"].forEach((field) => {
+    if (translation[field] !== undefined) {
+      const value =
+        translation[field] === null || translation[field] === undefined
+          ? ""
+          : String(translation[field]);
+      doc[field] = value;
+    }
+  });
 }
 
 async function fetchDiscounts(ids) {
@@ -156,7 +187,11 @@ function findMixedDiscounts(discounts) {
     }));
 }
 
-function shapeCampaign(doc, { includeTarget = false } = {}) {
+function shapeCampaign(
+  doc,
+  { includeTarget = false, includeTranslations = false } = {},
+  translations = null
+) {
   if (!doc) return null;
   const id = doc._id?.toString?.() || String(doc._id);
   const target = doc.target || {};
@@ -207,10 +242,15 @@ function shapeCampaign(doc, { includeTarget = false } = {}) {
     };
   }
 
+  if (includeTranslations) {
+    base.translations =
+      translations ?? doc.translations ?? { [DEFAULT_LANG]: {} };
+  }
+
   return base;
 }
 
-async function resolveProductCampaignItems(campaign) {
+async function resolveProductCampaignItems(campaign, lang) {
   const target = campaign.target || {};
   const directProductIds = new Set(
     (target.products || []).map((id) => id.toString())
@@ -279,15 +319,16 @@ async function resolveProductCampaignItems(campaign) {
     : new Map();
 
   return products
-    .map((product) =>
-      shapeProduct(product, {
+    .map((product) => {
+      const localized = resolveTranslation(product, lang);
+      return shapeProduct(localized, {
         discount: discountMap.get(product._id.toString()) || null,
-      })
-    )
+      });
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-async function resolveSetCampaignItems(campaign) {
+async function resolveSetCampaignItems(campaign, lang) {
   const target = campaign.target || {};
   const directSetIds = new Set(
     (target.sets || []).map((id) => id.toString())
@@ -346,36 +387,42 @@ async function resolveSetCampaignItems(campaign) {
 
   return sets
     .map((set) => {
+      const localizedSet = resolveTranslation(set, lang);
       const discount = setDiscountMap.get(set._id.toString()) || null;
-      const basePrice = Number(set.price) || 0;
+      const basePrice = Number(localizedSet.price ?? set.price) || 0;
       const { finalPrice } = applyDiscount(basePrice, discount);
       return {
         id: set._id.toString(),
-        name: set.name,
-        slug: set.slug,
-        description: set.description || "",
+        name: localizedSet.name,
+        slug: localizedSet.slug,
+        description: localizedSet.description || "",
         price: basePrice,
         finalPrice,
         discount,
         hasDiscount: Boolean(discount) && basePrice !== finalPrice,
-        show: !!set.show,
-        stock: Number(set.stock || 0),
-        images: set.images || [],
-        products: (set.products || []).map((entry) => ({
-          quantity: entry.quantity,
-          product: entry.product
-            ? shapeProduct(entry.product, {
-                discount:
-                  productDiscountMap.get(
-                    entry.product?._id?.toString?.() ||
-                      entry.product?.id?.toString?.() ||
-                      ""
-                  ) || null,
-              })
-            : null,
-        })),
-        createdAt: set.createdAt,
-        updatedAt: set.updatedAt,
+        show: !!localizedSet.show,
+        stock: Number(localizedSet.stock || set.stock || 0),
+        images: localizedSet.images || set.images || [],
+        products: (set.products || []).map((entry) => {
+          const localizedProduct = entry.product
+            ? resolveTranslation(entry.product, lang)
+            : null;
+          return {
+            quantity: entry.quantity,
+            product: localizedProduct
+              ? shapeProduct(localizedProduct, {
+                  discount:
+                    productDiscountMap.get(
+                      entry.product?._id?.toString?.() ||
+                        entry.product?.id?.toString?.() ||
+                        ""
+                    ) || null,
+                })
+              : null,
+          };
+        }),
+        createdAt: localizedSet.createdAt ?? set.createdAt,
+        updatedAt: localizedSet.updatedAt ?? set.updatedAt,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -383,12 +430,15 @@ async function resolveSetCampaignItems(campaign) {
 
 export async function listActiveCampaigns(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const campaigns = await Campaign.find({ isActive: true })
       .sort({ sortOrder: 1, createdAt: -1 })
       .lean();
 
     res.json({
-      campaigns: campaigns.map((campaign) => shapeCampaign(campaign)),
+      campaigns: campaigns.map((campaign) =>
+        shapeCampaign(resolveTranslation(campaign, lang))
+      ),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -397,6 +447,7 @@ export async function listActiveCampaigns(req, res) {
 
 export async function listCampaignsAdmin(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const includeInactive =
       String(req.query.includeInactive || "").toLowerCase() === "true";
     const filter = includeInactive ? {} : { isActive: true };
@@ -407,7 +458,11 @@ export async function listCampaignsAdmin(req, res) {
 
     res.json({
       campaigns: campaigns.map((campaign) =>
-        shapeCampaign(campaign, { includeTarget: true })
+        shapeCampaign(
+          resolveTranslation(campaign, lang),
+          { includeTarget: true, includeTranslations: true },
+          composeResponseTranslations(campaign, buildCampaignTrTranslation)
+        )
       ),
     });
   } catch (error) {
@@ -421,11 +476,23 @@ export async function getCampaign(req, res) {
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: "Invalid campaign id" });
     }
-    const campaign = await Campaign.findById(id).lean();
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
+    const campaign = await Campaign.findById(id);
     if (!campaign) {
       return res.status(404).json({ message: "Campaign not found" });
     }
-    res.json({ campaign: shapeCampaign(campaign, { includeTarget: true }) });
+    const localized = resolveTranslation(campaign, lang);
+    const translations = composeResponseTranslations(
+      campaign,
+      buildCampaignTrTranslation
+    );
+    res.json({
+      campaign: shapeCampaign(
+        localized,
+        { includeTarget: true, includeTranslations: true },
+        translations
+      ),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -579,6 +646,13 @@ async function parsePayload(req, { isUpdate = false } = {}) {
 export async function createCampaign(req, res) {
   try {
     console.log("[campaign:create] body", req.body);
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
+    if (lang !== DEFAULT_LANG) {
+      return res.status(400).json({
+        message:
+          "New campaigns must be created in the default language (tr). Please switch to TR to create the campaign, then edit other languages via the update endpoint.",
+      });
+    }
     const payload = await parsePayload(req, { isUpdate: false });
     const image = await uploadImage(req.file);
 
@@ -601,14 +675,32 @@ export async function createCampaign(req, res) {
       payload.sortOrder = count;
     }
 
-    const campaign = await Campaign.create({
+    const campaign = new Campaign({
       ...payload,
       image,
     });
+
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    syncDocTranslations(
+      campaign,
+      incomingTranslations,
+      buildCampaignTrTranslation,
+      applyCampaignTrTranslationToDoc
+    );
+
+    await campaign.save();
+
+    const localized = resolveTranslation(campaign, lang);
+    const translations = composeResponseTranslations(
+      campaign,
+      buildCampaignTrTranslation
+    );
     res.status(201).json({
-      campaign: shapeCampaign(campaign.toObject(), {
-        includeTarget: true,
-      }),
+      campaign: shapeCampaign(
+        localized,
+        { includeTarget: true, includeTranslations: true },
+        translations
+      ),
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -621,6 +713,7 @@ export async function updateCampaign(req, res) {
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: "Invalid campaign id" });
     }
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const campaign = await Campaign.findById(id);
     if (!campaign) {
       return res.status(404).json({ message: "Campaign not found" });
@@ -654,12 +747,58 @@ export async function updateCampaign(req, res) {
       payload.image = await uploadImage(req.file);
     }
 
-    campaign.set(payload);
+    const localizedFields = ["name", "description", "badge", "ctaText"];
+    const localizedValues = {};
+    localizedFields.forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(payload, field)) {
+        localizedValues[field] = payload[field] ?? "";
+      }
+    });
+
+    const sharedPayload = { ...payload };
+    if (lang !== DEFAULT_LANG) {
+      localizedFields.forEach((field) => {
+        delete sharedPayload[field];
+      });
+    }
+
+    campaign.set(sharedPayload);
+
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    const ensureLangBucket = () => {
+      const bucketLang = normalizeLang(lang);
+      incomingTranslations[bucketLang] = {
+        ...(incomingTranslations[bucketLang] || {}),
+      };
+      return incomingTranslations[bucketLang];
+    };
+
+    if (lang !== DEFAULT_LANG) {
+      const bucket = ensureLangBucket();
+      Object.entries(localizedValues).forEach(([key, value]) => {
+        bucket[key] = value == null ? "" : String(value);
+      });
+    }
+
+    syncDocTranslations(
+      campaign,
+      incomingTranslations,
+      buildCampaignTrTranslation,
+      applyCampaignTrTranslationToDoc
+    );
     await campaign.save();
+
+    const localized = resolveTranslation(campaign, lang);
+    const translations = composeResponseTranslations(
+      campaign,
+      buildCampaignTrTranslation
+    );
     res.json({
-      campaign: shapeCampaign(campaign.toObject(), {
-        includeTarget: true,
-      }),
+      campaign: shapeCampaign(
+        localized,
+        { includeTarget: true, includeTranslations: true },
+        translations
+      ),
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -721,25 +860,40 @@ export async function resolveCampaign(req, res) {
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: "Invalid campaign id" });
     }
-    const campaign = await Campaign.findById(id).lean();
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
+    const campaign = await Campaign.findById(id);
     if (!campaign) {
       return res.status(404).json({ message: "Campaign not found" });
     }
     const targetType = campaign.target?.type || "PRODUCTS";
+    const campaignObject = campaign.toObject();
+    const localized = resolveTranslation(campaign, lang);
+    const translations = composeResponseTranslations(
+      campaign,
+      buildCampaignTrTranslation
+    );
     if (targetType === "SETS") {
-      const items = await resolveSetCampaignItems(campaign);
+      const items = await resolveSetCampaignItems(campaignObject, lang);
       console.log("[campaign:resolve] sets", { id, targetType, count: items.length });
       return res.json({
-        campaign: shapeCampaign(campaign, { includeTarget: true }),
+        campaign: shapeCampaign(
+          localized,
+          { includeTarget: true, includeTranslations: true },
+          translations
+        ),
         items,
         targetType,
       });
     }
 
-    const items = await resolveProductCampaignItems(campaign);
+    const items = await resolveProductCampaignItems(campaignObject, lang);
     console.log("[campaign:resolve] products", { id, targetType, count: items.length });
     return res.json({
-      campaign: shapeCampaign(campaign, { includeTarget: true }),
+      campaign: shapeCampaign(
+        localized,
+        { includeTarget: true, includeTranslations: true },
+        translations
+      ),
       items,
       targetType,
     });

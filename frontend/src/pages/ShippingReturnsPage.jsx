@@ -2,19 +2,23 @@
 import { useEffect, useMemo, useState } from "react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { shippingReturnsApi } from "../api/shippingReturns";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 export default function ShippingReturnsPage() {
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
-        const data = await shippingReturnsApi.get();
+        const data = await shippingReturnsApi.get(lang);
         if (!mounted) return;
         setPage(normalize(data));
+        setErr(null);
       } catch (e) {
         if (!mounted) return;
         setErr(extractMessage(e) || "Unable to load Shipping & Returns.");
@@ -25,7 +29,7 @@ export default function ShippingReturnsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [lang]);
 
   const heroTitle = useMemo(
     () => page?.heroTitle || "Shipping & Returns",

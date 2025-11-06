@@ -2,6 +2,19 @@
 import Set from "../models/Set.js";
 import Product from "../models/Product.js";
 import { hydrateProductsWithInventory } from "../utils/stockItemHelpers.js";
+import {
+  uploadBufferToCloudinary,
+  deleteFromCloudinary,
+} from "../utils/cloudinaryUpload.js";
+import { configureCloudinary } from "../config/cloudinary.js";
+import {
+  DEFAULT_LANG,
+  normalizeLang,
+  resolveTranslation,
+  pickLocalizedPayload,
+  syncDocTranslations,
+  composeResponseTranslations,
+} from "../utils/i18n.js";
 
 const isId = (s) => typeof s === "string" && /^[0-9a-fA-F]{24}$/.test(s);
 
@@ -14,14 +27,44 @@ function parseBool(value, fallback = false) {
   return fallback;
 }
 
+const resolveSetFolder = () => {
+  const instance = configureCloudinary();
+  const base = (instance.uploadFolder || "ayyildiz/uploads").replace(/\/+$/, "");
+  return `${base}/sets`;
+};
+
 async function uploadImages(files = []) {
-  return files.map((f) => ({
-    url: f.path || f.location || "",
-    publicId: f.filename || f.originalname || "",
-    width: undefined,
-    height: undefined,
-    format: undefined,
-  }));
+  if (!Array.isArray(files) || !files.length) return [];
+  const folder = resolveSetFolder();
+  const uploads = files.map(async (file) => {
+    if (file?.buffer) {
+      const resourceType = file.mimetype?.startsWith("video/")
+        ? "video"
+        : "image";
+      const result = await uploadBufferToCloudinary(file.buffer, {
+        folder,
+        resource_type: resourceType,
+      });
+      return {
+        url: result.secure_url,
+        publicId: result.public_id,
+        width: result.width,
+        height: result.height,
+        format: result.format,
+      };
+    }
+    const fallbackUrl = file?.path || file?.location || file?.url || "";
+    if (!fallbackUrl) return null;
+    return {
+      url: fallbackUrl,
+      publicId: file?.filename || file?.originalname || "",
+      width: undefined,
+      height: undefined,
+      format: undefined,
+    };
+  });
+  const results = await Promise.all(uploads);
+  return results.filter(Boolean);
 }
 
 async function parseSetProducts(value) {
@@ -41,8 +84,60 @@ async function parseSetProducts(value) {
   return out;
 }
 
+function buildSetTrTranslation(doc) {
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  return {
+    name: plain.name ?? "",
+    description: plain.description ?? "",
+  };
+}
+
+function applySetTrTranslation(doc, translation = {}) {
+  if (!translation || typeof translation !== "object") return;
+  if (translation.name !== undefined) {
+    doc.name = String(translation.name).trim();
+  }
+  if (translation.description !== undefined) {
+    doc.description = translation.description ?? "";
+  }
+}
+
+function presentSet(doc, lang, { includeTranslations = true } = {}) {
+  const localized = resolveTranslation(doc, lang);
+  const productsSource = Array.isArray(doc.products) ? doc.products : [];
+  localized.products = productsSource.map((entry) => {
+    const plainEntry =
+      typeof entry.toObject === "function" ? entry.toObject() : { ...entry };
+    if (entry?.product && typeof entry.product === "object") {
+      plainEntry.product = resolveTranslation(entry.product, lang);
+    }
+    return plainEntry;
+  });
+
+  if (includeTranslations) {
+    localized.translations = composeResponseTranslations(
+      doc,
+      buildSetTrTranslation
+    );
+  }
+
+  return localized;
+}
+
 export async function createSet(req, res) {
   try {
+    console.log("🟡 [createSet] query:", req.query);
+    console.log("🟡 [createSet] DEFAULT_LANG:", DEFAULT_LANG);
+    console.log("🟡 [createSet] body:", req.body);
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
+    console.log("🟡 [createSet] normalized lang:", lang);
+    if (lang !== DEFAULT_LANG) {
+      console.warn("🔴 [createSet] Lang mismatch:", { lang, DEFAULT_LANG });
+      return res.status(400).json({
+        message:
+          "New sets must be created in the default language (tr). Please switch to TR to create the set, then edit translations in other languages.",
+      });
+    }
     const {
       name,
       description = "",
@@ -63,7 +158,7 @@ export async function createSet(req, res) {
     );
     const setProducts = await parseSetProducts(products);
 
-    const doc = await Set.create({
+    const doc = new Set({
       name: String(name).trim(),
       description,
       price: priceNum,
@@ -73,14 +168,25 @@ export async function createSet(req, res) {
       sku: sku ? String(sku).trim().toUpperCase() : undefined,
     });
 
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    syncDocTranslations(
+      doc,
+      incomingTranslations,
+      buildSetTrTranslation,
+      applySetTrTranslation
+    );
+
+    await doc.save();
+
     await doc.populate({ path: "products.product" });
     const componentProducts = doc.products
       .map((entry) => entry?.product)
       .filter(Boolean);
     await hydrateProductsWithInventory(componentProducts);
     doc.set("stock", null, { strict: false });
-    res.status(201).json({ set: doc });
+    res.status(201).json({ set: presentSet(doc, lang) });
   } catch (err) {
+    console.error("🔴 [createSet] error:", err);
     if (err?.code === 11000 && err?.keyPattern?.sku)
       return res.status(400).json({ message: "SKU already exists" });
     res.status(400).json({ message: err.message || "Create failed" });
@@ -89,6 +195,7 @@ export async function createSet(req, res) {
 
 export async function listSets(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const search = String(req.query.search || "").trim();
     const includeHidden = parseBool(req.query.includeHidden, false);
     const limit = Math.min(
@@ -116,7 +223,9 @@ export async function listSets(req, res) {
       set.stock = null;
     });
     await hydrateProductsWithInventory(products);
-    res.json({ sets });
+    res.json({
+      sets: sets.map((set) => presentSet(set, lang)),
+    });
   } catch (err) {
     res.status(500).json({ message: err.message || "List failed" });
   }
@@ -124,6 +233,7 @@ export async function listSets(req, res) {
 
 export async function getSet(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const { idOrSlug } = req.params;
     const set = isId(idOrSlug)
       ? await Set.findById(idOrSlug)
@@ -135,7 +245,7 @@ export async function getSet(req, res) {
       .filter(Boolean);
     await hydrateProductsWithInventory(componentProducts);
     set.set("stock", null, { strict: false });
-    res.json({ set });
+    res.json({ set: presentSet(set, lang) });
   } catch (err) {
     res.status(500).json({ message: err.message || "Get failed" });
   }
@@ -143,6 +253,7 @@ export async function getSet(req, res) {
 
 export async function updateSet(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const { idOrSlug } = req.params;
     const set = isId(idOrSlug)
       ? await Set.findById(idOrSlug)
@@ -159,8 +270,32 @@ export async function updateSet(req, res) {
       removeImagePublicIds,
     } = req.body;
 
-    if (name !== undefined) set.name = String(name).trim();
-    if (description !== undefined) set.description = description;
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    const ensureLangBucket = () => {
+      const bucketLang = normalizeLang(lang);
+      incomingTranslations[bucketLang] = {
+        ...(incomingTranslations[bucketLang] || {}),
+      };
+      return incomingTranslations[bucketLang];
+    };
+
+    if (name !== undefined) {
+      const normalizedName = String(name).trim();
+      if (lang === DEFAULT_LANG) {
+        set.name = normalizedName;
+      } else {
+        ensureLangBucket().name = normalizedName;
+      }
+    }
+    if (description !== undefined) {
+      const normalizedDescription =
+        description == null ? "" : String(description);
+      if (lang === DEFAULT_LANG) {
+        set.description = normalizedDescription;
+      } else {
+        ensureLangBucket().description = normalizedDescription;
+      }
+    }
     if (price !== undefined) {
       const n = Number(price);
       if (!Number.isFinite(n) || n < 0)
@@ -183,15 +318,30 @@ export async function updateSet(req, res) {
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean);
-      set.images = set.images.filter((img) => !ids.includes(img.publicId));
-      // storage temizliği burada yapılabilir
+      if (ids.length) {
+        set.images = set.images.filter((img) => !ids.includes(img.publicId));
+        await Promise.allSettled(
+          ids.map((pid) => deleteFromCloudinary(pid, "image"))
+        );
+        set.markModified("images");
+      }
     }
 
     const files = Array.isArray(req.files) ? req.files : [];
     const newImgs = await uploadImages(
       files.filter((f) => f.fieldname === "images")
     );
-    if (newImgs.length) set.images.push(...newImgs);
+    if (newImgs.length) {
+      set.images.push(...newImgs);
+      set.markModified("images");
+    }
+
+    syncDocTranslations(
+      set,
+      incomingTranslations,
+      buildSetTrTranslation,
+      applySetTrTranslation
+    );
 
     await set.save();
     await set.populate({ path: "products.product" });
@@ -200,7 +350,7 @@ export async function updateSet(req, res) {
       .filter(Boolean);
     await hydrateProductsWithInventory(componentProducts);
     set.set("stock", null, { strict: false });
-    res.json({ set });
+    res.json({ set: presentSet(set, lang) });
   } catch (err) {
     if (err?.code === 11000 && err?.keyPattern?.sku)
       return res.status(400).json({ message: "SKU already exists" });
@@ -215,7 +365,14 @@ export async function deleteSet(req, res) {
       ? await Set.findById(idOrSlug)
       : await Set.findOne({ slug: idOrSlug });
     if (!set) return res.status(404).json({ message: "Set not found" });
-    // set.images storage silme vs.
+    if (Array.isArray(set.images) && set.images.length) {
+      await Promise.allSettled(
+        set.images
+          .map((img) => img?.publicId)
+          .filter(Boolean)
+          .map((pid) => deleteFromCloudinary(pid, "image"))
+      );
+    }
     await set.deleteOne();
     res.json({ ok: true });
   } catch (err) {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminModal from "../common/AdminModal";
 import { Plus, Trash2 } from "lucide-react";
+import { DEFAULT_LANG } from "../../../constants/lang.js";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -13,6 +14,20 @@ const uid = () =>
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 
+/* 🔧 Buffer ObjectId -> String ObjectId çevirici */
+const normalizeId = (raw) => {
+  if (!raw) return "";
+  if (typeof raw === "string") return raw;
+  if (raw?.buffer?.data && Array.isArray(raw.buffer.data)) {
+    return raw.buffer.data.map((n) => n.toString(16).padStart(2, "0")).join("");
+  }
+  if (raw?.data && Array.isArray(raw.data)) {
+    return raw.data.map((n) => n.toString(16).padStart(2, "0")).join("");
+  }
+  if (raw?._id) return normalizeId(raw._id);
+  return String(raw);
+};
+
 export default function SetForm({
   open,
   onClose,
@@ -20,7 +35,9 @@ export default function SetForm({
   onDelete,
   initialSet,
   products = [],
+  contentLang = DEFAULT_LANG,
 }) {
+  const languageLabel = (contentLang || DEFAULT_LANG).toUpperCase();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -32,6 +49,7 @@ export default function SetForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  /* 🧩 Form açıldığında initial değerleri yükle */
   useEffect(() => {
     if (!open) return;
     setName(initialSet?.name ?? "");
@@ -44,7 +62,7 @@ export default function SetForm({
     setEntries(
       (initialSet?.products || []).map((entry) => ({
         key: uid(),
-        productId: entry.product?.id || entry.product?._id,
+        productId: normalizeId(entry.product?.id || entry.product?._id),
         product: entry.product,
         quantity: entry.quantity || 1,
       }))
@@ -53,10 +71,11 @@ export default function SetForm({
     setSubmitting(false);
   }, [initialSet, open]);
 
+  /* 🧩 Product listesi (id normalize edilerek) */
   const productOptions = useMemo(
     () =>
       products.map((p) => ({
-        id: p.id || p._id,
+        id: normalizeId(p.id || p._id),
         label: p.name,
         price: p.price,
       })),
@@ -72,7 +91,7 @@ export default function SetForm({
         productId: productOptions[0]?.id || "",
         product:
           products.find(
-            (p) => (p.id || p._id) === (productOptions[0]?.id || "")
+            (p) => normalizeId(p.id || p._id) === productOptions[0]?.id
           ) || null,
         quantity: 1,
       },
@@ -89,9 +108,11 @@ export default function SetForm({
         entry.key === key
           ? {
               ...entry,
-              productId,
+              productId: normalizeId(productId),
               product:
-                products.find((p) => (p.id || p._id) === productId) || null,
+                products.find(
+                  (p) => normalizeId(p.id || p._id) === normalizeId(productId)
+                ) || null,
             }
           : entry
       )
@@ -107,7 +128,7 @@ export default function SetForm({
     );
   };
 
-  // Set görselleri
+  // 📸 Görsel işlemleri
   const handleImageUpload = (event) => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
@@ -133,17 +154,17 @@ export default function SetForm({
         try {
           URL.revokeObjectURL(removed.preview);
         } catch {
-          // ignore
+          /* ignore */
         }
       }
       return next;
     });
   };
 
-  // API'ye gidecek ürün listesi
+  /* 🧾 Backend'e gönderilecek ürün listesi */
   const composedSetProducts = () =>
     entries.map((entry) => ({
-      productId: entry.productId,
+      productId: normalizeId(entry.productId),
       quantity: entry.quantity,
     }));
 
@@ -225,6 +246,16 @@ export default function SetForm({
       }
     >
       <form id="admin-set-form" onSubmit={handleSubmit} className="space-y-6">
+        <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]/80 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+          Set başlığı ve açıklaması{" "}
+          <span className="font-semibold text-[var(--color-text-admin)]">
+            {languageLabel}
+          </span>{" "}
+          diline kaydedilir. Diğer dil varyantlarını set listesindeki “Dil
+          varyantı” butonundan düzenleyebilirsiniz. Fiyat ve ürün listesi tüm
+          dillerde ortaktır.
+        </div>
+
         {/* Genel bilgiler */}
         <section className="grid gap-4 md:grid-cols-2">
           <label className="block">
@@ -239,6 +270,7 @@ export default function SetForm({
               maxLength={160}
             />
           </label>
+
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
               Fiyat (EUR)<span className="text-[var(--color-accent)]">*</span>
@@ -258,6 +290,7 @@ export default function SetForm({
               </span>
             )}
           </label>
+
           <label className="md:col-span-2 block">
             <span className="mb-1 block text-sm font-medium text-[var(--color-text-admin)]">
               Açıklama
@@ -270,6 +303,7 @@ export default function SetForm({
               placeholder="Bu seti özel kılan özellikleri açıklayın."
             />
           </label>
+
           <label className="inline-flex items-center gap-2 text-sm text-[var(--color-text-admin)]">
             <input
               type="checkbox"
@@ -281,7 +315,7 @@ export default function SetForm({
           </label>
         </section>
 
-        {/* Set görselleri */}
+        {/* Görseller */}
         <section>
           <header className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[var(--color-text-admin)]">
@@ -298,6 +332,7 @@ export default function SetForm({
               />
             </label>
           </header>
+
           <div className="mt-3 flex flex-wrap gap-3">
             {existingImages.map((img) => (
               <figure
@@ -318,6 +353,7 @@ export default function SetForm({
                 </button>
               </figure>
             ))}
+
             {newImages.map((img) => (
               <figure
                 key={img.preview}
@@ -340,7 +376,7 @@ export default function SetForm({
           </div>
         </section>
 
-        {/* Set ürünleri */}
+        {/* Ürün listesi */}
         <section>
           <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
@@ -381,6 +417,7 @@ export default function SetForm({
                     <Trash2 className="h-4 w-4" /> Kaldır
                   </button>
                 </div>
+
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
                   <label className="block md:col-span-2">
                     <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
@@ -400,6 +437,7 @@ export default function SetForm({
                       ))}
                     </select>
                   </label>
+
                   <label className="block">
                     <span className="mb-1 block text-xs font-medium text-[var(--color-text-admin-muted)]">
                       Adet

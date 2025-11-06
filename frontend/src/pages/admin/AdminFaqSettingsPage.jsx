@@ -16,6 +16,7 @@ import {
   ToggleRight,
 } from "lucide-react";
 import { faqApi } from "../../api/faq";
+import { useAdminLang } from "../../context/LangContext.jsx";
 
 export default function AdminFaqSettingsPageInner() {
   const [data, setData] = useState(null);
@@ -23,13 +24,15 @@ export default function AdminFaqSettingsPageInner() {
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
   const [expanded, setExpanded] = useState({}); // section index -> open?
+  const { adminLang } = useAdminLang();
 
   // initial load
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
-        const res = await faqApi.manage();
+        const res = await faqApi.manage(adminLang);
         if (mounted) {
           // sort güvenliği
           const sorted = {
@@ -52,7 +55,7 @@ export default function AdminFaqSettingsPageInner() {
       }
     })();
     return () => (mounted = false);
-  }, []);
+  }, [adminLang]);
 
   const updateRoot = (patch) => setData((p) => ({ ...p, ...patch }));
 
@@ -126,7 +129,7 @@ export default function AdminFaqSettingsPageInner() {
           })),
         })),
       };
-      const saved = await faqApi.upsert(normalized);
+      const saved = await faqApi.upsert(normalized, adminLang);
       setData(saved);
       setBanner({ ok: true, msg: "SSS içeriği başarıyla kaydedildi." });
     } catch (e) {
@@ -141,7 +144,7 @@ export default function AdminFaqSettingsPageInner() {
     if (!confirm("Değişiklikleri iptal edip yeniden yüklemek istiyor musun?")) return;
     setLoading(true);
     try {
-      const fresh = await faqApi.manage();
+      const fresh = await faqApi.manage(adminLang);
       setData(fresh);
       setBanner(null);
     } finally {

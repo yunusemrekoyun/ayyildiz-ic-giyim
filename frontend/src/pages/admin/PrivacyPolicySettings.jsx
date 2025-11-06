@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import privacyApi from "../../api/privacy.js";
+import { useAdminLang } from "../../context/LangContext.jsx";
 import {
   Loader2,
   Save,
@@ -26,12 +27,14 @@ export default function PrivacySettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
+  const { adminLang } = useAdminLang();
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
-        const data = await privacyApi.manage();
+        const data = await privacyApi.manage(adminLang);
         if (!mounted) return;
         setForm(normalizeIncoming(data));
       } catch (err) {
@@ -44,7 +47,7 @@ export default function PrivacySettings() {
       }
     })();
     return () => (mounted = false);
-  }, []);
+  }, [adminLang]);
 
   const canSave = useMemo(() => !!form.heroTitle.trim(), [form.heroTitle]);
 
@@ -52,7 +55,7 @@ export default function PrivacySettings() {
     setSaving(true);
     try {
       const payload = normalizeOutgoing(form);
-      const updated = await privacyApi.upsert(payload);
+      const updated = await privacyApi.upsert(payload, adminLang);
       setForm(normalizeIncoming(updated));
       setBanner({
         variant: "success",

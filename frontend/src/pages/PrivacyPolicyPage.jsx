@@ -2,19 +2,23 @@
 import { useEffect, useMemo, useState } from "react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { privacyApi } from "../api/privacy";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 export default function PrivacyPolicyPage() {
   const [data, setData] = useState(null); // { heroTitle, heroIntro, sections, footerHtml, seo, isActive }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
-        const res = await privacyApi.public(); // GET /privacy
+        const res = await privacyApi.public(lang); // GET /privacy
         if (!mounted) return;
         setData(normalizeIncoming(res));
+        setError("");
       } catch (e) {
         if (!mounted) return;
         setError(extractMessage(e) || "Failed to load privacy policy.");
@@ -25,7 +29,7 @@ export default function PrivacyPolicyPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [lang]);
 
   const title = data?.heroTitle || "Privacy Policy";
   const intro =

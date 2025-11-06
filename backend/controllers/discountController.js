@@ -3,12 +3,38 @@ import Discount from "../models/Discount.js";
 import Product from "../models/Product.js";
 import Set from "../models/Set.js";
 import Category from "../models/Category.js";
+import {
+  DEFAULT_LANG,
+  normalizeLang,
+  resolveTranslation,
+  pickLocalizedPayload,
+  syncDocTranslations,
+  composeResponseTranslations,
+} from "../utils/i18n.js";
 
 const TARGET_POPULATE = [
   { path: "appliesTo.products", select: "name slug price images" },
   { path: "appliesTo.sets", select: "name slug price images" },
   { path: "appliesTo.categories", select: "name slug" },
 ];
+
+function buildDiscountTrTranslation(doc) {
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  return {
+    name: plain.name ?? "",
+    description: plain.description ?? "",
+  };
+}
+
+function applyDiscountTrTranslation(doc, translation = {}) {
+  if (!translation || typeof translation !== "object") return;
+  if (translation.name !== undefined) {
+    doc.name = translation.name;
+  }
+  if (translation.description !== undefined) {
+    doc.description = translation.description;
+  }
+}
 
 async function validateObjectIds(ids = [], model, label = "item") {
   if (!Array.isArray(ids) || !ids.length) return [];
@@ -159,15 +185,56 @@ function serializeConflicts(conflicts) {
 }
 
 export async function listDiscounts(req, res) {
+  const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
   const discounts = await Discount.find()
     .sort({ createdAt: -1 })
-    .populate(TARGET_POPULATE)
-    .lean();
-  res.json({ discounts: discounts.map(shapeDiscount) });
+    .populate(TARGET_POPULATE);
+  res.json({
+    discounts: discounts.map((discountDoc) => {
+      const localized = resolveTranslation(discountDoc, lang);
+      if (localized.appliesTo) {
+        localized.appliesTo = {
+          ...localized.appliesTo,
+          products: (discountDoc.appliesTo?.products || []).map((item) =>
+            item && typeof item === "object"
+              ? resolveTranslation(item, lang)
+              : item
+          ),
+          sets: (discountDoc.appliesTo?.sets || []).map((item) =>
+            item && typeof item === "object"
+              ? resolveTranslation(item, lang)
+              : item
+          ),
+          categories: (discountDoc.appliesTo?.categories || []).map((item) =>
+            item && typeof item === "object"
+              ? resolveTranslation(item, lang)
+              : item
+          ),
+        };
+      }
+      const translations = composeResponseTranslations(
+        discountDoc,
+        buildDiscountTrTranslation
+      );
+      return shapeDiscount(
+        localized,
+        { includeTranslations: true },
+        translations
+      );
+    }),
+  });
 }
 
 export async function createDiscount(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
+    if (lang !== DEFAULT_LANG) {
+      return res.status(400).json({
+        message:
+          "New discounts must be created in the default language (tr). Please switch to TR to create the discount, then translate it via the update endpoint.",
+      });
+    }
+
     const {
       name,
       description = "",
@@ -292,7 +359,7 @@ export async function createDiscount(req, res) {
         return res.status(200).json({ cancelled: true });
     }
 
-    const discount = await Discount.create({
+    const discount = new Discount({
       name,
       description,
       percentage: parsedPercentage,
@@ -304,8 +371,51 @@ export async function createDiscount(req, res) {
       active: true,
     });
 
+    // ✅ BURASI EKLENDİ
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    syncDocTranslations(
+      discount,
+      incomingTranslations,
+      buildDiscountTrTranslation,
+      applyDiscountTrTranslation
+    );
+
+    await discount.save();
     await discount.populate(TARGET_POPULATE);
-    res.status(201).json({ discount: shapeDiscount(discount) });
+
+    const localized = resolveTranslation(discount, lang);
+    if (localized.appliesTo) {
+      localized.appliesTo = {
+        ...localized.appliesTo,
+        products: (discount.appliesTo?.products || []).map((item) =>
+          item && typeof item === "object"
+            ? resolveTranslation(item, lang)
+            : item
+        ),
+        sets: (discount.appliesTo?.sets || []).map((item) =>
+          item && typeof item === "object"
+            ? resolveTranslation(item, lang)
+            : item
+        ),
+        categories: (discount.appliesTo?.categories || []).map((item) =>
+          item && typeof item === "object"
+            ? resolveTranslation(item, lang)
+            : item
+        ),
+      };
+    }
+    const translations = composeResponseTranslations(
+      discount,
+      buildDiscountTrTranslation
+    );
+
+    res.status(201).json({
+      discount: shapeDiscount(
+        localized,
+        { includeTranslations: true },
+        translations
+      ),
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -313,6 +423,7 @@ export async function createDiscount(req, res) {
 
 export async function updateDiscount(req, res) {
   try {
+    const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const { id } = req.params;
     const discount = await Discount.findById(id);
     if (!discount)
@@ -329,8 +440,33 @@ export async function updateDiscount(req, res) {
       resolve = null,
     } = req.body;
 
-    if (name !== undefined) discount.name = String(name).trim();
-    if (description !== undefined) discount.description = String(description);
+    // ✅ TEK TANE incomingTranslations BURADA
+    const incomingTranslations = pickLocalizedPayload(req.body);
+    const ensureLangBucket = () => {
+      const bucketLang = normalizeLang(lang);
+      incomingTranslations[bucketLang] = {
+        ...(incomingTranslations[bucketLang] || {}),
+      };
+      return incomingTranslations[bucketLang];
+    };
+
+    if (name !== undefined) {
+      const normalizedName = String(name).trim();
+      if (lang === DEFAULT_LANG) {
+        discount.name = normalizedName;
+      } else {
+        ensureLangBucket().name = normalizedName;
+      }
+    }
+    if (description !== undefined) {
+      const normalizedDescription =
+        description == null ? "" : String(description);
+      if (lang === DEFAULT_LANG) {
+        discount.description = normalizedDescription;
+      } else {
+        ensureLangBucket().description = normalizedDescription;
+      }
+    }
     if (percentage !== undefined) {
       const parsed = Number(percentage);
       if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 100)
@@ -441,9 +577,50 @@ export async function updateDiscount(req, res) {
       };
     }
 
+    // ❌ TEKRAR TANIM YOK, SADECE KULLANIM VAR
+    syncDocTranslations(
+      discount,
+      incomingTranslations,
+      buildDiscountTrTranslation,
+      applyDiscountTrTranslation
+    );
+
     await discount.save();
     await discount.populate(TARGET_POPULATE);
-    res.json({ discount: shapeDiscount(discount) });
+
+    const localized = resolveTranslation(discount, lang);
+    if (localized.appliesTo) {
+      localized.appliesTo = {
+        ...localized.appliesTo,
+        products: (discount.appliesTo?.products || []).map((item) =>
+          item && typeof item === "object"
+            ? resolveTranslation(item, lang)
+            : item
+        ),
+        sets: (discount.appliesTo?.sets || []).map((item) =>
+          item && typeof item === "object"
+            ? resolveTranslation(item, lang)
+            : item
+        ),
+        categories: (discount.appliesTo?.categories || []).map((item) =>
+          item && typeof item === "object"
+            ? resolveTranslation(item, lang)
+            : item
+        ),
+      };
+    }
+    const translations = composeResponseTranslations(
+      discount,
+      buildDiscountTrTranslation
+    );
+
+    res.json({
+      discount: shapeDiscount(
+        localized,
+        { includeTranslations: true },
+        translations
+      ),
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -476,10 +653,14 @@ function shapeTargets(list = []) {
   return list.map((i) => normalizeRef(i)).filter((e) => e && e.id);
 }
 
-function shapeDiscount(doc) {
+function shapeDiscount(
+  doc,
+  { includeTranslations = false } = {},
+  translations = null
+) {
   if (!doc) return null;
   const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
-  return {
+  const shaped = {
     id: plain._id?.toString?.() || plain.id,
     name: plain.name,
     description: plain.description,
@@ -495,4 +676,10 @@ function shapeDiscount(doc) {
     createdAt: plain.createdAt,
     updatedAt: plain.updatedAt,
   };
+
+  if (includeTranslations) {
+    shaped.translations = translations ?? plain.translations ?? {};
+  }
+
+  return shaped;
 }

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import CategoryItem from "./CategoryItem";
 import { categoryApi } from "../../api/categories";
 import { mapCategoryTree } from "../../utils/catalog";
+import { useStorefrontLang } from "../../context/LangContext.jsx";
 
 const DESKTOP_VISIBLE = 4;
 
@@ -13,13 +14,15 @@ export default function Categories({
   const [categories, setCategories] = useState(items || []);
   const [loading, setLoading] = useState(!items);
   const scrollRef = useRef(null);
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     if (items) return;
     let mounted = true;
     (async () => {
       try {
-        const tree = await categoryApi.tree();
+        setLoading(true);
+        const tree = await categoryApi.tree(lang);
         if (!mounted) return;
         const mapped = mapCategoryTree(tree).map((node) => ({
           id: node.id,
@@ -37,7 +40,7 @@ export default function Categories({
     return () => {
       mounted = false;
     };
-  }, [items]);
+  }, [items, lang]);
 
   const showCarousel = useMemo(() => {
     return (categories?.length || 0) > DESKTOP_VISIBLE;

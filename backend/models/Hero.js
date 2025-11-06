@@ -23,6 +23,15 @@ const VideoSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const HeroTranslationSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true },
+    subtitle: { type: String, trim: true },
+    buttonText: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
 /**
  * Hero slide:
  * - Medya zorunlu: image XOR video
@@ -52,6 +61,17 @@ const HeroSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
+    translations: {
+      type: new mongoose.Schema(
+        {
+          tr: { type: HeroTranslationSchema, default: () => ({}) },
+          en: { type: HeroTranslationSchema, default: () => ({}) },
+          de: { type: HeroTranslationSchema, default: () => ({}) },
+        },
+        { _id: false }
+      ),
+      default: () => ({ tr: {} }),
+    },
   },
   { timestamps: true }
 );

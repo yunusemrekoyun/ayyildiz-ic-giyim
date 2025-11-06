@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { UploadCloud, Image as ImageIcon, X } from "lucide-react";
 import EntityPicker from "../discounts/EntityPicker.jsx";
+import { DEFAULT_LANG } from "../../../constants/lang.js";
 
 function mapSelected(ids = [], options = []) {
   if (!ids.length) return [];
@@ -76,7 +77,9 @@ export default function CampaignForm({
   setOptions = [],
   categoryOptions = [],
   discountOptions = [],
+  contentLang = DEFAULT_LANG,
 }) {
+  const languageLabel = (contentLang || DEFAULT_LANG).toUpperCase();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [badge, setBadge] = useState("");
@@ -277,6 +280,10 @@ export default function CampaignForm({
           </button>
         </div>
       </header>
+
+      <div className="rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]/40 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+        Kampanya başlığı, açıklaması ve CTA metinleri <span className="font-semibold text-[var(--color-text-admin)]">{languageLabel}</span> diline aittir. Görsel, hedef ve varyant seçimleri tüm dillerde ortaktır.
+      </div>
 
       {error && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

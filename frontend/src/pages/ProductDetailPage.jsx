@@ -5,6 +5,7 @@ import BreadCrumb from "../components/shop/BreadCrumb";
 import ProductDetail from "../components/product-detail/ProductDetail";
 import SimilarProducts from "../components/product-detail/SimilarProducts";
 import { productApi } from "../api/products";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
@@ -12,6 +13,7 @@ export default function ProductDetailPage() {
   const [similar, setSimilar] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { lang } = useStorefrontLang();
 
   useEffect(() => {
     if (!slug) return;
@@ -22,7 +24,7 @@ export default function ProductDetailPage() {
 
     (async () => {
       try {
-        const detail = await productApi.get(slug);
+        const detail = await productApi.get(slug, lang);
         if (!mounted) return;
         setProduct(detail);
 
@@ -30,7 +32,7 @@ export default function ProductDetailPage() {
           const related = await productApi.list({
             category: detail.category?.id || detail.category?._id || detail.category,
             limit: 8,
-          });
+          }, lang);
           if (mounted && related?.products) {
             setSimilar(
               related.products
@@ -49,7 +51,7 @@ export default function ProductDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [slug]);
+  }, [lang, slug]);
 
   if (loading) {
     return (

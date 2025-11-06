@@ -12,6 +12,7 @@ import { setApi } from "../api/sets";
 import { heroApi } from "../api/heroes";
 import { campaignApi } from "../api/campaigns";
 import { reviewApi } from "../api/reviews";
+import { useStorefrontLang } from "../context/LangContext.jsx";
 
 const FALLBACK_CAMPAIGNS = [
   {
@@ -94,13 +95,15 @@ export default function HomePage() {
 
   // error
   const [error, setError] = useState(null);
+  const { lang } = useStorefrontLang();
 
   // HERO fetch
   useEffect(() => {
     let mounted = true;
+    setLoadingHeroes(true);
     (async () => {
       try {
-        const list = await heroApi.list();
+        const list = await heroApi.list({}, lang);
         if (!mounted) return;
         setHeroes(list || []);
       } catch (err) {
@@ -112,14 +115,15 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, [setError]);
+  }, [lang]);
 
   // Products fetch
   useEffect(() => {
     let mounted = true;
+    setLoadingProducts(true);
     (async () => {
       try {
-        const data = await productApi.list({ limit: 12 });
+        const data = await productApi.list({ limit: 12 }, lang);
         if (!mounted) return;
         setFeaturedProducts(data.products || []);
       } catch (err) {
@@ -131,14 +135,15 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, [setError]);
+  }, [lang]);
 
   // Sets fetch
   useEffect(() => {
     let mounted = true;
+    setLoadingSets(true);
     (async () => {
       try {
-        const data = await setApi.list();
+        const data = await setApi.list({}, lang);
         const rawSets = Array.isArray(data) ? data : data?.sets || [];
         if (!mounted) return;
         setSets(mapSetsToCards(rawSets));
@@ -151,14 +156,15 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, [setError]);
+  }, [lang]);
 
   // Campaign fetch
   useEffect(() => {
     let mounted = true;
+    setLoadingCampaigns(true);
     (async () => {
       try {
-        const list = await campaignApi.listHome();
+        const list = await campaignApi.listHome(lang);
         if (!mounted) return;
         setCampaigns(list || []);
       } catch (err) {
@@ -172,7 +178,7 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [lang]);
 
   // Home Reviews fetch
   useEffect(() => {

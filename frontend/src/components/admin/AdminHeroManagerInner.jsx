@@ -18,10 +18,13 @@ import {
 } from "lucide-react";
 import AlertBanner from "../ui/AlertBanner.jsx";
 import { useConfirm } from "../ui/ConfirmDialog.jsx";
+import { useAdminLang } from "../../context/LangContext.jsx";
+import { DEFAULT_LANG } from "../../constants/lang.js";
 
 /* ----- Liste + Modal tetik ----- */
 export default function AdminHeroManagerInner() {
   const confirm = useConfirm();
+  const { adminLang } = useAdminLang();
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null); // item | "new" | null
   const [cats, setCats] = useState([]);
@@ -31,8 +34,8 @@ export default function AdminHeroManagerInner() {
     let mounted = true;
     (async () => {
       const [list, catList] = await Promise.all([
-        heroApi.list({ includeInactive: true }),
-        categoryApi.list({}), // admin tarafı; backend auth zaten var
+        heroApi.list({ includeInactive: true }, adminLang),
+        categoryApi.list({}, adminLang),
       ]);
       if (!mounted) return;
       setItems(list);
@@ -41,7 +44,7 @@ export default function AdminHeroManagerInner() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [adminLang]);
 
   const sorted = useMemo(
     () => [...items].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
@@ -49,7 +52,7 @@ export default function AdminHeroManagerInner() {
   );
 
   async function toggleActive(item) {
-    const updated = await heroApi.update(item.id, { isActive: !item.isActive });
+    const updated = await heroApi.update(item.id, { isActive: !item.isActive }, adminLang);
     setItems((arr) => arr.map((x) => (x.id === item.id ? updated : x)));
     setBanner({
       variant: "success",
@@ -256,6 +259,7 @@ export default function AdminHeroManagerInner() {
               message: `Hero “${saved.title}” kaydedildi.`,
             });
           }}
+          contentLang={adminLang}
         />
       )}
     </div>
@@ -263,7 +267,7 @@ export default function AdminHeroManagerInner() {
 }
 
 /* ----- Modal ----- */
-function HeroModal({ initial, onClose, onSaved, cats }) {
+function HeroModal({ initial, onClose, onSaved, cats, contentLang = DEFAULT_LANG }) {
   const [form, setForm] = useState(() => ({
     title: initial?.title || "",
     subtitle: initial?.subtitle || "",
@@ -277,6 +281,7 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
   const [removeMedia, setRemoveMedia] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const languageLabel = (contentLang || DEFAULT_LANG).toUpperCase();
 
   const mediaPreview = useMemo(() => {
     if (file) return URL.createObjectURL(file);
@@ -295,18 +300,22 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
     try {
       let saved;
       if (initial?.id) {
-        saved = await heroApi.update(initial.id, {
-          ...form,
-          file: file || undefined,
-          removeMedia: removeMedia || undefined,
-        });
+        saved = await heroApi.update(
+          initial.id,
+          {
+            ...form,
+            file: file || undefined,
+            removeMedia: removeMedia || undefined,
+          },
+          contentLang
+        );
       } else {
         if (!file) {
           setError("Lütfen bir görsel veya video seçin.");
           setSaving(false);
           return;
         }
-        saved = await heroApi.create({ ...form, file });
+        saved = await heroApi.create({ ...form, file }, contentLang);
       }
       onSaved(saved);
     } catch (err) {
@@ -335,15 +344,18 @@ function HeroModal({ initial, onClose, onSaved, cats }) {
         </div>
 
         <form onSubmit={submit} className="grid gap-5 p-5 md:grid-cols-12">
-          {error && (
-            <div className="md:col-span-12">
-              <AlertBanner
-                variant="danger"
-                message={error}
-                onClose={() => setError(null)}
-              />
-            </div>
-          )}
+        {error && (
+          <div className="md:col-span-12">
+            <AlertBanner
+              variant="danger"
+              message={error}
+              onClose={() => setError(null)}
+            />
+          </div>
+        )}
+        <div className="md:col-span-12 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]/80 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+          Başlık, alt başlık ve buton metni <span className="font-semibold text-[var(--color-text-admin)]">{languageLabel}</span> dilinde saklanır. Medya ve hedef seçimi tüm dillerde ortak kullanılır.
+        </div>
           {/* SOL */}
           <div className="md:col-span-7 space-y-4">
             <Field
