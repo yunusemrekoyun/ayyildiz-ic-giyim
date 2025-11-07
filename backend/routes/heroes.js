@@ -6,6 +6,7 @@ import { uploadHeroMedia } from "../middleware/upload.js";
 import {
   listHeroes,
   createHero,
+  getHero,
   updateHero,
   deleteHero,
   reorderHeroes,
@@ -21,6 +22,13 @@ router.post(
   requireRole("admin"),
   uploadHeroMedia.single("media"), // << büyük limit + video
   createHero
+);
+
+router.get(
+  "/:id",
+  requireAuth,
+  requireRole("admin"),
+  getHero
 );
 
 router.put(

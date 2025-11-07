@@ -126,13 +126,8 @@ function presentSet(doc, lang, { includeTranslations = true } = {}) {
 
 export async function createSet(req, res) {
   try {
-    console.log("🟡 [createSet] query:", req.query);
-    console.log("🟡 [createSet] DEFAULT_LANG:", DEFAULT_LANG);
-    console.log("🟡 [createSet] body:", req.body);
     const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
-    console.log("🟡 [createSet] normalized lang:", lang);
     if (lang !== DEFAULT_LANG) {
-      console.warn("🔴 [createSet] Lang mismatch:", { lang, DEFAULT_LANG });
       return res.status(400).json({
         message:
           "New sets must be created in the default language (tr). Please switch to TR to create the set, then edit translations in other languages.",
@@ -186,7 +181,6 @@ export async function createSet(req, res) {
     doc.set("stock", null, { strict: false });
     res.status(201).json({ set: presentSet(doc, lang) });
   } catch (err) {
-    console.error("🔴 [createSet] error:", err);
     if (err?.code === 11000 && err?.keyPattern?.sku)
       return res.status(400).json({ message: "SKU already exists" });
     res.status(400).json({ message: err.message || "Create failed" });

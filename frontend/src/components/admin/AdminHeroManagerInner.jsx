@@ -4,8 +4,6 @@ import { categoryApi } from "../../api/categories";
 import { Link } from "react-router-dom";
 import {
   Plus,
-  Image as ImageIcon,
-  Video,
   Pencil,
   Trash2,
   ArrowUp,
@@ -15,36 +13,62 @@ import {
   X,
   Save,
   ChevronLeft,
+  Languages,
 } from "lucide-react";
 import AlertBanner from "../ui/AlertBanner.jsx";
 import { useConfirm } from "../ui/ConfirmDialog.jsx";
-import { useAdminLang } from "../../context/LangContext.jsx";
 import { DEFAULT_LANG } from "../../constants/lang.js";
+import HeroTranslationModal from "./hero/HeroTranslationModal.jsx";
 
 /* ----- Liste + Modal tetik ----- */
 export default function AdminHeroManagerInner() {
   const confirm = useConfirm();
-  const { adminLang } = useAdminLang();
   const [items, setItems] = useState([]);
   const [editing, setEditing] = useState(null); // item | "new" | null
   const [cats, setCats] = useState([]);
   const [banner, setBanner] = useState(null);
+  const [translationState, setTranslationState] = useState({
+    open: false,
+    loading: false,
+    hero: null,
+    error: null,
+  });
+
+  const BASE_LANG = "tr";
+  const TRANSLATION_LANGS = [
+    { value: "en", label: "English (EN)" },
+    { value: "de", label: "Deutsch (DE)" },
+  ];
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const [list, catList] = await Promise.all([
-        heroApi.list({ includeInactive: true }, adminLang),
-        categoryApi.list({}, adminLang),
-      ]);
-      if (!mounted) return;
-      setItems(list);
-      setCats(catList || []);
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [adminLang]);
+    loadHeroes();
+    loadCategories();
+  }, []);
+
+  async function loadHeroes() {
+    try {
+      const list = await heroApi.list({ includeInactive: true }, BASE_LANG);
+
+      setItems(list || []);
+    } catch (error) {
+      setBanner({
+        variant: "danger",
+        message: error?.message || "Hero listesi yüklenemedi",
+      });
+    }
+  }
+
+  async function loadCategories() {
+    try {
+      const list = await categoryApi.list({}, BASE_LANG);
+      setCats(list || []);
+    } catch (error) {
+      setBanner({
+        variant: "danger",
+        message: error?.message || "Kategoriler yüklenemedi",
+      });
+    }
+  }
 
   const sorted = useMemo(
     () => [...items].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
@@ -52,8 +76,21 @@ export default function AdminHeroManagerInner() {
   );
 
   async function toggleActive(item) {
-    const updated = await heroApi.update(item.id, { isActive: !item.isActive }, adminLang);
-    setItems((arr) => arr.map((x) => (x.id === item.id ? updated : x)));
+    const id = item?.id;
+
+    if (!id) {
+      setBanner({
+        variant: "danger",
+        message: "Hero kimliği okunamadı. Lütfen sayfayı yenileyin.",
+      });
+      return;
+    }
+    const updated = await heroApi.update(
+      id,
+      { isActive: !item.isActive },
+      BASE_LANG
+    );
+    setItems((arr) => arr.map((x) => (x.id === updated.id ? updated : x)));
     setBanner({
       variant: "success",
       message: `Hero “${updated.title}” artık ${
@@ -71,8 +108,17 @@ export default function AdminHeroManagerInner() {
     });
     if (!ok) return;
     try {
-      await heroApi.remove(item.id);
-      setItems((arr) => arr.filter((x) => x.id !== item.id));
+      const id = item?.id;
+
+      if (!id) {
+        setBanner({
+          variant: "danger",
+          message: "Hero kimliği okunamadı. Lütfen sayfayı yenileyin.",
+        });
+        return;
+      }
+      await heroApi.remove(id);
+      setItems((arr) => arr.filter((x) => x.id !== id));
       setBanner({
         variant: "warning",
         message: `Hero “${item.title}” silindi.`,
@@ -86,27 +132,83 @@ export default function AdminHeroManagerInner() {
   }
 
   async function move(item, dir) {
-    const list = sorted; // mevcut sıralı liste
-    const from = list.findIndex((x) => x.id === item.id);
+    const id = item?.id;
+
+    if (!id) return;
+
+    const list = sorted;
+    const from = list.findIndex((x) => x.id === id);
     const to = from + dir;
     if (to < 0 || to >= list.length) return;
 
-    // 1) Yeni dizilimi üret
     const next = [...list];
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
 
-    // 2) Optimistic UI: hem local state'i hem sortOrder'ları güncelle
     const nextWithOrders = next.map((h, i) => ({ ...h, sortOrder: i }));
-    setItems((prev) =>
-      prev.map((p) => nextWithOrders.find((n) => n.id === p.id) || p)
-    );
+    setItems(nextWithOrders);
 
-    // 3) Sunucuya toplu reorder gönder
     await heroApi.reorder(
-      nextWithOrders.map((h, i) => ({ id: h.id, sortOrder: i }))
+      nextWithOrders.map((h, i) => ({
+        id: h.id,
+        sortOrder: i,
+      }))
     );
   }
+
+  const openTranslationModal = async (hero) => {
+    const id = hero?.id;
+
+    if (!id) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        hero: null,
+        error: "Hero kimliği okunamadı. Lütfen sayfayı yenileyin.",
+      });
+      return;
+    }
+    setTranslationState({
+      open: true,
+      loading: true,
+      hero: null,
+      error: null,
+    });
+    try {
+      const detail = await heroApi.get(id, BASE_LANG);
+
+      setTranslationState({
+        open: true,
+        loading: false,
+        hero: detail,
+        error: null,
+      });
+    } catch (error) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        hero: null,
+        error: error?.message || "Hero verisi alınamadı",
+      });
+    }
+  };
+
+  const closeTranslationModal = () => {
+    setTranslationState({
+      open: false,
+      loading: false,
+      hero: null,
+      error: null,
+    });
+  };
+
+  const handleTranslationsUpdated = async () => {
+    await loadHeroes();
+    setBanner({
+      variant: "success",
+      message: "Hero çeviri varyantı kaydedildi.",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -209,6 +311,13 @@ export default function AdminHeroManagerInner() {
                   <ArrowDown className="h-4 w-4" />
                 </button>
                 <button
+                  onClick={() => openTranslationModal(h)}
+                  className="rounded-lg p-2 hover:bg-[var(--color-bg-hover)]"
+                  title="Dil varyantları"
+                >
+                  <Languages className="h-4 w-4" />
+                </button>
+                <button
                   onClick={() => setEditing(h)}
                   className="rounded-lg p-2 hover:bg-[var(--color-bg-hover)]"
                   title="Düzenle"
@@ -259,15 +368,32 @@ export default function AdminHeroManagerInner() {
               message: `Hero “${saved.title}” kaydedildi.`,
             });
           }}
-          contentLang={adminLang}
+          contentLang={BASE_LANG}
         />
       )}
+
+      <HeroTranslationModal
+        open={translationState.open}
+        loading={translationState.loading}
+        error={translationState.error}
+        hero={translationState.hero}
+        baseLang={BASE_LANG}
+        langs={TRANSLATION_LANGS}
+        onClose={closeTranslationModal}
+        onUpdated={handleTranslationsUpdated}
+      />
     </div>
   );
 }
 
 /* ----- Modal ----- */
-function HeroModal({ initial, onClose, onSaved, cats, contentLang = DEFAULT_LANG }) {
+function HeroModal({
+  initial,
+  onClose,
+  onSaved,
+  cats,
+  contentLang = DEFAULT_LANG,
+}) {
   const [form, setForm] = useState(() => ({
     title: initial?.title || "",
     subtitle: initial?.subtitle || "",
@@ -295,6 +421,7 @@ function HeroModal({ initial, onClose, onSaved, cats, contentLang = DEFAULT_LANG
 
   const submit = async (e) => {
     e?.preventDefault?.();
+
     setSaving(true);
     setError(null);
     try {
@@ -344,18 +471,23 @@ function HeroModal({ initial, onClose, onSaved, cats, contentLang = DEFAULT_LANG
         </div>
 
         <form onSubmit={submit} className="grid gap-5 p-5 md:grid-cols-12">
-        {error && (
-          <div className="md:col-span-12">
-            <AlertBanner
-              variant="danger"
-              message={error}
-              onClose={() => setError(null)}
-            />
+          {error && (
+            <div className="md:col-span-12">
+              <AlertBanner
+                variant="danger"
+                message={error}
+                onClose={() => setError(null)}
+              />
+            </div>
+          )}
+          <div className="md:col-span-12 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]/80 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+            Başlık, alt başlık ve buton metni{" "}
+            <span className="font-semibold text-[var(--color-text-admin)]">
+              {languageLabel}
+            </span>{" "}
+            dilinde saklanır. Medya ve hedef seçimi tüm dillerde ortak
+            kullanılır.
           </div>
-        )}
-        <div className="md:col-span-12 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]/80 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
-          Başlık, alt başlık ve buton metni <span className="font-semibold text-[var(--color-text-admin)]">{languageLabel}</span> dilinde saklanır. Medya ve hedef seçimi tüm dillerde ortak kullanılır.
-        </div>
           {/* SOL */}
           <div className="md:col-span-7 space-y-4">
             <Field
@@ -477,7 +609,6 @@ function HeroModal({ initial, onClose, onSaved, cats, contentLang = DEFAULT_LANG
 
               <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]">
                 {mediaPreview ? (
-                  // dosya varsa tipinden; yoksa initial’den karar ver
                   file ? (
                     file.type?.startsWith("video/") ? (
                       <video
