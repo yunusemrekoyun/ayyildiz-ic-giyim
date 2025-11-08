@@ -9,9 +9,9 @@ import { discountApi } from "../../api/discounts";
 import { flattenCategoryTree } from "../../utils/catalog.js";
 import CampaignCard from "../../components/admin/campaigns/CampaignCard.jsx";
 import CampaignForm from "../../components/admin/campaigns/CampaignForm.jsx";
+import CampaignTranslationModal from "../../components/admin/campaigns/CampaignTranslationModal.jsx";
 import AlertBanner from "../../components/ui/AlertBanner.jsx";
 import { useConfirm } from "../../components/ui/ConfirmDialog.jsx";
-import { useAdminLang } from "../../context/LangContext.jsx";
 
 const currency = new Intl.NumberFormat("tr-TR", {
   style: "currency",
@@ -19,9 +19,70 @@ const currency = new Intl.NumberFormat("tr-TR", {
   minimumFractionDigits: 0,
 });
 
+const BASE_LANG = "tr";
+const TRANSLATION_LANGS = [
+  { value: "en", label: "English (EN)" },
+  { value: "de", label: "Deutsch (DE)" },
+];
+
+function resolveCampaignIdentifier(campaign) {
+  if (!campaign) return null;
+  if (typeof campaign === "string" || typeof campaign === "number") {
+    const trimmed = String(campaign).trim();
+    return trimmed && trimmed !== "[object Object]" ? trimmed : null;
+  }
+  if (typeof campaign === "object") {
+    if (typeof campaign.slug === "string" && campaign.slug.trim()) {
+      return campaign.slug.trim();
+    }
+    let raw =
+      campaign.id ??
+      campaign._id ??
+      campaign.campaignId ??
+      (campaign.campaign &&
+        (campaign.campaign.id ||
+          campaign.campaign._id ||
+          (typeof campaign.campaign.toHexString === "function"
+            ? campaign.campaign.toHexString()
+            : null)));
+    if (!raw && typeof campaign.toHexString === "function") {
+      raw = campaign.toHexString();
+    }
+    if (!raw && typeof campaign.toString === "function") {
+      const str = campaign.toString();
+      if (str && str !== "[object Object]") raw = str;
+    }
+    if (!raw) return null;
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      return trimmed && trimmed !== "[object Object]" ? trimmed : null;
+    }
+    if (typeof raw === "number") return String(raw);
+    if (typeof raw === "object") {
+      if (typeof raw._id === "string" && raw._id.trim()) return raw._id.trim();
+      if (typeof raw.id === "string" && raw.id.trim()) return raw.id.trim();
+      if (typeof raw.toHexString === "function") return raw.toHexString();
+      if (
+        typeof raw.toString === "function" &&
+        raw.toString !== Object.prototype.toString
+      ) {
+        const str = raw.toString();
+        if (str && str !== "[object Object]") return str;
+      }
+    }
+    const fallback = String(raw).trim();
+    return fallback && fallback !== "[object Object]" ? fallback : null;
+  }
+  try {
+    const str = String(campaign).trim();
+    return str && str !== "[object Object]" ? str : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AdminCampaigns() {
   const confirm = useConfirm();
-  const { adminLang } = useAdminLang();
   const [campaigns, setCampaigns] = useState([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [banner, setBanner] = useState(null);
@@ -35,18 +96,20 @@ export default function AdminCampaigns() {
   const [formMode, setFormMode] = useState("create");
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [translationState, setTranslationState] = useState({
+    open: false,
+    loading: false,
+    campaign: null,
+    error: null,
+  });
 
   useEffect(() => {
-    loadCampaigns(adminLang);
-    loadOptions(adminLang);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adminLang]);
+    loadCampaigns();
+    loadOptions();
+  }, []);
 
   const sortedCampaigns = useMemo(
-    () =>
-      [...campaigns].sort(
-        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-      ),
+    () => [...campaigns].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
     [campaigns]
   );
 
@@ -55,29 +118,37 @@ export default function AdminCampaigns() {
     [campaigns]
   );
 
-  async function loadCampaigns(lang = adminLang) {
+  async function loadCampaigns() {
     setLoadingCampaigns(true);
     try {
-      const data = await campaignApi.listManage({ includeInactive: true }, lang);
-      setCampaigns(data);
+      const data = await campaignApi.listManage({ includeInactive: true }, BASE_LANG);
+      const normalized =
+        (data || []).map((item) => {
+          const identifier =
+            resolveCampaignIdentifier(item) ||
+            item?.id ||
+            item?._id ||
+            item?.slug ||
+            null;
+          if (!identifier || item?.id === identifier) return item;
+          return { ...item, id: identifier };
+        }) || [];
+      setCampaigns(normalized);
     } catch (error) {
-      setBanner({
-        variant: "danger",
-        message: extractMessage(error),
-      });
+      setBanner({ variant: "danger", message: extractMessage(error) });
     } finally {
       setLoadingCampaigns(false);
     }
   }
 
-  async function loadOptions(lang = adminLang) {
+  async function loadOptions() {
     setLoadingOptions(true);
     try {
       const [productRes, setRes, categoryRes, discountRes] = await Promise.all([
-        productApi.list({ limit: 500, includeHidden: true }, lang),
-        setApi.list({ includeHidden: true }, lang),
-        categoryApi.tree(lang),
-        discountApi.list(lang),
+        productApi.list({ limit: 500, includeHidden: true }, BASE_LANG),
+        setApi.list({ includeHidden: true }, BASE_LANG),
+        categoryApi.tree(BASE_LANG),
+        discountApi.list(BASE_LANG),
       ]);
 
       const mappedProducts = (productRes.products || []).map((product) => ({
@@ -106,9 +177,7 @@ export default function AdminCampaigns() {
               ? item.path.join(" / ")
               : item.label || item.name || String(catId)) || "Adsız";
           const hint =
-            typeof item.level === "number"
-              ? `Seviye ${item.level + 1}`
-              : undefined;
+            typeof item.level === "number" ? `Seviye ${item.level + 1}` : undefined;
           return { id: String(catId), label, hint };
         })
         .filter(Boolean);
@@ -143,12 +212,12 @@ export default function AdminCampaigns() {
 
   async function handleToggleActive(campaign) {
     try {
+      const identifier = resolveCampaignIdentifier(campaign);
+      if (!identifier) throw new Error("Kampanya kimliği okunamadı. Lütfen yenileyin.");
       const updated = await campaignApi.update(
-        campaign.id,
-        {
-          isActive: !campaign.isActive,
-        },
-        adminLang
+        identifier,
+        { isActive: !campaign.isActive },
+        BASE_LANG
       );
       setCampaigns((prev) =>
         prev.map((item) => (item.id === updated.id ? updated : item))
@@ -176,7 +245,9 @@ export default function AdminCampaigns() {
     });
     if (!ok) return;
     try {
-      await campaignApi.remove(campaign.id);
+      const identifier = resolveCampaignIdentifier(campaign);
+      if (!identifier) throw new Error("Kampanya kimliği okunamadı. Lütfen yenileyin.");
+      await campaignApi.remove(identifier);
       setCampaigns((prev) => prev.filter((item) => item.id !== campaign.id));
       if (editingCampaign?.id === campaign.id) {
         openCreateForm();
@@ -212,13 +283,13 @@ export default function AdminCampaigns() {
     try {
       await campaignApi.reorder(
         nextWithOrder.map((item) => ({
-          id: item.id,
+          id: resolveCampaignIdentifier(item) || item.id,
           sortOrder: item.sortOrder,
         }))
       );
     } catch (error) {
       setBanner({ variant: "danger", message: extractMessage(error) });
-      loadCampaigns(adminLang);
+      loadCampaigns();
     }
   }
 
@@ -226,7 +297,7 @@ export default function AdminCampaigns() {
     setFormSubmitting(true);
     try {
       if (formMode === "create") {
-        const created = await campaignApi.create(payload, adminLang);
+        const created = await campaignApi.create(payload, BASE_LANG);
         setCampaigns((prev) => [...prev, created]);
         setBanner({
           variant: "success",
@@ -234,11 +305,11 @@ export default function AdminCampaigns() {
         });
         openCreateForm();
       } else if (editingCampaign?.id) {
-        const updated = await campaignApi.update(
-          editingCampaign.id,
-          payload,
-          adminLang
-        );
+        const identifier = resolveCampaignIdentifier(editingCampaign);
+        if (!identifier) {
+          throw new Error("Kampanya kimliği okunamadı. Lütfen yenileyin.");
+        }
+        const updated = await campaignApi.update(identifier, payload, BASE_LANG);
         setCampaigns((prev) =>
           prev.map((item) => (item.id === updated.id ? updated : item))
         );
@@ -256,6 +327,58 @@ export default function AdminCampaigns() {
       setFormSubmitting(false);
     }
   }
+
+  const openTranslationModal = async (campaign) => {
+    const identifier = resolveCampaignIdentifier(campaign);
+    if (!identifier) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        campaign: null,
+        error: "Kampanya kimliği okunamadı. Lütfen yenileyin.",
+      });
+      return;
+    }
+    setTranslationState({
+      open: true,
+      loading: true,
+      campaign: null,
+      error: null,
+    });
+    try {
+      const detail = await campaignApi.get(identifier, BASE_LANG);
+      setTranslationState({
+        open: true,
+        loading: false,
+        campaign: detail,
+        error: null,
+      });
+    } catch (error) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        campaign: null,
+        error: extractMessage(error),
+      });
+    }
+  };
+
+  const closeTranslationModal = () => {
+    setTranslationState({
+      open: false,
+      loading: false,
+      campaign: null,
+      error: null,
+    });
+  };
+
+  const handleTranslationsUpdated = async () => {
+    await loadCampaigns();
+    setBanner({
+      variant: "success",
+      message: "Kampanya çevirisi kaydedildi.",
+    });
+  };
 
   return (
     <section className="space-y-6">
@@ -311,7 +434,7 @@ export default function AdminCampaigns() {
               </div>
               <button
                 type="button"
-                onClick={() => loadCampaigns(adminLang)}
+                onClick={() => loadCampaigns()}
                 className="text-xs text-[var(--color-text-admin-muted)] underline-offset-2 hover:underline"
               >
                 Yenile
@@ -340,6 +463,7 @@ export default function AdminCampaigns() {
                     onToggleActive={() => handleToggleActive(campaign)}
                     onMoveUp={() => handleMove(campaign, -1)}
                     onMoveDown={() => handleMove(campaign, +1)}
+                    onTranslate={() => openTranslationModal(campaign)}
                     disableMoveUp={index === 0}
                     disableMoveDown={index === sortedCampaigns.length - 1}
                   />
@@ -366,7 +490,7 @@ export default function AdminCampaigns() {
             setOptions={setOptions}
             categoryOptions={categoryOptions}
             discountOptions={discountOptions}
-            contentLang={adminLang}
+            contentLang={BASE_LANG}
           />
 
           {loadingOptions && (
@@ -376,6 +500,17 @@ export default function AdminCampaigns() {
           )}
         </div>
       </div>
+
+      <CampaignTranslationModal
+        open={translationState.open}
+        loading={translationState.loading}
+        error={translationState.error}
+        campaign={translationState.campaign}
+        baseLang={BASE_LANG}
+        langs={TRANSLATION_LANGS}
+        onClose={closeTranslationModal}
+        onUpdated={handleTranslationsUpdated}
+      />
     </section>
   );
 }

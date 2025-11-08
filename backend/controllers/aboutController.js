@@ -1,3 +1,4 @@
+// controllers/aboutController.js
 import About from "../models/About.js";
 import {
   uploadBufferToCloudinary,
@@ -8,8 +9,6 @@ import {
   DEFAULT_LANG,
   normalizeLang,
   resolveTranslation,
-  pickLocalizedPayload,
-  syncDocTranslations,
   composeResponseTranslations,
 } from "../utils/i18n.js";
 
@@ -24,6 +23,7 @@ function buildAboutTrTranslation(doc) {
   const dotBlocks = Array.isArray(plain.dotBlocks) ? plain.dotBlocks : [];
   const stats = Array.isArray(plain.stats) ? plain.stats : [];
   const ctas = Array.isArray(plain.ctas) ? plain.ctas : [];
+
   return {
     heroTitle: plain.heroTitle ?? "",
     heroSubtitle: plain.heroSubtitle ?? "",
@@ -32,6 +32,7 @@ function buildAboutTrTranslation(doc) {
       text: block?.text ?? "",
     })),
     stats: stats.map((stat) => ({
+      value: stat?.value ?? "",
       label: stat?.label ?? "",
     })),
     materialsTitle: plain.materialsTitle ?? "",
@@ -90,6 +91,10 @@ function applyAboutTrTranslationToDoc(doc, translation = {}) {
     doc.stats = current.map((stat, index) => {
       const base = toPlain(stat);
       const localized = translation.stats[index] || {};
+
+      if (localized.value !== undefined) {
+        base.value = localized.value;
+      }
       if (localized.label !== undefined) {
         base.label = localized.label;
       }
@@ -108,6 +113,77 @@ function applyAboutTrTranslationToDoc(doc, translation = {}) {
       return base;
     });
   }
+}
+
+function applyAboutLocalizedArrays(resolved, translation = {}) {
+  if (!translation || typeof translation !== "object") return resolved;
+  const next = { ...resolved };
+
+  const assignIfDefined = (field) => {
+    const value = translation[field];
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      next[field] = value;
+    }
+  };
+
+  [
+    "heroTitle",
+    "heroSubtitle",
+    "materialsTitle",
+    "materialsText",
+    "ctaTitle",
+    "ctaSubtitle",
+  ].forEach(assignIfDefined);
+
+  if (Array.isArray(translation.materialsBullets)) {
+    const filtered = translation.materialsBullets.filter((item) =>
+      String(item || "").trim()
+    );
+    if (filtered.length) {
+      next.materialsBullets = filtered;
+    }
+  }
+
+  const mergeList = (base = [], overrides = [], keys = []) => {
+    if (!Array.isArray(base) || !base.length) return base;
+    return base.map((item, index) => {
+      const override = overrides[index] || {};
+      const merged = { ...item };
+      keys.forEach((key) => {
+        const val = override[key];
+        if (val !== undefined && val !== null && String(val).trim() !== "") {
+          merged[key] = val;
+        }
+      });
+      return merged;
+    });
+  };
+
+  if (Array.isArray(next.dotBlocks)) {
+    next.dotBlocks = mergeList(
+      next.dotBlocks,
+      Array.isArray(translation.dotBlocks) ? translation.dotBlocks : [],
+      ["title", "text"]
+    );
+  }
+
+  if (Array.isArray(next.stats)) {
+    next.stats = mergeList(
+      next.stats,
+      Array.isArray(translation.stats) ? translation.stats : [],
+      ["label", "value"]
+    );
+  }
+
+  if (Array.isArray(next.ctas)) {
+    next.ctas = mergeList(
+      next.ctas,
+      Array.isArray(translation.ctas) ? translation.ctas : [],
+      ["text"]
+    );
+  }
+
+  return next;
 }
 
 async function getOrCreateAbout() {
@@ -133,11 +209,20 @@ export async function getAbout(req, res) {
   try {
     const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const doc = await getOrCreateAbout();
-    const resolved = resolveTranslation(doc, lang);
-    resolved.translations = composeResponseTranslations(
+
+    const translations = composeResponseTranslations(
       doc,
       buildAboutTrTranslation
     );
+
+    const rawLangTranslation = doc?.translations?.[lang];
+    const langTranslation =
+      rawLangTranslation?.toObject?.() ?? rawLangTranslation ?? {};
+
+    let resolved = resolveTranslation(doc, lang);
+    resolved = applyAboutLocalizedArrays(resolved, langTranslation);
+    resolved.translations = translations;
+
     res.json({ about: resolved });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -147,147 +232,239 @@ export async function getAbout(req, res) {
 export async function updateAbout(req, res) {
   try {
     const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
+    const isDefaultLang = lang === DEFAULT_LANG;
+
     let doc = await About.findOne({ key: "about" });
     if (!doc) {
       doc = await About.create({ key: "about" });
     }
 
-    const incomingTranslations = pickLocalizedPayload(req.body);
+    // translations string -> object
+    let translationsPayload = {};
+    if (typeof req.body.translations === "string") {
+      try {
+        translationsPayload = JSON.parse(req.body.translations);
+      } catch {
+        translationsPayload = {};
+      }
+    } else if (
+      req.body.translations &&
+      typeof req.body.translations === "object"
+    ) {
+      translationsPayload = req.body.translations;
+    }
+
+    const incomingTranslations = translationsPayload || {};
+
+    // Eğer TR çevirisi translations içinde geldiyse, ana dokümana uygula
     const trIncoming = incomingTranslations[DEFAULT_LANG];
     if (trIncoming) {
       applyAboutTrTranslationToDoc(doc, trIncoming);
     }
 
-    const fields = [
-      "heroTitle",
-      "heroSubtitle",
-      "materialsTitle",
-      "materialsText",
-      "ctaTitle",
-      "ctaSubtitle",
-    ];
+    // Varsayılan dil alanları (TR) – klasik form submit
+    if (isDefaultLang) {
+      const fields = [
+        "heroTitle",
+        "heroSubtitle",
+        "materialsTitle",
+        "materialsText",
+        "ctaTitle",
+        "ctaSubtitle",
+      ];
 
-    fields.forEach((f) => {
-      if (req.body[f] !== undefined) {
-        doc[f] = String(req.body[f]);
-      }
-    });
+      fields.forEach((f) => {
+        if (req.body[f] !== undefined) {
+          doc[f] = String(req.body[f]);
+        }
+      });
 
-    if (req.body.dotBlocks !== undefined) {
-      let payload = req.body.dotBlocks;
-      if (typeof payload === "string") {
-        try {
-          payload = JSON.parse(payload);
-        } catch {
-          payload = [];
+      if (req.body.dotBlocks !== undefined) {
+        let payload = req.body.dotBlocks;
+        if (typeof payload === "string") {
+          try {
+            payload = JSON.parse(payload);
+          } catch {
+            payload = [];
+          }
+        }
+        if (Array.isArray(payload)) {
+          doc.dotBlocks = payload
+            .map((b) => ({
+              title: String(b?.title || "").trim(),
+              text: String(b?.text || "").trim(),
+            }))
+            .filter((b) => b.title && b.text);
         }
       }
-      if (Array.isArray(payload)) {
-        doc.dotBlocks = payload
-          .map((b) => ({
-            title: String(b?.title || "").trim(),
-            text: String(b?.text || "").trim(),
-          }))
-          .filter((b) => b.title && b.text);
-      }
-    }
 
-    if (req.body.stats !== undefined) {
-      let payload = req.body.stats;
-      if (typeof payload === "string") {
-        try {
-          payload = JSON.parse(payload);
-        } catch {
-          payload = [];
+      if (req.body.stats !== undefined) {
+        let payload = req.body.stats;
+        if (typeof payload === "string") {
+          try {
+            payload = JSON.parse(payload);
+          } catch {
+            payload = [];
+          }
+        }
+        if (Array.isArray(payload)) {
+          doc.stats = payload
+            .map((s) => ({
+              value: String(s?.value || "").trim(),
+              label: String(s?.label || "").trim(),
+            }))
+            .filter((s) => s.value && s.label);
         }
       }
-      if (Array.isArray(payload)) {
-        doc.stats = payload
-          .map((s) => ({
-            value: String(s?.value || "").trim(),
-            label: String(s?.label || "").trim(),
-          }))
-          .filter((s) => s.value && s.label);
+
+      if (req.body.materialsBullets !== undefined) {
+        const arr = normalizeArray(req.body.materialsBullets);
+        doc.materialsBullets = arr;
       }
-    }
 
-    if (req.body.materialsBullets !== undefined) {
-      const arr = normalizeArray(req.body.materialsBullets);
-      doc.materialsBullets = arr;
-    }
-
-    if (req.body.ctas !== undefined) {
-      let payload = req.body.ctas;
-      if (typeof payload === "string") {
-        try {
-          payload = JSON.parse(payload);
-        } catch {
-          payload = [];
+      if (req.body.ctas !== undefined) {
+        let payload = req.body.ctas;
+        if (typeof payload === "string") {
+          try {
+            payload = JSON.parse(payload);
+          } catch {
+            payload = [];
+          }
+        }
+        if (Array.isArray(payload)) {
+          doc.ctas = payload
+            .map((c) => ({
+              text: String(c?.text || "").trim(),
+              to: String(c?.to || "").trim(),
+              variant:
+                String(c?.variant || "primary").toLowerCase() === "secondary"
+                  ? "secondary"
+                  : "primary",
+            }))
+            .filter((c) => c.text && c.to);
         }
       }
-      if (Array.isArray(payload)) {
-        doc.ctas = payload
-          .map((c) => ({
-            text: String(c?.text || "").trim(),
-            to: String(c?.to || "").trim(),
-            variant:
-              String(c?.variant || "primary").toLowerCase() === "secondary"
-                ? "secondary"
-                : "primary",
-          }))
-          .filter((c) => c.text && c.to);
+
+      const removeHeroImage = parseBoolean(req.body.removeHeroImage, false);
+      const removeLeftImage = parseBoolean(req.body.removeLeftImage, false);
+      const removeMaterialsImage = parseBoolean(
+        req.body.removeMaterialsImage,
+        false
+      );
+
+      const deletions = [];
+      if (removeHeroImage && doc.heroImage?.publicId) {
+        deletions.push(deleteFromCloudinary(doc.heroImage.publicId));
+        doc.heroImage = null;
+      }
+      if (removeLeftImage && doc.leftImage?.publicId) {
+        deletions.push(deleteFromCloudinary(doc.leftImage.publicId));
+        doc.leftImage = null;
+      }
+      if (removeMaterialsImage && doc.materialsImage?.publicId) {
+        deletions.push(deleteFromCloudinary(doc.materialsImage.publicId));
+        doc.materialsImage = null;
+      }
+      if (deletions.length) await Promise.allSettled(deletions);
+
+      const files = req.files || {};
+      if (files.heroImage?.[0]?.buffer) {
+        const up = await uploadBufferToCloudinary(files.heroImage[0].buffer);
+        doc.heroImage = shapeImageResult(up);
+      }
+      if (files.leftImage?.[0]?.buffer) {
+        const up = await uploadBufferToCloudinary(files.leftImage[0].buffer);
+        doc.leftImage = shapeImageResult(up);
+      }
+      if (files.materialsImage?.[0]?.buffer) {
+        const up = await uploadBufferToCloudinary(
+          files.materialsImage[0].buffer
+        );
+        doc.materialsImage = shapeImageResult(up);
       }
     }
 
-    const removeHeroImage = parseBoolean(req.body.removeHeroImage, false);
-    const removeLeftImage = parseBoolean(req.body.removeLeftImage, false);
-    const removeMaterialsImage = parseBoolean(
-      req.body.removeMaterialsImage,
-      false
-    );
+    // Çevirileri doc.translations içine manuel merge et
+    doc.translations = doc.translations || {};
 
-    const deletions = [];
-    if (removeHeroImage && doc.heroImage?.publicId) {
-      deletions.push(deleteFromCloudinary(doc.heroImage.publicId));
-      doc.heroImage = null;
-    }
-    if (removeLeftImage && doc.leftImage?.publicId) {
-      deletions.push(deleteFromCloudinary(doc.leftImage.publicId));
-      doc.leftImage = null;
-    }
-    if (removeMaterialsImage && doc.materialsImage?.publicId) {
-      deletions.push(deleteFromCloudinary(doc.materialsImage.publicId));
-      doc.materialsImage = null;
-    }
-    if (deletions.length) await Promise.allSettled(deletions);
+    // TR snapshotını her kayıtta güncelle
+    doc.translations[DEFAULT_LANG] = buildAboutTrTranslation(doc);
 
-    const files = req.files || {};
-    if (files.heroImage?.[0]?.buffer) {
-      const up = await uploadBufferToCloudinary(files.heroImage[0].buffer);
-      doc.heroImage = shapeImageResult(up);
-    }
-    if (files.leftImage?.[0]?.buffer) {
-      const up = await uploadBufferToCloudinary(files.leftImage[0].buffer);
-      doc.leftImage = shapeImageResult(up);
-    }
-    if (files.materialsImage?.[0]?.buffer) {
-      const up = await uploadBufferToCloudinary(files.materialsImage[0].buffer);
-      doc.materialsImage = shapeImageResult(up);
-    }
+    if (incomingTranslations && Object.keys(incomingTranslations).length) {
+      Object.entries(incomingTranslations).forEach(([lng, patch]) => {
+        if (!patch || typeof patch !== "object") return;
+        if (lng === DEFAULT_LANG) return; // TR zaten doc'tan rebuild edildi
 
-    const finalTranslations = syncDocTranslations(
-      doc,
-      incomingTranslations,
-      buildAboutTrTranslation
-    );
+        const currentRaw = doc.translations[lng];
+        const current =
+          currentRaw && typeof currentRaw.toObject === "function"
+            ? currentRaw.toObject()
+            : currentRaw || {};
+
+        const next = { ...current };
+
+        // basit alanlar
+        const scalarFields = [
+          "heroTitle",
+          "heroSubtitle",
+          "materialsTitle",
+          "materialsText",
+          "ctaTitle",
+          "ctaSubtitle",
+        ];
+        scalarFields.forEach((f) => {
+          if (patch[f] !== undefined) {
+            next[f] = patch[f];
+          }
+        });
+
+        // bullets
+        if (Array.isArray(patch.materialsBullets)) {
+          next.materialsBullets = patch.materialsBullets
+            .map((x) => String(x || "").trim())
+            .filter(Boolean);
+        }
+
+        // dotBlocks
+        if (Array.isArray(patch.dotBlocks)) {
+          next.dotBlocks = patch.dotBlocks.map((b) => ({
+            title: (b?.title ?? "").trim(),
+            text: (b?.text ?? "").trim(),
+          }));
+        }
+
+        // stats
+        if (Array.isArray(patch.stats)) {
+          next.stats = patch.stats.map((s) => ({
+            value: (s?.value ?? "").trim(),
+            label: (s?.label ?? "").trim(),
+          }));
+        }
+
+        // ctas
+        if (Array.isArray(patch.ctas)) {
+          next.ctas = patch.ctas.map((c) => ({
+            text: (c?.text ?? "").trim(),
+          }));
+        }
+
+        doc.translations[lng] = next;
+      });
+    }
 
     await doc.save();
 
-    const resolved = resolveTranslation(doc, lang);
-    resolved.translations = composeResponseTranslations(
+    const translations = composeResponseTranslations(
       doc,
       buildAboutTrTranslation
     );
+    const rawLangTranslation = doc?.translations?.[lang];
+    const langTranslation =
+      rawLangTranslation?.toObject?.() ?? rawLangTranslation ?? {};
+    let resolved = resolveTranslation(doc, lang);
+    resolved = applyAboutLocalizedArrays(resolved, langTranslation);
+    resolved.translations = translations;
+
     res.json({ about: resolved });
   } catch (err) {
     res.status(400).json({ message: err.message });

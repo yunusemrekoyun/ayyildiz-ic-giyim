@@ -15,4 +15,19 @@ export const aboutApi = {
       auth: true,
     });
   },
+  async updateTranslations(payload, lang) {
+    const form = new FormData();
+    form.append(
+      "translations",
+      JSON.stringify({
+        [lang]: payload,
+      })
+    );
+    const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
+    return await http(`/about${qs}`, {
+      method: "PUT",
+      body: form,
+      auth: true,
+    });
+  },
 };

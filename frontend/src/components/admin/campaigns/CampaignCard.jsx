@@ -7,12 +7,14 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  Languages,
 } from "lucide-react";
 
 export default function CampaignCard({
   campaign,
   onEdit,
   onDelete,
+  onTranslate,
   onToggleActive,
   onMoveUp,
   onMoveDown,
@@ -161,6 +163,14 @@ export default function CampaignCard({
             title="Kampanyayı düzenle"
           >
             <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onTranslate}
+            className="rounded-lg p-2 text-[var(--color-text-admin-muted)] transition hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-admin)]"
+            title="Dil varyantlarını düzenle"
+          >
+            <Languages className="h-4 w-4" />
           </button>
           <button
             type="button"

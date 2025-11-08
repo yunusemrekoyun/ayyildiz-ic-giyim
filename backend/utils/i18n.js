@@ -5,6 +5,11 @@ const ID_KEYS = ["_id", "id"];
 
 function isPlainObject(value) {
   if (value === null || typeof value !== "object") return false;
+
+  // 🔴 ÖNEMLİ: Mongo ObjectId / BSON objelerini "plain object" gibi ele alma
+  if (typeof value.toHexString === "function") return false;
+  if (value._bsontype === "ObjectID") return false;
+
   return Object.prototype.toString.call(value) === "[object Object]";
 }
 
@@ -15,6 +20,15 @@ function cloneValue(value) {
   if (value instanceof Date) {
     return new Date(value);
   }
+
+  // 🔴 ObjectId ve benzeri BSON objeleri hiç dokunma, referans olarak bırak
+  if (
+    typeof value?.toHexString === "function" ||
+    value?._bsontype === "ObjectID"
+  ) {
+    return value;
+  }
+
   if (isPlainObject(value)) {
     const out = {};
     Object.keys(value).forEach((key) => {
@@ -148,7 +162,14 @@ export function mergeIncomingTranslations(existing = {}, incoming = {}) {
 
 export function pickLocalizedPayload(body = {}) {
   if (!isPlainObject(body)) return {};
-  const incoming = body.translations;
+  let incoming = body.translations;
+  if (typeof incoming === "string") {
+    try {
+      incoming = JSON.parse(incoming);
+    } catch {
+      incoming = null;
+    }
+  }
   if (!isPlainObject(incoming)) return {};
   return incoming;
 }

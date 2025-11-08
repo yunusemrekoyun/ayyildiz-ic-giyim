@@ -50,6 +50,7 @@ const DotBlockTranslationSchema = new mongoose.Schema(
 
 const StatTranslationSchema = new mongoose.Schema(
   {
+    value: { type: String, trim: true },
     label: { type: String, trim: true },
   },
   { _id: false }

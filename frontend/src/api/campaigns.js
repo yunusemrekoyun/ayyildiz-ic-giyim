@@ -1,25 +1,111 @@
+// frontend/src/api/campaigns.js
 import { http, toQueryString } from "./client.js";
 import { DEFAULT_LANG } from "../constants/lang.js";
 
-function extractIds(values) {
-  if (!Array.isArray(values)) return [];
-  return values
-    .map((value) => {
-      if (!value) return null;
-      if (typeof value === "string") return value.trim();
-      if (typeof value === "object") {
-        return (
-          value.id ||
-          value._id ||
-          value.value ||
-          (typeof value.toString === "function" ? value.toString() : null)
-        );
+// Sadece ID normalizasyonu için basit helper
+const normalizeCampaignId = (value) => {
+  if (!value) return "";
+
+  if (typeof value === "object" && !Array.isArray(value)) {
+    if (typeof value.slug === "string" && value.slug.trim()) {
+      return value.slug.trim();
+    }
+
+    let raw =
+      value.id ??
+      value._id ??
+      value.campaignId ??
+      (value.campaign &&
+        (value.campaign.id ||
+          value.campaign._id ||
+          (typeof value.campaign.toHexString === "function"
+            ? value.campaign.toHexString()
+            : null)));
+
+    if (!raw) {
+      if (typeof value.toHexString === "function") {
+        raw = value.toHexString();
+      } else if (
+        typeof value.toString === "function" &&
+        value.toString !== Object.prototype.toString
+      ) {
+        const str = value.toString();
+        if (str && str !== "[object Object]") raw = str;
       }
-      return null;
-    })
-    .filter(Boolean);
+    }
+
+    if (!raw) return "";
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      return trimmed && trimmed !== "[object Object]" ? trimmed : "";
+    }
+    if (typeof raw === "number") return String(raw);
+    if (typeof raw === "object") {
+      if (typeof raw._id === "string" && raw._id.trim()) return raw._id.trim();
+      if (typeof raw.id === "string" && raw.id.trim()) return raw.id.trim();
+      if (typeof raw.toHexString === "function") return raw.toHexString();
+      if (
+        typeof raw.toString === "function" &&
+        raw.toString !== Object.prototype.toString
+      ) {
+        const str = raw.toString();
+        if (str && str !== "[object Object]") return str;
+      }
+    }
+
+    const fallback = String(raw).trim();
+    return fallback && fallback !== "[object Object]" ? fallback : "";
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed && trimmed !== "[object Object]" ? trimmed : "";
+  }
+  if (typeof value === "number") return String(value);
+  const fallback = String(value).trim();
+  return fallback && fallback !== "[object Object]" ? fallback : "";
+};
+
+// Geçerli bir Mongo ObjectId string’i mi?
+function isValidObjectId(str) {
+  return typeof str === "string" && /^[0-9a-fA-F]{24}$/.test(str.trim());
 }
 
+// products / sets / categories / discounts için ID çıkarma
+function extractIds(values) {
+  if (!Array.isArray(values)) return [];
+  const result = [];
+  const seen = new Set();
+
+  for (const value of values) {
+    if (!value) continue;
+    let id = null;
+
+    if (typeof value === "string") {
+      id = value.trim();
+    } else if (typeof value === "object") {
+      // Seçim komponentleri genelde { id, label, ... } veya { value, label } gönderir
+      id =
+        value.id ||
+        value._id ||
+        value.value ||
+        (typeof value.toString === "function" ? value.toString() : null);
+      if (typeof id === "string") id = id.trim();
+    }
+
+    if (!id) continue;
+
+    // Sadece geçerli ObjectId string’lerini al
+    if (isValidObjectId(id) && !seen.has(id)) {
+      seen.add(id);
+      result.push(id);
+    }
+  }
+
+  return result;
+}
+
+// multipart/form-data payload üretici
 function buildFormData(
   {
     name,
@@ -47,19 +133,30 @@ function buildFormData(
   if (ctaText !== undefined)
     form.append("ctaText", ctaText == null ? "" : String(ctaText));
   if (layout !== undefined) form.append("layout", String(layout).toUpperCase());
-  if (isActive !== undefined)
+  if (isActive !== undefined) {
     form.append(
       "isActive",
-      typeof isActive === "boolean" ? (isActive ? "true" : "false") : String(isActive)
+      typeof isActive === "boolean"
+        ? isActive
+          ? "true"
+          : "false"
+        : String(isActive)
     );
-  if (sortOrder !== undefined) form.append("sortOrder", String(sortOrder));
+  }
+  if (sortOrder !== undefined) {
+    form.append("sortOrder", String(sortOrder));
+  }
 
+  // 🔴 ÖNEMLİ DEĞİŞİKLİK:
+  // Artık JSON.stringify ile tek field’a gömmüyoruz.
+  // Her id’yi ayrı separate field olarak gönderiyoruz: products: id1, products: id2 ...
   const appendIds = (field, values) => {
     if (values === undefined) return;
-    const ids = extractIds(
-      Array.isArray(values) ? values : values ? [values] : []
-    );
-    form.append(field, JSON.stringify(ids));
+    const arr = Array.isArray(values) ? values : values ? [values] : [];
+    const ids = extractIds(arr);
+    ids.forEach((id) => {
+      form.append(field, id);
+    });
   };
 
   appendIds("products", products);
@@ -93,8 +190,14 @@ export const campaignApi = {
   },
 
   async get(id, lang = DEFAULT_LANG) {
+    const identifier = normalizeCampaignId(id);
+    if (!identifier) {
+      throw new Error(
+        JSON.stringify({ message: "Kampanya kimliği bulunamadı" })
+      );
+    }
     const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
-    const data = await http(`/campaigns/${id}${qs}`, { auth: true });
+    const data = await http(`/campaigns/${identifier}${qs}`, { auth: true });
     return data.campaign;
   },
 
@@ -110,9 +213,17 @@ export const campaignApi = {
   },
 
   async update(id, payload, lang = DEFAULT_LANG) {
-    const form = buildFormData(payload, { includeImage: payload.image !== undefined });
+    const identifier = normalizeCampaignId(id);
+    if (!identifier) {
+      throw new Error(
+        JSON.stringify({ message: "Kampanya kimliği bulunamadı" })
+      );
+    }
+    const form = buildFormData(payload, {
+      includeImage: payload.image !== undefined,
+    });
     const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
-    const data = await http(`/campaigns/${id}${qs}`, {
+    const data = await http(`/campaigns/${identifier}${qs}`, {
       method: "PUT",
       body: form,
       auth: true,
@@ -121,22 +232,40 @@ export const campaignApi = {
   },
 
   async remove(id) {
-    await http(`/campaigns/${id}`, { method: "DELETE", auth: true });
+    const identifier = normalizeCampaignId(id);
+    if (!identifier) {
+      throw new Error(
+        JSON.stringify({ message: "Kampanya kimliği bulunamadı" })
+      );
+    }
+    await http(`/campaigns/${identifier}`, { method: "DELETE", auth: true });
     return true;
   },
 
   async reorder(orders) {
+    const normalized = (orders || [])
+      .map((order) => ({
+        id: normalizeCampaignId(order.id),
+        sortOrder: order.sortOrder,
+      }))
+      .filter((order) => order.id);
     await http("/campaigns/reorder", {
       method: "POST",
       auth: true,
-      body: { orders },
+      body: { orders: normalized },
     });
     return true;
   },
 
   async resolve(id, lang = DEFAULT_LANG) {
+    const identifier = normalizeCampaignId(id);
+    if (!identifier) {
+      throw new Error(
+        JSON.stringify({ message: "Kampanya kimliği bulunamadı" })
+      );
+    }
     const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
-    const data = await http(`/campaigns/${id}/resolve${qs}`);
+    const data = await http(`/campaigns/${identifier}/resolve${qs}`);
     return data;
   },
 };
