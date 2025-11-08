@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { shippingReturnsApi } from "../../api/shippingReturns";
-import { useAdminLang } from "../../context/LangContext.jsx";
 import { Link } from "react-router-dom";
+import ShippingReturnsTranslationModal from "../../components/admin/shippingReturns/ShippingReturnsTranslationModal.jsx";
 import {
   Loader2,
   Save,
@@ -20,9 +20,17 @@ import {
   Globe,
   ToggleLeft,
   ToggleRight,
+  Languages,
 } from "lucide-react";
 
 // Varsayılan boş model
+const BASE_LANG = "tr";
+const BASE_LANGUAGE_LABEL = "Türkçe (TR)";
+const TRANSLATION_LANGS = [
+  { value: "en", label: "English (EN)" },
+  { value: "de", label: "Deutsch (DE)" },
+];
+
 const EMPTY_MODEL = {
   heroTitle: "",
   heroSubtitle: "",
@@ -38,7 +46,12 @@ export default function ShippingReturnsSettings() {
   const [banner, setBanner] = useState(null);
 
   const [form, setForm] = useState(EMPTY_MODEL);
-  const { adminLang } = useAdminLang();
+  const [translationState, setTranslationState] = useState({
+    open: false,
+    loading: false,
+    page: null,
+    error: null,
+  });
 
   function deepMergeKeepDraft(prev, srv) {
     // Basit alanlar
@@ -107,6 +120,32 @@ export default function ShippingReturnsSettings() {
     return out;
   }
 
+  const loadPage = async () => {
+    setLoading(true);
+    try {
+      const data = await shippingReturnsApi.manage(BASE_LANG);
+      setForm(normalizeIncoming(data));
+      setBanner(null);
+      setTranslationState((prev) =>
+        prev.open
+          ? {
+              ...prev,
+              page: data,
+              error: null,
+            }
+          : prev
+      );
+    } catch (e) {
+      setBanner({
+        variant: "danger",
+        message: extractMessage(e) || "Kargo ve iade içeriği yüklenemedi.",
+      });
+      setForm(EMPTY_MODEL);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Dizilerde taslağı (draft) koruyarak birleştir.
   // Sunucu dizisi boş/undefined ise prev'i tutar; aksi halde
   // index bazlı birleştirme yapar. srv’deki elemanlar "" ise prev’deki değer korunur.
@@ -124,27 +163,8 @@ export default function ShippingReturnsSettings() {
   }
   // Yükleme
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    (async () => {
-      try {
-        const data = await shippingReturnsApi.manage(adminLang);
-        if (!mounted) return;
-        setForm(normalizeIncoming(data));
-      } catch (e) {
-        setBanner({
-          variant: "danger",
-          message:
-            extractMessage(e) || "Kargo ve iade içeriği yüklenemedi.",
-        });
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [adminLang]);
+    loadPage();
+  }, []);
 
   const canSave = useMemo(() => {
     if (!form.heroTitle?.trim()) return false;
@@ -155,10 +175,19 @@ export default function ShippingReturnsSettings() {
     setSaving(true);
     try {
       const payload = normalizeOutgoing(form);
-      const updated = await shippingReturnsApi.upsert(payload, adminLang);
+      const updated = await shippingReturnsApi.upsert(payload, BASE_LANG);
       if (updated) {
         const srv = normalizeIncoming(updated);
         setForm((prev) => deepMergeKeepDraft(prev, srv));
+        setTranslationState((prev) =>
+          prev.open
+            ? {
+                ...prev,
+                page: updated,
+                error: null,
+              }
+            : prev
+        );
       } // else: mevcut formu koru
 
       setBanner({
@@ -175,13 +204,52 @@ export default function ShippingReturnsSettings() {
     }
   }
 
+  const openTranslationModal = async () => {
+    setTranslationState({
+      open: true,
+      loading: true,
+      page: null,
+      error: null,
+    });
+    try {
+      const data = await shippingReturnsApi.manage(BASE_LANG);
+      setTranslationState({
+        open: true,
+        loading: false,
+        page: data,
+        error: null,
+      });
+    } catch (error) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        page: null,
+        error: extractMessage(error) || "Çeviri içeriği yüklenemedi.",
+      });
+    }
+  };
+
+  const closeTranslationModal = () => {
+    setTranslationState({
+      open: false,
+      loading: false,
+      page: null,
+      error: null,
+    });
+  };
+
+  const handleTranslationsUpdated = async () => {
+    await loadPage();
+  };
+
   function toggleActive() {
     setForm((prev) => ({ ...prev, isActive: !prev.isActive }));
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-      <div className="xl:col-span-8">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="xl:col-span-8">
         {/* Header */}
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
           <div className="flex flex-col gap-2">
@@ -197,6 +265,23 @@ export default function ShippingReturnsSettings() {
               </code>{" "}
               sayfasını kontrol eder.
             </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <p className="flex-1 rounded-xl border border-[var(--color-border-admin)]/60 bg-[var(--color-bg-admin)]/40 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+                Bu form{" "}
+                <span className="font-semibold text-[var(--color-text-admin)]">
+                  {BASE_LANGUAGE_LABEL}
+                </span>{" "}
+                içeriklerini günceller. İngilizce ve Almanca varyantları düzenlemek için aşağıdaki butonu kullanın.
+              </p>
+              <button
+                type="button"
+                onClick={openTranslationModal}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+              >
+                <Languages className="h-4 w-4" />
+                Dil varyantları
+              </button>
+            </div>
           </div>
 
           {/* Banner */}
@@ -307,18 +392,30 @@ export default function ShippingReturnsSettings() {
         />
       </div>
 
-      {/* Tips */}
-      <aside className="xl:col-span-4">
-        <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          <h3 className="text-lg font-semibold">İpuçları</h3>
-          <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-admin-muted)]">
-            <li>Hero alanını kısa ve anlaşılır tutun.</li>
-            <li>Kenar çubuğu için 4-6 "Hızlı bilgi" kullanın.</li>
-            <li>Bölümleri kargo, ücretler, iadeler ve geri ödemeler şeklinde yapılandırın.</li>
-            <li>SEO için benzersiz başlık ve açıklama ekleyin.</li>
-          </ul>
-        </div>
-      </aside>
+        {/* Tips */}
+        <aside className="xl:col-span-4">
+          <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
+            <h3 className="text-lg font-semibold">İpuçları</h3>
+            <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-admin-muted)]">
+              <li>Hero alanını kısa ve anlaşılır tutun.</li>
+              <li>Kenar çubuğu için 4-6 "Hızlı bilgi" kullanın.</li>
+              <li>Bölümleri kargo, ücretler, iadeler ve geri ödemeler şeklinde yapılandırın.</li>
+              <li>SEO için benzersiz başlık ve açıklama ekleyin.</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+
+      <ShippingReturnsTranslationModal
+        open={translationState.open}
+        loading={translationState.loading}
+        error={translationState.error}
+        page={translationState.page}
+        baseLang={BASE_LANG}
+        langs={TRANSLATION_LANGS}
+        onClose={closeTranslationModal}
+        onUpdated={handleTranslationsUpdated}
+      />
     </div>
   );
 }

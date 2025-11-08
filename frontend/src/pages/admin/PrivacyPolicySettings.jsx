@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import privacyApi from "../../api/privacy.js";
-import { useAdminLang } from "../../context/LangContext.jsx";
+import PrivacyTranslationModal from "../../components/admin/privacy/PrivacyTranslationModal.jsx";
 import {
   Loader2,
   Save,
@@ -8,7 +8,6 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
-  Globe,
   Sparkles,
   ShieldCheck,
   GripVertical,
@@ -17,37 +16,61 @@ import {
   ToggleLeft,
   ToggleRight,
   Eye,
+  Languages,
+  Globe,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 /* -------------------- PAGE -------------------- */
+
+const BASE_LANG = "tr";
+const BASE_LANGUAGE_LABEL = "Türkçe (TR)";
+const TRANSLATION_LANGS = [
+  { value: "en", label: "English (EN)" },
+  { value: "de", label: "Deutsch (DE)" },
+];
 
 export default function PrivacySettings() {
   const [form, setForm] = useState(EMPTY_MODEL);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
-  const { adminLang } = useAdminLang();
+  const [translationState, setTranslationState] = useState({
+    open: false,
+    loading: false,
+    privacy: null,
+    error: null,
+  });
+
+  const loadPrivacy = async () => {
+    setLoading(true);
+    try {
+      const data = await privacyApi.manage(BASE_LANG);
+      setForm(normalizeIncoming(data));
+      setBanner(null);
+      setTranslationState((prev) =>
+        prev.open
+          ? {
+              ...prev,
+              privacy: data,
+              error: null,
+            }
+          : prev
+      );
+    } catch (err) {
+      setBanner({
+        variant: "danger",
+        message: extractMessage(err) || "Gizlilik içeriği yüklenemedi.",
+      });
+      setForm(EMPTY_MODEL);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    (async () => {
-      try {
-        const data = await privacyApi.manage(adminLang);
-        if (!mounted) return;
-        setForm(normalizeIncoming(data));
-      } catch (err) {
-        setBanner({
-          variant: "danger",
-          message: extractMessage(err) || "Gizlilik içeriği yüklenemedi.",
-        });
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => (mounted = false);
-  }, [adminLang]);
+    loadPrivacy();
+  }, []);
 
   const canSave = useMemo(() => !!form.heroTitle.trim(), [form.heroTitle]);
 
@@ -55,8 +78,19 @@ export default function PrivacySettings() {
     setSaving(true);
     try {
       const payload = normalizeOutgoing(form);
-      const updated = await privacyApi.upsert(payload, adminLang);
-      setForm(normalizeIncoming(updated));
+      const updated = await privacyApi.upsert(payload, BASE_LANG);
+      if (updated) {
+        setForm(normalizeIncoming(updated));
+        setTranslationState((prev) =>
+          prev.open
+            ? {
+                ...prev,
+                privacy: updated,
+                error: null,
+              }
+            : prev
+        );
+      }
       setBanner({
         variant: "success",
         message: "Gizlilik Politikası başarıyla kaydedildi.",
@@ -71,149 +105,219 @@ export default function PrivacySettings() {
     }
   }
 
+  const openTranslationModal = async () => {
+    setTranslationState({
+      open: true,
+      loading: true,
+      privacy: null,
+      error: null,
+    });
+    try {
+      const data = await privacyApi.manage(BASE_LANG);
+      setTranslationState({
+        open: true,
+        loading: false,
+        privacy: data,
+        error: null,
+      });
+    } catch (err) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        privacy: null,
+        error: extractMessage(err) || "Çeviri içeriği yüklenemedi.",
+      });
+    }
+  };
+
+  const closeTranslationModal = () => {
+    setTranslationState({
+      open: false,
+      loading: false,
+      privacy: null,
+      error: null,
+    });
+  };
+
+  const handleTranslationsUpdated = async () => {
+    await loadPrivacy();
+  };
+
   function toggleActive() {
     setForm((p) => ({ ...p, isActive: !p.isActive }));
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-      {/* --- LEFT MAIN --- */}
-      <div className="xl:col-span-8">
-        {/* Header */}
-        <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          <div className="flex flex-col gap-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
-              <ShieldCheck className="h-4 w-4" />
-              İçerik • Gizlilik Politikası
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        {/* --- LEFT MAIN --- */}
+        <div className="xl:col-span-8">
+          {/* Header */}
+          <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
+            <div className="flex flex-col gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
+                <ShieldCheck className="h-4 w-4" />
+                İçerik • Gizlilik Politikası
+              </div>
+              <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
+                Gizlilik Politikası Sayfası
+              </h1>
+              <p className="text-sm text-[var(--color-text-admin-muted)]">
+                Gizlilik politikası başlığını, bölümleri, alt bilgi ve SEO
+                verilerini yönetin. Bu ayarlar{" "}
+                <code className="rounded bg-[var(--color-bg-hover)] px-1 py-0.5">
+                  /privacy
+                </code>{" "}
+                sayfasını kontrol eder.
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <p className="flex-1 rounded-xl border border-[var(--color-border-admin)]/60 bg-[var(--color-bg-admin)]/40 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+                  Bu form{" "}
+                  <span className="font-semibold text-[var(--color-text-admin)]">
+                    {BASE_LANGUAGE_LABEL}
+                  </span>{" "}
+                  içeriklerini düzenler. Diğer diller için “Dil varyantları”
+                  butonunu kullanın.
+                </p>
+                <button
+                  type="button"
+                  onClick={openTranslationModal}
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                >
+                  <Languages className="h-4 w-4" />
+                  Dil varyantları
+                </button>
+              </div>
             </div>
-            <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
-              Gizlilik Politikası Sayfası
-            </h1>
-            <p className="text-sm text-[var(--color-text-admin-muted)]">
-              Gizlilik politikası başlığını, bölümleri, alt bilgi ve SEO verilerini yönetin. Bu ayarlar{" "}
-              <code className="rounded bg-[var(--color-bg-hover)] px-1 py-0.5">
-                /privacy
-              </code>{" "}
-              sayfasını kontrol eder.
-            </p>
+
+            {banner && (
+              <div
+                className={`mt-4 rounded-xl border p-4 text-sm ${
+                  banner.variant === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-rose-200 bg-rose-50 text-rose-700"
+                }`}
+              >
+                {banner.message}
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleSave}
+                disabled={!canSave || saving || loading}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90 disabled:opacity-60"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Değişiklikleri Kaydet
+              </button>
+
+              <Link
+                to="/privacy"
+                target="_blank"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+              >
+                <Eye className="h-4 w-4" />
+                Önizleme
+              </Link>
+
+              <button
+                onClick={toggleActive}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+              >
+                {form.isActive ? (
+                  <>
+                    <ToggleRight className="h-4 w-4 text-emerald-600" />
+                    Aktif
+                  </>
+                ) : (
+                  <>
+                    <ToggleLeft className="h-4 w-4 text-rose-600" />
+                    Pasif
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
-          {banner && (
-            <div
-              className={`mt-4 rounded-xl border p-4 text-sm ${
-                banner.variant === "success"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-rose-200 bg-rose-50 text-rose-700"
-              }`}
-            >
-              {banner.message}
+          {/* Hero */}
+          <div className="mt-6 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Info className="h-5 w-5 text-[var(--color-text-admin-muted)]" />
+              <h2 className="text-lg font-semibold">Hero</h2>
             </div>
-          )}
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleSave}
-              disabled={!canSave || saving || loading}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90 disabled:opacity-60"
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Değişiklikleri Kaydet
-            </button>
-
-            <Link
-              to="/privacy"
-              target="_blank"
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-5 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-            >
-              <Eye className="h-4 w-4" />
-              Önizleme
-            </Link>
-
-            <button
-              onClick={toggleActive}
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
-            >
-              {form.isActive ? (
-                <>
-                  <ToggleRight className="h-4 w-4 text-emerald-600" />
-                  Aktif
-                </>
-              ) : (
-                <>
-                  <ToggleLeft className="h-4 w-4 text-rose-600" />
-                  Pasif
-                </>
-              )}
-            </button>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+              <div className="md:col-span-6">
+                <Label>Sayfa Başlığı</Label>
+                <Input
+                  value={form.heroTitle}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, heroTitle: e.target.value }))
+                  }
+                  placeholder="Gizlilik Politikası"
+                />
+              </div>
+              <div className="md:col-span-6">
+                <Label>Alt Başlık</Label>
+                <Input
+                  value={form.heroIntro}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, heroIntro: e.target.value }))
+                  }
+                  placeholder="Gizliliğiniz bizim için önemli..."
+                />
+              </div>
+            </div>
           </div>
+
+          {/* Sections */}
+          <SectionsEditor
+            sections={form.sections}
+            onChange={(next) => setForm((p) => ({ ...p, sections: next }))}
+          />
+
+          {/* Footer HTML */}
+          <FooterEditor
+            value={form.footerHtml}
+            onChange={(v) => setForm((p) => ({ ...p, footerHtml: v }))}
+          />
+
+          {/* SEO */}
+          <SEOEditor
+            seo={form.seo}
+            onChange={(next) => setForm((p) => ({ ...p, seo: next }))}
+          />
         </div>
 
-        {/* Hero */}
-        <div className="mt-6 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Info className="h-5 w-5 text-[var(--color-text-admin-muted)]" />
-            <h2 className="text-lg font-semibold">Hero</h2>
+        {/* --- RIGHT SIDEBAR --- */}
+        <aside className="xl:col-span-4">
+          <div className="sticky top-4 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
+            <h3 className="text-lg font-semibold">İpuçları</h3>
+            <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-admin-muted)]">
+              <li>Bölümleri kısa tutun ve net şekilde numaralandırın.</li>
+              <li>Hızlı gezinme için anchor bağlantıları kullanın.</li>
+              <li>Alt bilgiye iletişim veya uyumluluk metni ekleyin.</li>
+              <li>SEO verileri görünürlüğü artırır.</li>
+            </ul>
           </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
-            <div className="md:col-span-6">
-              <Label>Sayfa Başlığı</Label>
-              <Input
-                value={form.heroTitle}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, heroTitle: e.target.value }))
-                }
-                placeholder="Gizlilik Politikası"
-              />
-            </div>
-            <div className="md:col-span-6">
-              <Label>Alt Başlık</Label>
-              <Input
-                value={form.heroIntro}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, heroIntro: e.target.value }))
-                }
-                placeholder="Gizliliğiniz bizim için önemli..."
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Sections */}
-        <SectionsEditor
-          sections={form.sections}
-          onChange={(next) => setForm((p) => ({ ...p, sections: next }))}
-        />
-
-        {/* Footer HTML */}
-        <FooterEditor
-          value={form.footerHtml}
-          onChange={(v) => setForm((p) => ({ ...p, footerHtml: v }))}
-        />
-
-        {/* SEO */}
-        <SEOEditor
-          seo={form.seo}
-          onChange={(next) => setForm((p) => ({ ...p, seo: next }))}
-        />
+        </aside>
       </div>
 
-      {/* --- RIGHT SIDEBAR --- */}
-      <aside className="xl:col-span-4">
-        <div className="sticky top-4 rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-          <h3 className="text-lg font-semibold">İpuçları</h3>
-          <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-admin-muted)]">
-            <li>Bölümleri kısa tutun ve net şekilde numaralandırın.</li>
-            <li>Hızlı gezinme için anchor bağlantıları kullanın.</li>
-            <li>Alt bilgiye iletişim veya uyumluluk metni ekleyin.</li>
-            <li>SEO verileri görünürlüğü artırır.</li>
-          </ul>
-        </div>
-      </aside>
+      <PrivacyTranslationModal
+        open={translationState.open}
+        loading={translationState.loading}
+        error={translationState.error}
+        privacy={translationState.privacy}
+        baseLang={BASE_LANG}
+        langs={TRANSLATION_LANGS}
+        onClose={closeTranslationModal}
+        onUpdated={handleTranslationsUpdated}
+      />
     </div>
   );
 }

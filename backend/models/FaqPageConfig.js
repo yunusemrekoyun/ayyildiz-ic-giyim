@@ -14,7 +14,7 @@ const FaqItemSchema = new mongoose.Schema(
 const FaqSectionSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
-    subtitle: { type: String, default: "", trim: true }, // opsiyonel
+    subtitle: { type: String, default: "", trim: true },
     sortOrder: { type: Number, default: 0, index: true },
     isActive: { type: Boolean, default: true, index: true },
     items: { type: [FaqItemSchema], default: [] },
@@ -31,9 +31,16 @@ const SeoSchema = new mongoose.Schema(
   { _id: false }
 );
 
+/**
+ * 🔧 ÇEVİRİ ŞEMALARI
+ * Burada _id'leri ObjectId değil STRING tutuyoruz.
+ * Sebep: frontend, yeni eklenen section/item'lar için section_0, section_0_item_0 gibi
+ * pseudo id'ler gönderiyor. Bunlar ObjectId olmadığı için cast hatasına sebep oluyordu.
+ */
+
 const FaqItemTranslationSchema = new mongoose.Schema(
   {
-    _id: { type: mongoose.Schema.Types.ObjectId },
+    _id: { type: String }, // ✅ ObjectId yerine String
     question: { type: String, trim: true },
     answer: { type: String, trim: true },
   },
@@ -42,7 +49,7 @@ const FaqItemTranslationSchema = new mongoose.Schema(
 
 const FaqSectionTranslationSchema = new mongoose.Schema(
   {
-    _id: { type: mongoose.Schema.Types.ObjectId },
+    _id: { type: String }, // ✅ ObjectId yerine String
     title: { type: String, trim: true },
     subtitle: { type: String, trim: true },
     items: { type: [FaqItemTranslationSchema], default: undefined },
@@ -92,6 +99,8 @@ const FaqPageConfigSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+
+    // 🔤 Çeviriler
     translations: {
       type: new mongoose.Schema(
         {

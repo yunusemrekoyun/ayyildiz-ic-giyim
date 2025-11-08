@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { termsApi } from "../../api/terms";
-import { useAdminLang } from "../../context/LangContext.jsx";
+import TermsTranslationModal from "../../components/admin/terms/TermsTranslationModal.jsx";
 import { Link } from "react-router-dom";
 import {
   Loader2,
@@ -18,7 +18,15 @@ import {
   Globe,
   ToggleLeft,
   ToggleRight,
+  Languages,
 } from "lucide-react";
+
+const BASE_LANG = "tr";
+const BASE_LANGUAGE_LABEL = "Türkçe (TR)";
+const TRANSLATION_LANGS = [
+  { value: "en", label: "English (EN)" },
+  { value: "de", label: "Deutsch (DE)" },
+];
 
 /** ------- Empty Model (UI state) ------- */
 const EMPTY_MODEL = {
@@ -35,30 +43,42 @@ export default function TermsSettings() {
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
   const [form, setForm] = useState(EMPTY_MODEL);
-  const { adminLang } = useAdminLang();
+  const [translationState, setTranslationState] = useState({
+    open: false,
+    loading: false,
+    terms: null,
+    error: null,
+  });
+
+  const loadTerms = async () => {
+    setLoading(true);
+    try {
+      const data = await termsApi.manage(BASE_LANG);
+      setForm(normalizeIncoming(data));
+      setBanner(null);
+      setTranslationState((prev) =>
+        prev.open
+          ? {
+              ...prev,
+              terms: data,
+              error: null,
+            }
+          : prev
+      );
+    } catch (e) {
+      setBanner({
+        variant: "danger",
+        message: extractMessage(e) || "Şartlar içeriği yüklenemedi.",
+      });
+      setForm(EMPTY_MODEL);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    (async () => {
-      try {
-        const data = await termsApi.manage(adminLang);
-        if (!mounted) return;
-        setForm(normalizeIncoming(data));
-      } catch (e) {
-        if (!mounted) return;
-        setBanner({
-          variant: "danger",
-          message: extractMessage(e) || "Şartlar içeriği yüklenemedi.",
-        });
-      } finally {
-        mounted && setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [adminLang]);
+    loadTerms();
+  }, []);
 
   const canSave = useMemo(() => {
     if (!form.heroTitle?.trim()) return false;
@@ -70,11 +90,20 @@ export default function TermsSettings() {
     setSaving(true);
     try {
       const payload = normalizeOutgoing(form);
-      const updated = await termsApi.upsert(payload, adminLang);
+      const updated = await termsApi.upsert(payload, BASE_LANG);
 
       if (updated) {
         const srv = normalizeIncoming(updated);
         setForm((prev) => deepMergeKeepDraft(prev, srv));
+        setTranslationState((prev) =>
+          prev.open
+            ? {
+                ...prev,
+                terms: updated,
+                error: null,
+              }
+            : prev
+        );
       }
       setBanner({
         variant: "success",
@@ -90,12 +119,51 @@ export default function TermsSettings() {
     }
   }
 
+  const openTranslationModal = async () => {
+    setTranslationState({
+      open: true,
+      loading: true,
+      terms: null,
+      error: null,
+    });
+    try {
+      const data = await termsApi.manage(BASE_LANG);
+      setTranslationState({
+        open: true,
+        loading: false,
+        terms: data,
+        error: null,
+      });
+    } catch (error) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        terms: null,
+        error: extractMessage(error) || "Çeviri içeriği yüklenemedi.",
+      });
+    }
+  };
+
+  const closeTranslationModal = () => {
+    setTranslationState({
+      open: false,
+      loading: false,
+      terms: null,
+      error: null,
+    });
+  };
+
+  const handleTranslationsUpdated = async () => {
+    await loadTerms();
+  };
+
   function toggleActive() {
     setForm((prev) => ({ ...prev, isActive: !prev.isActive }));
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <div className="xl:col-span-8">
         {/* Header */}
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
@@ -112,6 +180,23 @@ export default function TermsSettings() {
               </code>{" "}
               sayfasını kontrol eder.
             </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <p className="flex-1 rounded-xl border border-[var(--color-border-admin)]/60 bg-[var(--color-bg-admin)]/40 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+                Bu form{" "}
+                <span className="font-semibold text-[var(--color-text-admin)]">
+                  {BASE_LANGUAGE_LABEL}
+                </span>{" "}
+                içeriklerini düzenler. Diğer diller için “Dil varyantları” butonunu kullanın.
+              </p>
+              <button
+                type="button"
+                onClick={openTranslationModal}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+              >
+                <Languages className="h-4 w-4" />
+                Dil varyantları
+              </button>
+            </div>
           </div>
 
           {banner ? (
@@ -243,6 +328,18 @@ export default function TermsSettings() {
           </ul>
         </div>
       </aside>
+    </div>
+
+      <TermsTranslationModal
+        open={translationState.open}
+        loading={translationState.loading}
+        error={translationState.error}
+        terms={translationState.terms}
+        baseLang={BASE_LANG}
+        langs={TRANSLATION_LANGS}
+        onClose={closeTranslationModal}
+        onUpdated={handleTranslationsUpdated}
+      />
     </div>
   );
 }

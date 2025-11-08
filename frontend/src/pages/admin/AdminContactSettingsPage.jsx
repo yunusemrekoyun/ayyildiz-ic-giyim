@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { contactPageApi } from "../../api/contact";
-import { useAdminLang } from "../../context/LangContext.jsx";
-import { DEFAULT_LANG } from "../../constants/lang.js";
+import ContactTranslationModal from "../../components/admin/contact/ContactTranslationModal.jsx";
 import {
   MapPin,
   Mail,
@@ -17,7 +16,15 @@ import {
   Type,
   Quote,
   Loader2,
+  Languages,
 } from "lucide-react";
+
+const BASE_LANG = "tr";
+const BASE_LANGUAGE_LABEL = "Türkçe (TR)";
+const TRANSLATION_LANGS = [
+  { value: "en", label: "English (EN)" },
+  { value: "de", label: "Deutsch (DE)" },
+];
 
 const makeBlock = (title = "", lines = []) => ({
   title,
@@ -149,34 +156,41 @@ function getMessage(err) {
 }
 
 export default function AdminContactSettingsPageInner() {
-  const { adminLang } = useAdminLang();
-  const languageLabel = (adminLang || DEFAULT_LANG).toUpperCase();
   const [data, setData] = useState(() => deepClone(emptyConfig));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
+  const [translationState, setTranslationState] = useState({
+    open: false,
+    loading: false,
+    contact: null,
+    error: null,
+  });
+
+  const loadConfig = async () => {
+    setLoading(true);
+    try {
+      const conf = await contactPageApi.get(BASE_LANG);
+      setData(normalizeState(conf));
+      setTranslationState((prev) =>
+        prev.open
+          ? {
+              ...prev,
+              contact: conf,
+            }
+          : prev
+      );
+    } catch (err) {
+      setBanner({ variant: "danger", message: getMessage(err) });
+      setData(deepClone(emptyConfig));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      setLoading(true);
-      try {
-        const conf = await contactPageApi.get(adminLang);
-        if (!active) return;
-        setData(normalizeState(conf));
-      } catch (err) {
-        if (!active) return;
-        setBanner({ variant: "danger", message: getMessage(err) });
-        setData(deepClone(emptyConfig));
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adminLang]);
+    loadConfig();
+  }, []);
 
   const canSave = useMemo(() => !saving && !loading, [saving, loading]);
   const disabled = loading || saving;
@@ -222,7 +236,7 @@ export default function AdminContactSettingsPageInner() {
     setBanner(null);
     try {
       const payload = sanitizePayload(data);
-      const saved = await contactPageApi.upsert(payload, adminLang);
+      const saved = await contactPageApi.upsert(payload, BASE_LANG);
       setData(normalizeState(saved || payload));
       setBanner({
         variant: "success",
@@ -237,22 +251,72 @@ export default function AdminContactSettingsPageInner() {
   };
 
   const resetToServer = async () => {
-    setLoading(true);
     setBanner(null);
+    await loadConfig();
+  };
+
+  const openTranslationModal = async () => {
+    setTranslationState({
+      open: true,
+      loading: true,
+      contact: null,
+      error: null,
+    });
     try {
-      const conf = await contactPageApi.get(adminLang);
-      setData(normalizeState(conf));
+      const conf = await contactPageApi.get(BASE_LANG);
+      setTranslationState({
+        open: true,
+        loading: false,
+        contact: conf,
+        error: null,
+      });
     } catch (err) {
-      setBanner({ variant: "danger", message: getMessage(err) });
-      setData(deepClone(emptyConfig));
-    } finally {
-      setLoading(false);
+      setTranslationState({
+        open: true,
+        loading: false,
+        contact: null,
+        error: getMessage(err),
+      });
     }
   };
 
+  const closeTranslationModal = () => {
+    setTranslationState({
+      open: false,
+      loading: false,
+      contact: null,
+      error: null,
+    });
+  };
+
+  const handleTranslationsUpdated = async () => {
+    await loadConfig();
+  };
+
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-      <div className="xl:col-span-8">
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
+            İletişim Sayfası İçeriği
+          </h1>
+          <p className="text-sm text-[var(--color-text-admin-muted)]">
+            Türkçe (varsayılan) içerikleri buradan düzenleyin; diğer diller için
+            “Dil varyantları” butonunu kullanın.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openTranslationModal}
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+        >
+          <Languages className="h-4 w-4" />
+          Dil varyantları
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="xl:col-span-8">
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
           <div className="flex flex-col gap-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-3 py-1 text-xs text-[var(--color-text-admin-muted)]">
@@ -264,7 +328,12 @@ export default function AdminContactSettingsPageInner() {
               Kahraman metnini, kenar çubuğu bloklarını ve form davranışını düzenleyin.
             </p>
             <p className="rounded-xl border border-[var(--color-border-admin)]/60 bg-[var(--color-bg-admin)]/40 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
-              Başlıklar ve metinler <span className="font-semibold text-[var(--color-text-admin)]">{languageLabel}</span> dili için kaydedilir. Görsel, form durumu ve iletişim kanalları tüm dillerde ortak kullanılır.
+              Başlıklar ve metinler{" "}
+              <span className="font-semibold text-[var(--color-text-admin)]">
+                {BASE_LANGUAGE_LABEL}
+              </span>{" "}
+              dili için kaydedilir. Görsel, form durumu ve iletişim kanalları tüm
+              dillerde ortak kullanılır.
             </p>
           </div>
 
@@ -466,19 +535,31 @@ export default function AdminContactSettingsPageInner() {
         </div>
       </div>
 
-      <aside className="xl:col-span-4">
-        <div className="sticky top-20 space-y-6">
-          <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
-            <h3 className="text-lg font-semibold">İçerik ipuçları</h3>
-            <ul className="mt-4 space-y-2 text-sm text-[var(--color-text-admin-muted)]">
-              <li>Kolay okunabilirlik için hero metnini 140 karakterin altında tutun.</li>
-              <li>Adres satırlarını mantıklı şekilde birleştirin ve tekrarları önleyin.</li>
-              <li>En hızlı destek kanalını ilk satırda vurgulayın.</li>
-              <li>Başarı mesajı net yanıt beklentisi oluşturmalıdır.</li>
-            </ul>
+        <aside className="xl:col-span-4">
+          <div className="sticky top-20 space-y-6">
+            <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6">
+              <h3 className="text-lg font-semibold">İçerik ipuçları</h3>
+              <ul className="mt-4 space-y-2 text-sm text-[var(--color-text-admin-muted)]">
+                <li>Kolay okunabilirlik için hero metnini 140 karakterin altında tutun.</li>
+                <li>Adres satırlarını mantıklı şekilde birleştirin ve tekrarları önleyin.</li>
+                <li>En hızlı destek kanalını ilk satırda vurgulayın.</li>
+                <li>Başarı mesajı net yanıt beklentisi oluşturmalıdır.</li>
+              </ul>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      </div>
+
+      <ContactTranslationModal
+        open={translationState.open}
+        loading={translationState.loading}
+        error={translationState.error}
+        contact={translationState.contact}
+        baseLang={BASE_LANG}
+        langs={TRANSLATION_LANGS}
+        onClose={closeTranslationModal}
+        onUpdated={handleTranslationsUpdated}
+      />
     </div>
   );
 }

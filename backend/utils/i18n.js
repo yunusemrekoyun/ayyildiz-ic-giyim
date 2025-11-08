@@ -43,6 +43,7 @@ function mergeArray(baseValue, sourceValue) {
   if (!Array.isArray(sourceValue)) return baseValue;
   if (!Array.isArray(baseValue)) return cloneValue(sourceValue);
   if (!sourceValue.length) return baseValue;
+  if (!baseValue.length) return cloneValue(sourceValue);
 
   const baseIsObject = baseValue.every((item) => isPlainObject(item));
   const sourceIsObject = sourceValue.every((item) => isPlainObject(item));

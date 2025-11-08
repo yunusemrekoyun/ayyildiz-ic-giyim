@@ -1,13 +1,6 @@
 // backend/controllers/faqController.js
 import FaqPageConfig from "../models/FaqPageConfig.js";
-import {
-  DEFAULT_LANG,
-  normalizeLang,
-  resolveTranslation,
-  pickLocalizedPayload,
-  syncDocTranslations,
-  composeResponseTranslations,
-} from "../utils/i18n.js";
+import { DEFAULT_LANG, normalizeLang } from "../utils/i18n.js";
 
 // helpers
 function normStr(v, def = "") {
@@ -46,7 +39,7 @@ function normList(val) {
 
 function sanitizeSectionsPayload(sections = []) {
   if (!Array.isArray(sections)) return [];
-  return sections.map((section, index) => {
+  return sections.map((section) => {
     const sec = {
       _id: section?._id ?? null,
       title: normStr(section?.title, ""),
@@ -56,7 +49,7 @@ function sanitizeSectionsPayload(sections = []) {
     };
     const rawItems = Array.isArray(section?.items) ? section.items : [];
     sec.items = rawItems
-      .map((item, itemIndex) => ({
+      .map((item) => ({
         _id: item?._id ?? null,
         question: normStr(item?.question, ""),
         answer: normStr(item?.answer, ""),
@@ -71,15 +64,14 @@ function sanitizeSectionsPayload(sections = []) {
 function sanitizeSeoPayload(rawSeo = {}, fallback = {}) {
   const source = rawSeo || {};
   return {
-    title: normStr(
-      source.title ?? source.seoTitle ?? fallback.title ?? "",
-      ""
-    ),
+    title: normStr(source.title ?? source.seoTitle ?? fallback.title ?? "", ""),
     description: normStr(
       source.description ?? source.seoDescription ?? fallback.description ?? "",
       ""
     ),
-      keywords: normList(source.keywords ?? source.seoKeywords ?? fallback.keywords),
+    keywords: normList(
+      source.keywords ?? source.seoKeywords ?? fallback.keywords
+    ),
   };
 }
 
@@ -87,10 +79,7 @@ function extractLocalizedSectionsPayload(rawSections = []) {
   if (!Array.isArray(rawSections)) return [];
   return rawSections.map((section) => {
     const baseId =
-      section?._id?.toString?.() ??
-      section?._id ??
-      section?.id ??
-      null;
+      section?._id?.toString?.() ?? section?._id ?? section?.id ?? null;
     return {
       _id: baseId,
       title: normStr(section?.title, ""),
@@ -98,10 +87,7 @@ function extractLocalizedSectionsPayload(rawSections = []) {
       items: Array.isArray(section?.items)
         ? section.items.map((item) => {
             const itemId =
-              item?._id?.toString?.() ??
-              item?._id ??
-              item?.id ??
-              null;
+              item?._id?.toString?.() ?? item?._id ?? item?.id ?? null;
             return {
               _id: itemId,
               question: normStr(item?.question, ""),
@@ -114,7 +100,11 @@ function extractLocalizedSectionsPayload(rawSections = []) {
 }
 
 function syncSharedSectionMetadata(doc, incomingSections = []) {
-  if (!doc || !Array.isArray(doc.sections) || !Array.isArray(incomingSections)) {
+  if (
+    !doc ||
+    !Array.isArray(doc.sections) ||
+    !Array.isArray(incomingSections)
+  ) {
     return;
   }
 
@@ -137,10 +127,7 @@ function syncSharedSectionMetadata(doc, incomingSections = []) {
       section.isActive = !!incoming.isActive;
     }
     if (incoming.sortOrder !== undefined) {
-      section.sortOrder = normNum(
-        incoming.sortOrder,
-        section.sortOrder ?? 0
-      );
+      section.sortOrder = normNum(incoming.sortOrder, section.sortOrder ?? 0);
     }
 
     if (!Array.isArray(section.items)) {
@@ -148,10 +135,7 @@ function syncSharedSectionMetadata(doc, incomingSections = []) {
     }
 
     const itemKey = (item, itemIndex) =>
-      item?._id?.toString?.() ??
-      item?._id ??
-      item?.id ??
-      `__idx_${itemIndex}`;
+      item?._id?.toString?.() ?? item?._id ?? item?.id ?? `__idx_${itemIndex}`;
 
     const incomingItems = Array.isArray(incoming.items) ? incoming.items : [];
     const incomingItemMap = new Map();
@@ -166,12 +150,100 @@ function syncSharedSectionMetadata(doc, incomingSections = []) {
         item.isActive = !!incomingItem.isActive;
       }
       if (incomingItem.sortOrder !== undefined) {
-        item.sortOrder = normNum(
-          incomingItem.sortOrder,
-          item.sortOrder ?? 0
-        );
+        item.sortOrder = normNum(incomingItem.sortOrder, item.sortOrder ?? 0);
       }
     });
+  });
+}
+
+function normalizeObjectId(value) {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  if (typeof value === "object") {
+    if (typeof value.toHexString === "function") {
+      return value.toHexString();
+    }
+    if (
+      typeof value.toString === "function" &&
+      value.toString !== Object.prototype.toString
+    ) {
+      const str = value.toString();
+      if (str && str !== "[object Object]") return str;
+    }
+  }
+  return null;
+}
+
+function shouldOverrideValue(value) {
+  return value !== undefined && value !== null && value !== "";
+}
+
+function buildItemTranslationMap(items = []) {
+  const map = new Map();
+  if (!Array.isArray(items)) return map;
+  items.forEach((item) => {
+    const key =
+      normalizeObjectId(item?._id) ?? normalizeObjectId(item?.id) ?? null;
+    if (!key) return;
+    map.set(key, {
+      question: item?.question,
+      answer: item?.answer,
+    });
+  });
+  return map;
+}
+
+function applySectionTranslations(baseSections = [], translationSections = []) {
+  if (!Array.isArray(baseSections) || !Array.isArray(translationSections)) {
+    return baseSections;
+  }
+
+  const sectionMap = new Map();
+  translationSections.forEach((section) => {
+    const key =
+      normalizeObjectId(section?._id) ?? normalizeObjectId(section?.id);
+    if (!key) return;
+    sectionMap.set(key, {
+      title: section?.title,
+      subtitle: section?.subtitle,
+      items: buildItemTranslationMap(section?.items),
+    });
+  });
+
+  return baseSections.map((section) => {
+    const key =
+      section?.id ??
+      normalizeObjectId(section?._id) ??
+      normalizeObjectId(section?._id?.toString?.());
+    if (!key || !sectionMap.has(key)) return section;
+    const localized = sectionMap.get(key);
+    const mergedSection = { ...section };
+    if (shouldOverrideValue(localized.title)) {
+      mergedSection.title = localized.title;
+    }
+    if (shouldOverrideValue(localized.subtitle)) {
+      mergedSection.subtitle = localized.subtitle;
+    }
+    if (Array.isArray(section.items) && localized.items.size) {
+      mergedSection.items = section.items.map((item) => {
+        const itemKey =
+          item?.id ??
+          normalizeObjectId(item?._id) ??
+          normalizeObjectId(item?._id?.toString?.());
+        if (!itemKey || !localized.items.has(itemKey)) return item;
+        const loc = localized.items.get(itemKey);
+        const mergedItem = { ...item };
+        if (shouldOverrideValue(loc.question)) {
+          mergedItem.question = loc.question;
+        }
+        if (shouldOverrideValue(loc.answer)) {
+          mergedItem.answer = loc.answer;
+        }
+        return mergedItem;
+      });
+    }
+    return mergedSection;
   });
 }
 
@@ -212,7 +284,7 @@ function shapePublic(config) {
   };
 }
 
-// shape (manage/admin) – aktiflik filtrelemeden döner
+// shape (manage/admin)
 function shapeManage(config) {
   if (!config) return null;
   return {
@@ -248,7 +320,7 @@ function shapeManage(config) {
   };
 }
 
-// normalize incoming payload for upsert
+// normalize incoming payload for upsert (TR form)
 function sanitizePayload(body = {}) {
   const clean = {};
 
@@ -256,11 +328,9 @@ function sanitizePayload(body = {}) {
   clean.heroIntro = normStr(body.heroIntro, "");
   clean.isActive = normBool(body.isActive, true);
 
-  // sections
   const rawSections = Array.isArray(body.sections) ? body.sections : [];
   clean.sections = sanitizeSectionsPayload(rawSections);
 
-  // seo
   clean.seo = sanitizeSeoPayload(
     body.seo ?? {
       title: body?.seoTitle,
@@ -271,6 +341,8 @@ function sanitizePayload(body = {}) {
 
   return clean;
 }
+
+/* ---------- TR snapshot builder & TR apply ---------- */
 
 function buildFaqTrTranslation(doc) {
   const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
@@ -339,9 +411,7 @@ function applyFaqTrTranslation(doc, translation = {}) {
           itemMap.set(itemKey, item);
         });
 
-        const currentItems = Array.isArray(section.items)
-          ? section.items
-          : [];
+        const currentItems = Array.isArray(section.items) ? section.items : [];
         currentItems.forEach((item, itemIndex) => {
           const itemKey =
             item?._id?.toString?.() ?? item?._id ?? `__idx_${itemIndex}`;
@@ -367,9 +437,147 @@ function applyFaqTrTranslation(doc, translation = {}) {
   }
 }
 
+/* ---------- SADECE FAQ İÇİN LOCALIZATION BUILDER ---------- */
+
+/* ---------- SADECE FAQ İÇİN LOCALIZATION BUILDER ---------- */
+
+function buildLocalizedFaqDoc(doc, lang) {
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  const normalizedLang = normalizeLang(lang || DEFAULT_LANG);
+
+  // Varsayılan dil ise TR base dokümanı aynen dön
+  if (!normalizedLang || normalizedLang === DEFAULT_LANG) {
+    return plain;
+  }
+
+  const translations = plain.translations || {};
+  const langBucket = translations[normalizedLang] || {};
+  const trSnapshot = translations[DEFAULT_LANG] || buildFaqTrTranslation(plain);
+
+  const localized = { ...plain };
+
+  // 🔹 HERO
+  localized.heroTitle = shouldOverrideValue(langBucket.heroTitle)
+    ? langBucket.heroTitle
+    : trSnapshot.heroTitle ?? plain.heroTitle ?? "";
+
+  localized.heroIntro = shouldOverrideValue(langBucket.heroIntro)
+    ? langBucket.heroIntro
+    : trSnapshot.heroIntro ?? plain.heroIntro ?? "";
+
+  // 🔹 SECTIONS + ITEMS
+  const baseSections = Array.isArray(plain.sections) ? plain.sections : [];
+  const trSections = Array.isArray(trSnapshot.sections)
+    ? trSnapshot.sections
+    : [];
+  const transSections = Array.isArray(langBucket.sections)
+    ? langBucket.sections
+    : [];
+
+  localized.sections = baseSections.map((baseSec, secIndex) => {
+    const baseId = normalizeObjectId(baseSec?._id);
+
+    // TR snapshot’taki karşılığı (index’e göre)
+    const trSec = trSections[secIndex] || {};
+
+    // Çeviri tarafında aynı _id’yi bulmaya çalış, yoksa index’e göre al
+    let tSec =
+      (baseId &&
+        transSections.find(
+          (s) =>
+            normalizeObjectId(s?._id) === baseId ||
+            normalizeObjectId(s?.id) === baseId
+        )) ||
+      transSections[secIndex] ||
+      null;
+
+    const mergedSection = { ...baseSec };
+
+    // title
+    if (tSec && shouldOverrideValue(tSec.title)) {
+      mergedSection.title = tSec.title;
+    } else if (shouldOverrideValue(trSec.title)) {
+      mergedSection.title = trSec.title;
+    }
+
+    // subtitle
+    if (tSec && shouldOverrideValue(tSec.subtitle)) {
+      mergedSection.subtitle = tSec.subtitle;
+    } else if (shouldOverrideValue(trSec.subtitle)) {
+      mergedSection.subtitle = trSec.subtitle;
+    }
+
+    // ITEMS
+    const baseItems = Array.isArray(baseSec.items) ? baseSec.items : [];
+    const trItems = Array.isArray(trSec.items) ? trSec.items : [];
+    const transItems = Array.isArray(tSec?.items) ? tSec.items : [];
+
+    mergedSection.items = baseItems.map((baseItem, itemIndex) => {
+      const baseItemId = normalizeObjectId(baseItem?._id);
+
+      const trItem = trItems[itemIndex] || {};
+
+      let tItem =
+        (baseItemId &&
+          transItems.find(
+            (it) =>
+              normalizeObjectId(it?._id) === baseItemId ||
+              normalizeObjectId(it?.id) === baseItemId
+          )) ||
+        transItems[itemIndex] ||
+        null;
+
+      const mergedItem = { ...baseItem };
+
+      if (tItem && shouldOverrideValue(tItem.question)) {
+        mergedItem.question = tItem.question;
+      } else if (shouldOverrideValue(trItem.question)) {
+        mergedItem.question = trItem.question;
+      }
+
+      if (tItem && shouldOverrideValue(tItem.answer)) {
+        mergedItem.answer = tItem.answer;
+      } else if (shouldOverrideValue(trItem.answer)) {
+        mergedItem.answer = trItem.answer;
+      }
+
+      return mergedItem;
+    });
+
+    return mergedSection;
+  });
+
+  // 🔹 SEO
+  const baseSeo = plain.seo || {};
+  const trSeo = trSnapshot.seo || {};
+  const transSeo = langBucket.seo || {};
+
+  localized.seo = {
+    title: shouldOverrideValue(transSeo.title)
+      ? transSeo.title
+      : shouldOverrideValue(trSeo.title)
+      ? trSeo.title
+      : baseSeo.title || "",
+    description: shouldOverrideValue(transSeo.description)
+      ? transSeo.description
+      : shouldOverrideValue(trSeo.description)
+      ? trSeo.description
+      : baseSeo.description || "",
+    keywords:
+      Array.isArray(transSeo.keywords) && transSeo.keywords.length
+        ? transSeo.keywords
+        : Array.isArray(trSeo.keywords) && trSeo.keywords.length
+        ? trSeo.keywords
+        : Array.isArray(baseSeo.keywords)
+        ? baseSeo.keywords
+        : [],
+  };
+
+  return localized;
+}
+
 /* -------------------- PUBLIC -------------------- */
 
-// GET /api/faq
 export async function getFaqPublic(req, res) {
   try {
     const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
@@ -377,8 +585,10 @@ export async function getFaqPublic(req, res) {
     if (!doc) {
       return res.json({ faq: null });
     }
-    const localized = resolveTranslation(doc, lang);
-    const shaped = shapePublic(localized);
+
+    const localizedDoc = buildLocalizedFaqDoc(doc, lang);
+    const shaped = shapePublic(localizedDoc);
+
     if (!doc.isActive) {
       return res.json({ faq: shaped || null });
     }
@@ -390,18 +600,23 @@ export async function getFaqPublic(req, res) {
 
 /* -------------------- ADMIN / MANAGE -------------------- */
 
-// GET /api/faq/manage
 export async function getFaqManage(req, res) {
   try {
     const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const doc = await FaqPageConfig.findOne();
     if (!doc) return res.json({ faq: null });
-    const localized = resolveTranslation(doc, lang);
-    const shaped = shapeManage(localized);
-    shaped.translations = composeResponseTranslations(
-      doc,
-      buildFaqTrTranslation
-    );
+
+    const localizedDoc = buildLocalizedFaqDoc(doc, lang);
+    const shaped = shapeManage(localizedDoc);
+
+    // translation modal için gerekli snapshot'lar
+    const translations = doc.translations || {};
+    shaped.translations = {
+      tr: buildFaqTrTranslation(doc),
+      en: translations.en || null,
+      de: translations.de || null,
+    };
+
     res.json({ faq: shaped });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -414,7 +629,10 @@ export async function upsertFaq(req, res) {
     const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     const isDefaultLang = lang === DEFAULT_LANG;
     const body = req.body || {};
+
+    // TR form payload’ını normalize et
     const payload = sanitizePayload(body);
+
     let doc = await FaqPageConfig.findOne();
 
     if (!doc) {
@@ -430,25 +648,45 @@ export async function upsertFaq(req, res) {
       doc.updatedBy = req.userId;
 
       if (isDefaultLang) {
+        // Varsayılan dilde TR içeriğini direkt güncelliyoruz
         doc.heroTitle = payload.heroTitle;
         doc.heroIntro = payload.heroIntro;
         doc.sections = payload.sections;
         doc.seo = payload.seo;
       } else {
+        // Diğer dillerde gelen ana form isteklerinde sadece meta (sortOrder, isActive) senkronize
         syncSharedSectionMetadata(doc, payload.sections);
         doc.markModified("sections");
       }
     }
 
-    const incomingTranslations = {
-      ...pickLocalizedPayload(body),
-    };
+    // translations alanını parse et (modal'dan gelen)
+    let translationsPayload = {};
+    if (typeof body.translations === "string") {
+      try {
+        translationsPayload = JSON.parse(body.translations);
+      } catch {
+        translationsPayload = {};
+      }
+    } else if (body.translations && typeof body.translations === "object") {
+      translationsPayload = body.translations;
+    }
 
+    const incomingTranslations =
+      translationsPayload && typeof translationsPayload === "object"
+        ? { ...translationsPayload }
+        : {};
+
+    // Non-default dil isteği direkt heroTitle/heroIntro/sections/seo ile gelirse
     if (!isDefaultLang) {
       const ensureLangBucket = () => {
-        const bucket = incomingTranslations[lang] || {};
-        incomingTranslations[lang] = bucket;
-        return bucket;
+        if (
+          !incomingTranslations[lang] ||
+          typeof incomingTranslations[lang] !== "object"
+        ) {
+          incomingTranslations[lang] = {};
+        }
+        return incomingTranslations[lang];
       };
 
       if (Object.prototype.hasOwnProperty.call(body, "heroTitle")) {
@@ -467,21 +705,55 @@ export async function upsertFaq(req, res) {
       }
     }
 
-    syncDocTranslations(
-      doc,
-      incomingTranslations,
-      buildFaqTrTranslation,
-      applyFaqTrTranslation
-    );
+    // TR snapshot’ı her save’de güncelle
+    doc.translations = doc.translations || {};
+    doc.translations[DEFAULT_LANG] = buildFaqTrTranslation(doc);
+
+    // Diğer diller
+    Object.entries(incomingTranslations).forEach(([lng, patch]) => {
+      if (!patch || typeof patch !== "object") return;
+
+      if (lng === DEFAULT_LANG) {
+        applyFaqTrTranslation(doc, patch);
+        doc.translations[DEFAULT_LANG] = buildFaqTrTranslation(doc);
+        doc.markModified(`translations.${DEFAULT_LANG}`);
+        return;
+      }
+
+      const next = {
+        heroTitle: normStr(patch.heroTitle, ""),
+        heroIntro: normStr(patch.heroIntro, ""),
+        sections: Array.isArray(patch.sections)
+          ? patch.sections.map((section) => ({
+              _id: section?._id ?? null,
+              title: normStr(section?.title, ""),
+              subtitle: normStr(section?.subtitle, ""),
+              items: Array.isArray(section?.items)
+                ? section.items.map((item) => ({
+                    _id: item?._id ?? null,
+                    question: normStr(item?.question, ""),
+                    answer: normStr(item?.answer, ""),
+                  }))
+                : [],
+            }))
+          : [],
+        seo: patch.seo ? sanitizeSeoPayload(patch.seo, {}) : undefined,
+      };
+
+      doc.translations[lng] = next;
+      doc.markModified(`translations.${lng}`);
+    });
 
     await doc.save();
 
-    const localized = resolveTranslation(doc, lang);
-    const shaped = shapeManage(localized);
-    shaped.translations = composeResponseTranslations(
-      doc,
-      buildFaqTrTranslation
-    );
+    const localizedDoc = buildLocalizedFaqDoc(doc, lang);
+    const shaped = shapeManage(localizedDoc);
+    const translationsAfter = doc.translations || {};
+    shaped.translations = {
+      tr: buildFaqTrTranslation(doc),
+      en: translationsAfter.en || null,
+      de: translationsAfter.de || null,
+    };
 
     res.json({ faq: shaped });
   } catch (err) {

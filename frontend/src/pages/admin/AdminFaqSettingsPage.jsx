@@ -14,48 +14,96 @@ import {
   Tags,
   ToggleLeft,
   ToggleRight,
+  Languages,
 } from "lucide-react";
 import { faqApi } from "../../api/faq";
-import { useAdminLang } from "../../context/LangContext.jsx";
+import FaqTranslationModal from "../../components/admin/faq/FaqTranslationModal.jsx";
+
+const BASE_LANG = "tr";
+const BASE_LANGUAGE_LABEL = "Türkçe (TR)";
+const TRANSLATION_LANGS = [
+  { value: "en", label: "English (EN)" },
+  { value: "de", label: "Deutsch (DE)" },
+];
+
+const createEmptyFaq = () => ({
+  heroTitle: "",
+  heroIntro: "",
+  isActive: true,
+  sections: [],
+  seo: { title: "", description: "", keywords: [] },
+  translations: {},
+});
+
+const sortItems = (items = []) =>
+  [...(Array.isArray(items) ? items : [])]
+    .map((item) => ({ ...item }))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+const sortSections = (sections = []) =>
+  [...(Array.isArray(sections) ? sections : [])]
+    .map((section) => ({
+      ...section,
+      items: sortItems(section.items),
+    }))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+const normalizeFaq = (raw = null) => {
+  const base = raw ? { ...raw } : {};
+  const merged = {
+    ...createEmptyFaq(),
+    ...base,
+  };
+  return {
+    ...merged,
+    sections: sortSections(base.sections || []),
+    seo: {
+      title: base.seo?.title || "",
+      description: base.seo?.description || "",
+      keywords: Array.isArray(base.seo?.keywords) ? base.seo.keywords : [],
+    },
+    translations: base.translations || {},
+    updatedAt: base.updatedAt || merged.updatedAt || null,
+    updatedBy: base.updatedBy || merged.updatedBy || null,
+    id: base.id || merged.id || null,
+  };
+};
 
 export default function AdminFaqSettingsPageInner() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => normalizeFaq());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
   const [expanded, setExpanded] = useState({}); // section index -> open?
-  const { adminLang } = useAdminLang();
+  const [translationState, setTranslationState] = useState({
+    open: false,
+    loading: false,
+    faq: null,
+    error: null,
+  });
+
+  const loadFaq = async () => {
+    setLoading(true);
+    setBanner(null);
+    try {
+      const res = await faqApi.manage(BASE_LANG);
+      const normalized = normalizeFaq(res);
+      setData(normalized);
+      setTranslationState((prev) =>
+        prev.open ? { ...prev, faq: normalized, error: null } : prev
+      );
+    } catch (e) {
+      setBanner({ ok: false, msg: e?.message || "SSS yüklenemedi" });
+      setData(normalizeFaq());
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // initial load
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    (async () => {
-      try {
-        const res = await faqApi.manage(adminLang);
-        if (mounted) {
-          // sort güvenliği
-          const sorted = {
-            ...res,
-            sections: [...(res.sections || [])]
-              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-              .map((s) => ({
-                ...s,
-                items: [...(s.items || [])].sort(
-                  (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-                ),
-              })),
-          };
-          setData(sorted);
-        }
-      } catch (e) {
-        setBanner({ ok: false, msg: e?.message || "SSS yüklenemedi" });
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => (mounted = false);
-  }, [adminLang]);
+    loadFaq();
+  }, []);
 
   const updateRoot = (patch) => setData((p) => ({ ...p, ...patch }));
 
@@ -113,6 +161,44 @@ export default function AdminFaqSettingsPageInner() {
     updateSection(si, { items });
   };
 
+  const openTranslationModal = async () => {
+    setTranslationState({
+      open: true,
+      loading: true,
+      faq: null,
+      error: null,
+    });
+    try {
+      const res = await faqApi.manage(BASE_LANG);
+      setTranslationState({
+        open: true,
+        loading: false,
+        faq: normalizeFaq(res),
+        error: null,
+      });
+    } catch (err) {
+      setTranslationState({
+        open: true,
+        loading: false,
+        faq: null,
+        error: err?.message || "SSS içeriği yüklenemedi",
+      });
+    }
+  };
+
+  const closeTranslationModal = () => {
+    setTranslationState({
+      open: false,
+      loading: false,
+      faq: null,
+      error: null,
+    });
+  };
+
+  const handleTranslationsUpdated = async () => {
+    await loadFaq();
+  };
+
   const save = async () => {
     setSaving(true);
     setBanner(null);
@@ -129,8 +215,12 @@ export default function AdminFaqSettingsPageInner() {
           })),
         })),
       };
-      const saved = await faqApi.upsert(normalized, adminLang);
-      setData(saved);
+      const saved = await faqApi.upsert(normalized, BASE_LANG);
+      const nextData = normalizeFaq(saved || normalized);
+      setData(nextData);
+      setTranslationState((prev) =>
+        prev.open ? { ...prev, faq: nextData } : prev
+      );
       setBanner({ ok: true, msg: "SSS içeriği başarıyla kaydedildi." });
     } catch (e) {
       setBanner({ ok: false, msg: e?.message || "Kaydetme başarısız" });
@@ -142,25 +232,15 @@ export default function AdminFaqSettingsPageInner() {
 
   const reset = async () => {
     if (!confirm("Değişiklikleri iptal edip yeniden yüklemek istiyor musun?")) return;
-    setLoading(true);
-    try {
-      const fresh = await faqApi.manage(adminLang);
-      setData(fresh);
-      setBanner(null);
-    } finally {
-      setLoading(false);
-    }
+    setBanner(null);
+    await loadFaq();
   };
 
-  if (loading) {
-    return (
-      <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-8 text-[var(--color-text-admin-muted)]">
-        SSS yapılandırması yükleniyor...
-      </div>
-    );
-  }
-
-  return (
+  const content = loading ? (
+    <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-8 text-[var(--color-text-admin-muted)]">
+      SSS yapılandırması yükleniyor...
+    </div>
+  ) : (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <div className="xl:col-span-8">
         <div className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-6 shadow-sm">
@@ -174,6 +254,24 @@ export default function AdminFaqSettingsPageInner() {
             <p className="text-sm text-[var(--color-text-admin-muted)]">
               Bölümleri, soru-cevapları ve SEO verilerini yönetin.
             </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <p className="flex-1 rounded-xl border border-[var(--color-border-admin)]/60 bg-[var(--color-bg-admin)]/40 px-3 py-2 text-[11px] text-[var(--color-text-admin-muted)]">
+                Bu form{" "}
+                <span className="font-semibold text-[var(--color-text-admin)]">
+                  {BASE_LANGUAGE_LABEL}
+                </span>{" "}
+                içeriklerini günceller. İngilizce ve Almanca içerikler için “Dil varyantları”
+                butonunu kullanın.
+              </p>
+              <button
+                type="button"
+                onClick={openTranslationModal}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+              >
+                <Languages className="h-4 w-4" />
+                Dil varyantları
+              </button>
+            </div>
           </div>
 
           {/* Banner */}
@@ -462,6 +560,22 @@ export default function AdminFaqSettingsPageInner() {
           <PreviewCard data={data} />
         </div>
       </aside>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {content}
+      <FaqTranslationModal
+        open={translationState.open}
+        loading={translationState.loading}
+        error={translationState.error}
+        faq={translationState.faq}
+        baseLang={BASE_LANG}
+        langs={TRANSLATION_LANGS}
+        onClose={closeTranslationModal}
+        onUpdated={handleTranslationsUpdated}
+      />
     </div>
   );
 }
