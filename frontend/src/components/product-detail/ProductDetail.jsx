@@ -7,6 +7,10 @@ import { useNavigate } from "react-router-dom";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
 import { getColorInfo } from "../../utils/colors.js";
 import ReviewSectionCard from "../reviews/ReviewSectionCard.jsx";
+import {
+  useStaticTranslation,
+  formatStaticText,
+} from "../../i18n/staticContent.js";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -20,6 +24,20 @@ export default function ProductDetail({ product = {} }) {
   const navigate = useNavigate();
   const [isFav, setIsFav] = useState(false);
   const productId = product?.id || product?._id || null;
+  const t = useStaticTranslation();
+  const copy = t("productDetail") || {};
+  const stockCopy = copy.stock || {};
+  const favoritesCopy = t("favorites") || {};
+  const colorLabel = copy.colorLabel || "Colour";
+  const sizeLabel = copy.sizeLabel || "Size";
+  const optionLabel = copy.optionLabel || "Option";
+  const careTitle = copy.careTitle || "Care";
+  const detailsTitle = copy.detailsTitle || "Details";
+  const descriptionFallback = copy.descriptionFallback || "No description provided.";
+  const addToCartLabel = copy.addToCart || "Add to Cart";
+  const fallbackName = copy.fallbackName || "Product";
+  const favoriteAddLabel = favoritesCopy.add || "Add to favorites";
+  const favoriteRemoveLabel = favoritesCopy.remove || "Remove from favorites";
 
   const gallery = useMemo(() => {
     const imgs = (product.images || [])
@@ -208,12 +226,14 @@ export default function ProductDetail({ product = {} }) {
 
   const stockLabel =
     currentStock === null
-      ? "In stock"
+      ? stockCopy.inStock || "In stock"
       : currentStock > 0
-      ? `${currentStock} in stock`
-      : "Out of stock";
+      ? formatStaticText(stockCopy.inStockCount || "{count} in stock", {
+          count: currentStock,
+        })
+      : stockCopy.outOfStock || "Out of stock";
 
-  const description = product.description || "No description provided.";
+  const description = product.description || descriptionFallback;
   const care = product.careInstructions || "";
   const details = Array.isArray(product.details) ? product.details : [];
   const originalPrice = Number(product.price ?? 0);
@@ -228,7 +248,7 @@ export default function ProductDetail({ product = {} }) {
         <div className="relative overflow-hidden rounded-xl border border-border bg-white">
           <img
             src={gallery[activeImg]}
-            alt={product.name || product.title || "Product"}
+            alt={product.name || product.title || fallbackName}
             className="aspect-[4/5] w-full object-cover"
             draggable="false"
           />
@@ -269,21 +289,21 @@ export default function ProductDetail({ product = {} }) {
           {/* Başlık + Kalp */}
           <div className="flex items-start justify-between gap-3">
             <h1 className="font-serif text-3xl font-extrabold text-primary">
-              {product.name || product.title || "Product"}
+              {product.name || product.title || fallbackName}
             </h1>
 
             <button
               type="button"
               onClick={toggleFav}
               aria-pressed={isFav}
-              aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+              aria-label={isFav ? favoriteRemoveLabel : favoriteAddLabel}
               className={[
                 "inline-flex items-center justify-center rounded-full border px-3 py-2",
                 isFav
                   ? "border-accent text-accent bg-white"
                   : "border-border text-secondary hover:bg-surface-hover",
               ].join(" ")}
-              title={isFav ? "Favorilerden kaldır" : "Favorilere ekle"}
+              title={isFav ? favoriteRemoveLabel : favoriteAddLabel}
             >
               <Heart
                 className="h-5 w-5"
@@ -320,7 +340,9 @@ export default function ProductDetail({ product = {} }) {
 
           {colorOptions.length > 0 && (
             <div className="mt-5">
-              <p className="mb-2 text-sm font-semibold text-primary">Colour</p>
+              <p className="mb-2 text-sm font-semibold text-primary">
+                {colorLabel}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {colorOptions.map((option) => {
                   const active =
@@ -350,7 +372,9 @@ export default function ProductDetail({ product = {} }) {
 
           {sizeOptions.length > 0 && (
             <div className="mt-5">
-              <p className="mb-2 text-sm font-semibold text-primary">Size</p>
+              <p className="mb-2 text-sm font-semibold text-primary">
+                {sizeLabel}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {sizeOptions.map((size) => {
                   const active = size === selectedSize;
@@ -375,7 +399,7 @@ export default function ProductDetail({ product = {} }) {
           {attribute && attribute.values.length > 0 && (
             <div className="mt-5">
               <p className="mb-2 text-sm font-semibold text-primary">
-                {attribute.title || "Option"}
+                {attribute.title || optionLabel}
               </p>
               <div className="flex flex-wrap gap-2">
                 {attribute.values.map((value) => {
@@ -432,7 +456,7 @@ export default function ProductDetail({ product = {} }) {
               className="inline-flex flex-1 items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60 md:flex-none md:px-8"
               disabled={!canPurchase}
             >
-              Add to Cart
+              {addToCartLabel}
             </button>
           </div>
 

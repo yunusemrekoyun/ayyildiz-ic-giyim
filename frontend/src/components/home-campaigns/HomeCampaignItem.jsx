@@ -1,5 +1,6 @@
 // src/components/home-campaigns/HomeCampaignItem.jsx
 import { Link } from "react-router-dom";
+import { useStaticTranslation } from "../../i18n/staticContent.js";
 
 export default function HomeCampaignItem({
   to = "#",
@@ -7,10 +8,12 @@ export default function HomeCampaignItem({
   title,
   subtitle,
   badge,
-  ctaText = "Shop Now",
+  ctaText,
   variant = "small", // 'big' | 'wide' | 'small'
   className = "",
 }) {
+  const t = useStaticTranslation();
+  const resolvedCta = ctaText || t("homeCampaigns.cta") || "Shop Now";
   const span =
     variant === "big"
       ? "md:col-span-2 md:row-span-2"
@@ -49,7 +52,7 @@ export default function HomeCampaignItem({
           <p className="mt-1 max-w-md text-sm text-white/90">{subtitle}</p>
         )}
         <button className="mt-4 inline-flex items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-accent-hover">
-          {ctaText}
+          {resolvedCta}
         </button>
       </div>
     </Link>

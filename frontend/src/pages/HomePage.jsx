@@ -13,63 +13,7 @@ import { heroApi } from "../api/heroes";
 import { campaignApi } from "../api/campaigns";
 import { reviewApi } from "../api/reviews";
 import { useStorefrontLang } from "../context/LangContext.jsx";
-
-const FALLBACK_CAMPAIGNS = [
-  {
-    image: "/cmp-1.jpg",
-    title: "Autumn Bedding Event",
-    subtitle: "Up to 30% off on premium duvet & sheet sets.",
-    badge: "Limited",
-    to: "/campaign/autumn-bedding",
-    variant: "big",
-  },
-  {
-    image: "/cmp-2.jpg",
-    title: "Bridal Lingerie Picks",
-    subtitle: "Elegant designs for your special day.",
-    badge: "Top Picks",
-    to: "/campaign/bridal-lingerie",
-    variant: "wide",
-  },
-  {
-    image: "/cmp-3.jpg",
-    title: "Home Towels Bundle",
-    subtitle: "Egyptian cotton towels bundle prices.",
-    to: "/campaign/towels-bundle",
-    variant: "small",
-  },
-  {
-    image: "/cmp-4.jpg",
-    title: "Trousseau Essentials",
-    subtitle: "Complete wedding trousseau sets.",
-    to: "/campaign/trousseau-essentials",
-    variant: "small",
-  },
-];
-
-const FALLBACK_COMMENTS = [
-  {
-    name: "Ayla",
-    quote:
-      "I absolutely love the quality and elegance of the lingerie I purchased. It’s perfect for my special day!",
-    rating: 5,
-    avatar: "/c1.png",
-  },
-  {
-    name: "Elif",
-    quote:
-      "The home textiles are so soft and luxurious. They add a touch of elegance to my bedroom.",
-    rating: 5,
-    avatar: "/c2.png",
-  },
-  {
-    name: "Fatma",
-    quote:
-      "The wedding set is stunning! Exactly what I was looking for and the quality is exceptional.",
-    rating: 5,
-    avatar: "/c3.png",
-  },
-];
+import { useStaticTranslation } from "../i18n/staticContent.js";
 
 export default function HomePage() {
   // HERO (dinamik)
@@ -96,6 +40,13 @@ export default function HomePage() {
   // error
   const [error, setError] = useState(null);
   const { lang } = useStorefrontLang();
+  const t = useStaticTranslation();
+  const fallbackCampaigns = t("homePage.fallbackCampaigns") || [];
+  const fallbackComments = t("homePage.fallbackComments") || [];
+  const heroFallback = t("homePage.heroFallback") || [];
+  const sectionCopy = t("homePage.sections") || {};
+  const allTabLabel = t("homeSets.tabsAll") || "All";
+  const campaignCopy = t("homeCampaigns") || {};
 
   // HERO fetch
   useEffect(() => {
@@ -146,7 +97,12 @@ export default function HomePage() {
         const data = await setApi.list({}, lang);
         const rawSets = Array.isArray(data) ? data : data?.sets || [];
         if (!mounted) return;
-        setSets(mapSetsToCards(rawSets));
+        setSets(
+          mapSetsToCards(rawSets, {
+            untitledSet: sectionCopy.untitledSet,
+            includesMoreLabel: sectionCopy.includesMore,
+          })
+        );
       } catch (e) {
         if (mounted) setError(extractMessage(e));
       } finally {
@@ -202,15 +158,12 @@ export default function HomePage() {
   }, []);
 
   const commentsToRender = useMemo(() => {
-    // API'den geldiyse onu kullan, yoksa FALLBACK
     const list =
       Array.isArray(homeReviews) && homeReviews.length
         ? homeReviews
-        : FALLBACK_COMMENTS;
-
-    // Home grid 3 kart bekliyor; fazla ise 3’e kırp
+        : fallbackComments;
     return list.slice(0, 3);
-  }, [homeReviews]);
+  }, [homeReviews, fallbackComments]);
 
   const newArrivalCards = useMemo(
     () => mapProductsToHomeCards(featuredProducts.slice(0, 3)),
@@ -222,41 +175,23 @@ export default function HomePage() {
   );
   const setTabs = useMemo(() => {
     const tagSet = new Set();
-    (sets || []).forEach((s) => (s.tags || []).forEach((t) => tagSet.add(t)));
-    return ["All", ...Array.from(tagSet)];
-  }, [sets]);
+    (sets || []).forEach((s) => (s.tags || []).forEach((tag) => tagSet.add(tag)));
+    return [allTabLabel, ...Array.from(tagSet)];
+  }, [sets, allTabLabel]);
 
   const campaignItems = useMemo(() => {
     if (!campaigns.length) return [];
-    return mapCampaignsToHomeCards(campaigns.slice(0, 4));
-  }, [campaigns]);
+    return mapCampaignsToHomeCards(campaigns.slice(0, 4), {
+      fallbackTitle: campaignCopy.fallbackTitle,
+      fallbackCta: campaignCopy.cta,
+    });
+  }, [campaigns, campaignCopy.fallbackTitle, campaignCopy.cta]);
 
   const campaignsToRender =
-    campaignItems.length > 0 ? campaignItems : FALLBACK_CAMPAIGNS;
+    campaignItems.length > 0 ? campaignItems : fallbackCampaigns;
 
   // Hero slaytlarına fallback
-  const heroSlides = heroes.length
-    ? heroes
-    : [
-        {
-          id: "f1",
-          title: "Celebrate Your Moments in Style",
-          subtitle: "Discover our exclusive collection.",
-          buttonText: "Shop Now",
-          image: { url: "/hero-1.jpg" },
-          video: null,
-          computedLink: "/shop",
-        },
-        {
-          id: "f2",
-          title: "Elegance for Every Day",
-          subtitle: "Timeless pieces for your wardrobe.",
-          buttonText: "Explore",
-          image: { url: "/hero-2.jpg" },
-          video: null,
-          computedLink: "/shop",
-        },
-      ];
+  const heroSlides = heroes.length ? heroes : heroFallback;
 
   return (
     <>
@@ -276,14 +211,14 @@ export default function HomePage() {
         <div className="rounded-xl bg-surface shadow-sm">
           <HomeProducts
             variant="merge-top"
-            title="New Arrivals"
+            title={sectionCopy.newArrivalsTitle || "New Arrivals"}
             items={newArrivalCards}
             loading={loadingProducts && !newArrivalCards.length}
             className="rounded-t-xl"
           />
           <HomeProducts
             variant="merge-bottom"
-            title="Bestsellers"
+            title={sectionCopy.bestsellersTitle || "Bestsellers"}
             items={bestsellerCards}
             loading={loadingProducts && !bestsellerCards.length}
             className="rounded-b-xl"
@@ -292,8 +227,8 @@ export default function HomePage() {
       </section>
       <HomeSets
         variant="compact"
-        title="Trousseau Packages"
-        subtitle="Curated collections for your perfect wedding trousseau"
+        title={sectionCopy.setsTitle}
+        subtitle={sectionCopy.setsSubtitle}
         tabs={setTabs}
         items={sets}
         viewAllHref="/sets"
@@ -319,10 +254,10 @@ function mapProductsToHomeCards(products) {
   }));
 }
 
-function mapSetsToCards(sets) {
+function mapSetsToCards(sets, { untitledSet, includesMoreLabel } = {}) {
   return (sets || []).map((s) => {
     const image = s.images?.[0]?.url || "/set-placeholder.jpg";
-    const title = s.name || "Untitled Set";
+    const title = s.name || untitledSet || "Untitled Set";
     const desc = s.description || "";
     const to = `/set/${s.slug || s.id}`;
     const price = Number(s.price ?? 0);
@@ -334,7 +269,12 @@ function mapSetsToCards(sets) {
     const includes =
       productNames.length > 0
         ? productNames.slice(0, 3).join(", ") +
-          (productNames.length > 3 ? " +" + (productNames.length - 3) : "")
+          (productNames.length > 3
+            ? ` ${String(includesMoreLabel || "+{count}").replace(
+                "{count}",
+                productNames.length - 3
+              )}`
+            : "")
         : "";
     const tags = Array.from(
       new Set(
@@ -357,15 +297,15 @@ function mapSetsToCards(sets) {
   });
 }
 
-function mapCampaignsToHomeCards(list) {
+function mapCampaignsToHomeCards(list, { fallbackTitle, fallbackCta } = {}) {
   return (list || []).map((campaign) => ({
     id: campaign.id,
     to: campaign.computedLink || "/shop",
     image: campaign.image?.url || "/cmp-1.jpg",
-    title: campaign.name || "Campaign",
+    title: campaign.name || fallbackTitle || "Campaign",
     subtitle: campaign.description || "",
     badge: campaign.badge || "",
-    ctaText: campaign.ctaText || "Shop Now",
+    ctaText: campaign.ctaText || fallbackCta || "Shop Now",
     variant: mapLayoutToVariant(campaign.layout),
   }));
 }

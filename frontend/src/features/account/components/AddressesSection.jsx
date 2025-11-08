@@ -52,11 +52,14 @@ function AddressField({ label, value, onChange, required, wide }) {
   );
 }
 
-export default function AddressesSection({ addresses, onCreate, onUpdate, onDelete }) {
+export default function AddressesSection({ addresses, onCreate, onUpdate, onDelete, copy = {} }) {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyAddress());
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState(null);
+  const fieldCopy = copy.fields || {};
+  const buttonsCopy = copy.buttons || {};
+  const bannersCopy = copy.banners || {};
 
   const startNew = () => {
     setForm(emptyAddress());
@@ -84,10 +87,10 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
     try {
       if (editingId === "new") {
         await onCreate(cleanAddress(form));
-        setBanner({ variant: "success", message: "Address added" });
+        setBanner({ variant: "success", message: bannersCopy.added || "Address added" });
       } else if (editingId) {
         await onUpdate(editingId, cleanAddress(form));
-        setBanner({ variant: "success", message: "Address updated" });
+        setBanner({ variant: "success", message: bannersCopy.updated || "Address updated" });
       }
       cancel();
     } catch (error) {
@@ -103,7 +106,7 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
   const handleDelete = async (id) => {
     try {
       await onDelete(id);
-      setBanner({ variant: "warning", message: "Address removed" });
+      setBanner({ variant: "warning", message: bannersCopy.removed || "Address removed" });
     } catch (error) {
       setBanner({ variant: "danger", message: extractErrorMessage(error) });
     }
@@ -122,18 +125,20 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-primary">Addresses</h2>
+        <h2 className="text-xl font-semibold text-primary">
+          {copy.heading || "Addresses"}
+        </h2>
         <button
           onClick={startNew}
           className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-primary hover:bg-surface-hover"
         >
           <Plus className="h-4 w-4" />
-          Add New
+          {copy.addNew || "Add New"}
         </button>
       </div>
 
       {addresses.length === 0 && !editingId && (
-        <p className="mt-2 text-secondary">No saved addresses.</p>
+        <p className="mt-2 text-secondary">{copy.empty || "No saved addresses."}</p>
       )}
 
       <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -154,11 +159,11 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
                 </div>
                 <div className="text-sm text-secondary">{address.country}</div>
                 {address.phone && (
-                  <div className="text-sm text-secondary">📞 {address.phone}</div>
+                <div className="text-sm text-secondary">📞 {address.phone}</div>
                 )}
                 {address.isDefault && (
                   <div className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
-                    Default
+                    {copy.badgeDefault || "Default"}
                   </div>
                 )}
               </div>
@@ -166,14 +171,14 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
                 <button
                   onClick={() => startEdit(address)}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-hover"
-                  title="Edit"
+                  title={copy.edit || "Edit"}
                 >
                   <Pencil className="h-4 w-4 text-secondary" />
                 </button>
                 <button
                   onClick={() => handleDelete(address.id)}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-surface-hover"
-                  title="Delete"
+                  title={copy.delete || "Delete"}
                 >
                   <Trash2 className="h-4 w-4 text-rose-500" />
                 </button>
@@ -191,18 +196,18 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
           <LoadingOverlay show={saving} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AddressField
-              label="Full Name"
+              label={fieldCopy.fullName || "Full Name"}
               value={form.fullName}
               onChange={(value) => setForm((prev) => ({ ...prev, fullName: value }))}
               required
             />
             <AddressField
-              label="Phone"
+              label={fieldCopy.phone || "Phone"}
               value={form.phone}
               onChange={(value) => setForm((prev) => ({ ...prev, phone: value }))}
             />
             <AddressField
-              label="Address Line 1"
+              label={fieldCopy.address1 || "Address Line 1"}
               value={form.addressLine1}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, addressLine1: value }))
@@ -211,7 +216,7 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
               wide
             />
             <AddressField
-              label="Address Line 2"
+              label={fieldCopy.address2 || "Address Line 2"}
               value={form.addressLine2}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, addressLine2: value }))
@@ -219,25 +224,25 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
               wide
             />
             <AddressField
-              label="City"
+              label={fieldCopy.city || "City"}
               value={form.city}
               onChange={(value) => setForm((prev) => ({ ...prev, city: value }))}
               required
             />
             <AddressField
-              label="State"
+              label={fieldCopy.state || "State"}
               value={form.state}
               onChange={(value) => setForm((prev) => ({ ...prev, state: value }))}
             />
             <AddressField
-              label="Postal Code"
+              label={fieldCopy.postalCode || "Postal Code"}
               value={form.postalCode}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, postalCode: value }))
               }
             />
             <AddressField
-              label="Country"
+              label={fieldCopy.country || "Country"}
               value={form.country}
               onChange={(value) =>
                 setForm((prev) => ({ ...prev, country: value }))
@@ -252,14 +257,16 @@ export default function AddressesSection({ addresses, onCreate, onUpdate, onDele
               onClick={cancel}
               className="rounded-full border border-border px-4 py-2 text-sm text-secondary hover:bg-surface-hover"
             >
-              Cancel
+              {buttonsCopy.cancel || "Cancel"}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60"
             >
-              {saving ? "Saving..." : "Save address"}
+              {saving
+                ? buttonsCopy.saving || "Saving..."
+                : buttonsCopy.save || "Save address"}
             </button>
           </div>
         </form>

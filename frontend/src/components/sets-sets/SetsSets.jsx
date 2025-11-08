@@ -12,6 +12,8 @@ export default function SetsSets({
   tabs = [],
   items = [],
   loading = false,
+  emptyLabel = "No packages match this filter.",
+  cardCopy = {},
 }) {
   const [active, setActive] = useState(tabs[0] ?? "All");
 
@@ -68,11 +70,11 @@ export default function SetsSets({
         ) : (
           <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
             {shown.map((s, i) => (
-              <SetsSetItem key={i} {...s} />
+              <SetsSetItem key={i} {...s} copy={cardCopy} />
             ))}
             {shown.length === 0 && (
               <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border p-10 text-secondary">
-                No packages match this filter.
+                {emptyLabel}
               </div>
             )}
           </div>

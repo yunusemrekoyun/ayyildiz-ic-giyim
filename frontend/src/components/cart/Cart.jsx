@@ -3,6 +3,10 @@ import { useState } from "react";
 import CartItem from "./CartItem";
 import { useCart } from "../../hooks/useCart";
 import { useNavigate } from "react-router-dom";
+import {
+  useStaticTranslation,
+  formatStaticText,
+} from "../../i18n/staticContent.js";
 
 const CURRENCY = (n) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(
@@ -26,13 +30,16 @@ export default function Cart() {
     clearCoupon = () => {},
     shipping: shippingInfo = {},
   } = cart;
+  const t = useStaticTranslation();
+  const copy = t("cart") || {};
+  const rowCopy = copy.rows || {};
 
   const [couponInput, setCouponInput] = useState("");
 
   const shippingFee = shippingInfo?.fee ?? 0;
   const baseShippingFee = shippingInfo?.baseFee ?? shippingFee;
   const freeThreshold = shippingInfo?.freeThreshold ?? 0;
-  const shippingName = shippingInfo?.name || "Shipping";
+  const shippingName = shippingInfo?.name || rowCopy.shipping || "Shipping";
 
   const totalWithDiscount = Math.max(0, grandTotal || total);
 
@@ -55,16 +62,17 @@ export default function Cart() {
     return (
       <div className="rounded-2xl border border-border bg-contact-bg p-10 text-center">
         <h2 className="text-2xl font-serif font-extrabold text-primary">
-          Your cart is empty
+          {copy.emptyTitle || "Your cart is empty"}
         </h2>
         <p className="mt-2 text-secondary">
-          Discover our latest arrivals and curated trousseau packages.
+          {copy.emptySubtitle ||
+            "Discover our latest arrivals and curated trousseau packages."}
         </p>
         <a
           href="/shop"
           className="mt-5 inline-flex items-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
         >
-          Continue Shopping
+          {copy.continueShopping || "Continue Shopping"}
         </a>
       </div>
     );
@@ -77,7 +85,7 @@ export default function Cart() {
         <div className="rounded-2xl border border-border bg-white">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="text-lg font-semibold text-primary">
-              Shopping Cart
+              {copy.heading || "Shopping Cart"}
             </h2>
             <span className="text-sm text-secondary/80">
               {items.length} item{items.length > 1 ? "s" : ""}
@@ -101,21 +109,21 @@ export default function Cart() {
               <input
                 value={couponInput}
                 onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                placeholder="Enter coupon code"
+                placeholder={copy.couponPlaceholder || "Enter coupon code"}
                 className="flex-1 rounded-lg border border-border bg-contact-bg px-3 py-2 text-sm text-primary outline-none placeholder:text-secondary/60"
               />
               <button
                 onClick={handleApplyCoupon}
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover"
               >
-                Apply
+                {copy.apply || "Apply"}
               </button>
               {coupon && (
                 <button
                   onClick={clearCoupon}
                   className="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-surface-hover"
                 >
-                  Clear
+                  {copy.clear || "Clear"}
                 </button>
               )}
             </div>
@@ -123,7 +131,10 @@ export default function Cart() {
             <div className="flex flex-col items-start gap-1 text-sm">
               {coupon && (
                 <span className="font-medium text-accent">
-                  Applied: {coupon.code} ({coupon.percentage}% off)
+                  {formatStaticText(copy.appliedLabel, {
+                    code: coupon.code,
+                    percentage: coupon.percentage,
+                  })}
                 </span>
               )}
               {couponMessage && (
@@ -138,7 +149,7 @@ export default function Cart() {
       <aside className="md:col-span-4">
         <div className="rounded-2xl border border-border bg-contact-bg p-5">
           <h3 className="mb-4 text-lg font-semibold text-primary">
-            Order Summary
+            {copy.orderSummary || "Order Summary"}
           </h3>
 
           {/* Progress to free shipping */}
@@ -146,12 +157,13 @@ export default function Cart() {
             <div className="mb-4 rounded-xl border border-border bg-white p-3">
               <p className="text-sm text-secondary">
                 {subTotal >= freeThreshold
-                  ? "You’ve unlocked Free Shipping 🎉"
-                  : `Spend ${CURRENCY(
-                      Math.max(
-                        0,
-                        freeThreshold - subTotal
-                      )
+                  ? copy.freeShippingUnlocked ||
+                    "You’ve unlocked Free Shipping 🎉"
+                  : formatStaticText(copy.freeShippingHint, {
+                      amount: CURRENCY(Math.max(0, freeThreshold - subTotal)),
+                    }) ||
+                    `Spend ${CURRENCY(
+                      Math.max(0, freeThreshold - subTotal)
                     )} more to get Free Shipping`}
               </p>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface">
@@ -169,17 +181,32 @@ export default function Cart() {
           )}
 
           <div className="space-y-2 text-sm">
-            <Row label="Subtotal" value={CURRENCY(subTotal)} />
             <Row
-              label="Discount"
-              value={couponDiscount ? `– ${CURRENCY(couponDiscount)}` : CURRENCY(0)}
+              label={rowCopy.subtotal || "Subtotal"}
+              value={CURRENCY(subTotal)}
             />
             <Row
-              label={`Shipping${shippingName ? ` (${shippingName})` : ""}`}
-              value={shippingFee === 0 ? "Free" : CURRENCY(shippingFee)}
+              label={rowCopy.discount || "Discount"}
+              value={
+                couponDiscount ? `– ${CURRENCY(couponDiscount)}` : CURRENCY(0)
+              }
+            />
+            <Row
+              label={`${rowCopy.shipping || "Shipping"}${
+                shippingName ? ` (${shippingName})` : ""
+              }`}
+              value={
+                shippingFee === 0
+                  ? rowCopy.free || "Free"
+                  : CURRENCY(shippingFee)
+              }
             />
             <div className="my-2 border-t border-border" />
-            <Row label="Total" value={CURRENCY(totalWithDiscount)} bold />
+            <Row
+              label={rowCopy.total || "Total"}
+              value={CURRENCY(totalWithDiscount)}
+              bold
+            />
           </div>
 
           <button
@@ -187,14 +214,14 @@ export default function Cart() {
             disabled={!items.length}
             onClick={() => navigate("/checkout")}
           >
-            Proceed to Checkout
+            {copy.checkoutCta || "Proceed to Checkout"}
           </button>
 
           <a
             href="/shop"
             className="mt-3 block text-center text-sm text-secondary hover:text-accent"
           >
-            Continue Shopping
+            {copy.continueShoppingLink || "Continue Shopping"}
           </a>
         </div>
       </aside>

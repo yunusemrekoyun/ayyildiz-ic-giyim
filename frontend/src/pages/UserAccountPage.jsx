@@ -15,6 +15,7 @@ import {
   extractAvatarUrl,
 } from "../features/account/helpers.js";
 import Avatar from "../components/ui/Avatar.jsx";
+import { useStaticTranslation } from "../i18n/staticContent.js";
 
 export default function UserAccountPage({ onLogout }) {
   const location = useLocation();
@@ -31,6 +32,11 @@ export default function UserAccountPage({ onLogout }) {
   const [addresses, setAddresses] = useState([]);
   const [favorites, setFavorites] = useState({ products: [], sets: [] });
   const [busy, setBusy] = useState(false);
+  const t = useStaticTranslation();
+  const accountCopy = t("userAccount") || {};
+  const sidebarCopy = accountCopy.sidebar || {};
+  const tabsCopy = sidebarCopy.tabs || {};
+  const logoutLabel = sidebarCopy.logout || "Logout";
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -157,7 +163,7 @@ export default function UserAccountPage({ onLogout }) {
                       ].join(" ")}
                       onClick={() => setActive(tab)}
                     >
-                      {tab}
+                      {tabsCopy[tab] || tab}
                     </button>
                   </li>
                 ))}
@@ -169,7 +175,7 @@ export default function UserAccountPage({ onLogout }) {
                 disabled={busy}
               >
                 <LogOut className="h-4 w-4" />
-                Logout
+                {logoutLabel}
               </button>
             </div>
           </aside>
@@ -180,6 +186,7 @@ export default function UserAccountPage({ onLogout }) {
               <div className={busy ? "pointer-events-none opacity-60" : ""}>
                 {active === "Overview" && (
                   <OverviewSection
+                    copy={accountCopy.overview}
                     user={user}
                     profile={profile}
                     avatarSrc={avatarSrc}
@@ -215,10 +222,11 @@ export default function UserAccountPage({ onLogout }) {
                   />
                 )}
 
-                {active === "Orders" && <OrdersSection />}
+                {active === "Orders" && <OrdersSection copy={accountCopy.orders} />}
 
                 {active === "Addresses" && (
                   <AddressesSection
+                    copy={accountCopy.addresses}
                     addresses={addresses}
                     onCreate={async (payload) => {
                       const created = await userDetailsApi.createAddress(payload);
@@ -246,6 +254,7 @@ export default function UserAccountPage({ onLogout }) {
 
                 {active === "Wishlist" && (
                   <WishlistSection
+                    copy={accountCopy.wishlist}
                     favorites={favorites}
                     onToggle={async (type, id) => {
                       await userDetailsApi.toggleFavorite({ type, id });

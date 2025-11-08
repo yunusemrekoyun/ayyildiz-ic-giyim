@@ -1,4 +1,8 @@
 import DiscountBadge from "../ui/DiscountBadge.jsx";
+import {
+  useStaticTranslation,
+  formatStaticText,
+} from "../../i18n/staticContent.js";
 
 export default function SetInfo({
   name,
@@ -8,6 +12,9 @@ export default function SetInfo({
   stock,
   description,
 }) {
+  const t = useStaticTranslation();
+  const copy = t("setDetail") || {};
+  const stockCopy = copy.stock || {};
   const basePrice = Number(price ?? 0);
   const computedFinal = Number(finalPrice ?? basePrice);
   const showStrike = Number.isFinite(basePrice) && computedFinal < basePrice;
@@ -16,6 +23,24 @@ export default function SetInfo({
     currency: "EUR",
     minimumFractionDigits: 2,
   });
+
+  let stockState = "variant";
+  let stockText = stockCopy.variantDependent || "Stock depends on selections.";
+
+  if (stock !== null && stock !== undefined) {
+    if (stock > 0) {
+      stockState = "in";
+      stockText =
+        stock >= Number.MAX_SAFE_INTEGER / 2
+          ? stockCopy.infinite || "In stock"
+          : formatStaticText(stockCopy.inStockCount || "In stock: {count}", {
+              count: stock,
+            });
+    } else {
+      stockState = "out";
+      stockText = stockCopy.outOfStock || "Out of stock";
+    }
+  }
 
   return (
     <div>
@@ -37,29 +62,17 @@ export default function SetInfo({
         {showStrike && (
           <DiscountBadge percentage={discount} size="sm" />
         )}
-        {(() => {
-          if (stock === null || stock === undefined) {
-            return (
-              <div className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-sky-50 text-sky-700 ring-1 ring-sky-200">
-                Stok durumu varyantlara bağlı
-              </div>
-            );
-          }
-          if (stock > 0) {
-            const display =
-              stock >= Number.MAX_SAFE_INTEGER / 2 ? "∞" : stock;
-            return (
-              <div className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
-                In stock: {display}
-              </div>
-            );
-          }
-          return (
-            <div className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-rose-50 text-rose-700 ring-1 ring-rose-200">
-              Out of stock
-            </div>
-          );
-        })()}
+        <div
+          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${
+            stockState === "in"
+              ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+              : stockState === "out"
+              ? "bg-rose-50 text-rose-700 ring-rose-200"
+              : "bg-sky-50 text-sky-700 ring-sky-200"
+          }`}
+        >
+          {stockText}
+        </div>
       </div>
 
       {description && (

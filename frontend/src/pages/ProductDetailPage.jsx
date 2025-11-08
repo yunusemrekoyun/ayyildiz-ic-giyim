@@ -6,6 +6,7 @@ import ProductDetail from "../components/product-detail/ProductDetail";
 import SimilarProducts from "../components/product-detail/SimilarProducts";
 import { productApi } from "../api/products";
 import { useStorefrontLang } from "../context/LangContext.jsx";
+import { useStaticTranslation } from "../i18n/staticContent.js";
 
 export default function ProductDetailPage() {
   const { slug } = useParams();
@@ -14,6 +15,10 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { lang } = useStorefrontLang();
+  const t = useStaticTranslation();
+  const breadcrumbCopy = t("breadcrumbs") || {};
+  const productPageCopy = t("productDetailPage") || {};
+  const productCopy = t("productDetail") || {};
 
   useEffect(() => {
     if (!slug) return;
@@ -85,7 +90,7 @@ export default function ProductDetailPage() {
       <section className="bg-surface-light/60">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-16">
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-6 py-8 text-center text-rose-700">
-            {error || "Product not found"}
+            {error || productPageCopy.notFound || "Product not found"}
           </div>
         </div>
       </section>
@@ -93,14 +98,20 @@ export default function ProductDetailPage() {
   }
 
   const breadcrumbItems = [
-    { label: "Home", to: "/" },
+    { label: breadcrumbCopy.home || "Home", to: "/" },
     product.category?.name
       ? {
           label: product.category.name,
           to: `/shop?category=${product.category.id || product.category._id}`,
         }
       : null,
-    { label: product.name || product.title || "Product" },
+    {
+      label:
+        product.name ||
+        product.title ||
+        productCopy.fallbackName ||
+        "Product",
+    },
   ].filter(Boolean);
 
   return (

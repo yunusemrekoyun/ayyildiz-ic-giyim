@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
@@ -11,10 +11,19 @@ import {
 } from "lucide-react";
 import { reviewApi } from "../../api/reviews";
 import { getAccessToken } from "../../api/client";
+import { useStorefrontLang } from "../../context/LangContext.jsx";
+import {
+  useStaticTranslation,
+  formatStaticText,
+} from "../../i18n/staticContent.js";
 
-const dateFormatter = new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium" });
 const PAGE_LIMIT = 4;
 const INITIAL_STATS = { avgRating: 0, count: 0 };
+const DATE_LOCALES = {
+  tr: "tr-TR",
+  en: "en-US",
+  de: "de-DE",
+};
 
 export default function ReviewSectionCard({
   targetType = "product",
@@ -22,6 +31,18 @@ export default function ReviewSectionCard({
   targetSlug,
   targetName,
 }) {
+  const { lang } = useStorefrontLang();
+  const t = useStaticTranslation();
+  const reviewsCopy = t("reviews") || {};
+  const formCopy = reviewsCopy.form || {};
+  const errorCopy = reviewsCopy.errors || {};
+  const listCopy = reviewsCopy.list || {};
+  const displayCopy = reviewsCopy.displayName || {};
+  const locale = DATE_LOCALES[lang] || DATE_LOCALES.en;
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }),
+    [locale]
+  );
   const identifier = targetSlug || targetId;
   const [stats, setStats] = useState(INITIAL_STATS);
   const [reviews, setReviews] = useState([]);
@@ -44,19 +65,32 @@ export default function ReviewSectionCard({
   const isAuthenticated = Boolean(getAccessToken());
   const averageRating = useMemo(() => Number(stats.avgRating || 0), [stats]);
   const totalReviews = stats.count || 0;
-  const displayName =
-    targetName ||
+  const fallbackDisplayName =
     (targetType === "set"
-      ? "this set"
+      ? displayCopy.set || "this set"
       : targetType === "product"
-      ? "this product"
-      : "this item");
+      ? displayCopy.product || "this product"
+      : displayCopy.item || "this item") || "this item";
+  const targetLabel = targetName || fallbackDisplayName;
+  const titleLabel = formCopy.titleLabel || "Title";
+  const titleOptional = formCopy.titleOptional || "(optional)";
+  const formatDate = useCallback(
+    (value) => {
+      if (!value) return "—";
+      try {
+        return dateFormatter.format(new Date(value));
+      } catch {
+        return "—";
+      }
+    },
+    [dateFormatter]
+  );
 
   useEffect(() => {
     let mounted = true;
     async function load() {
       if (!identifier) {
-        setError("Unable to load reviews for this item.");
+        setError(reviewsCopy.loadError || "Unable to load reviews for this item.");
         setLoading(false);
         return;
       }
@@ -84,7 +118,7 @@ export default function ReviewSectionCard({
     return () => {
       mounted = false;
     };
-  }, [identifier, targetType]);
+  }, [identifier, targetType, reviewsCopy.loadError]);
 
   const handleChangeRating = (value) =>
     setForm((p) => ({ ...p, rating: value }));
@@ -96,19 +130,19 @@ export default function ReviewSectionCard({
     setFeedback(null);
 
     if (!isAuthenticated) {
-      setFormError("Please sign in to submit a review.");
+      setFormError(errorCopy.notAuthenticated || "Please sign in to submit a review.");
       return;
     }
 
     const trimmedBody = form.body.trim();
     if (trimmedBody.length < 10) {
-      setFormError("Please share at least 10 characters in your review.");
+      setFormError(errorCopy.shortBody || "Please share at least 10 characters in your review.");
       return;
     }
 
     const ratingValue = Number(form.rating);
     if (!Number.isFinite(ratingValue) || ratingValue < 1 || ratingValue > 5) {
-      setFormError("Rating must be between 1 and 5.");
+      setFormError(errorCopy.invalidRating || "Rating must be between 1 and 5.");
       return;
     }
 
@@ -129,7 +163,7 @@ export default function ReviewSectionCard({
     setSubmitting(true);
     try {
       await reviewApi.create(payload);
-      setFeedback("Thank you! Your review has been sent for approval.");
+      setFeedback(formCopy.success || "Thank you! Your review has been sent for approval.");
       setHasSubmitted(true);
       setForm({ rating: ratingValue, title: "", body: "" });
     } catch (err) {
@@ -171,14 +205,20 @@ export default function ReviewSectionCard({
           </span>
           <div>
             <h2 className="text-lg font-semibold text-primary">
-              Customer reviews
+              {reviewsCopy.heading || "Customer reviews"}
             </h2>
             <p className="text-sm text-secondary">
-              Share your experience with {displayName}.
+              {formatStaticText(reviewsCopy.subheading || "Share your experience with {target}.", {
+                target: targetLabel,
+              })}
             </p>
           </div>
         </div>
-        <RatingPreview value={averageRating} count={totalReviews} />
+        <RatingPreview
+          value={averageRating}
+          count={totalReviews}
+          copy={reviewsCopy}
+        />
       </header>
 
       {error ? (
@@ -200,7 +240,8 @@ export default function ReviewSectionCard({
           </div>
         ) : reviews.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/60 bg-surface-light p-6 text-center text-sm text-secondary">
-            There are no reviews yet. Be the first to share your thoughts!
+            {reviewsCopy.emptyPrompt ||
+              "There are no reviews yet. Be the first to share your thoughts!"}
           </div>
         ) : (
           <div className="space-y-4">
@@ -213,7 +254,7 @@ export default function ReviewSectionCard({
                   <div>
                     <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                       <UserRound className="h-4 w-4 text-secondary/70" />
-                      {review.user?.name || "Customer"}
+                      {review.user?.name || listCopy.anonymous || "Customer"}
                     </div>
                     <div className="text-xs text-secondary">
                       {formatDate(review.createdAt)}
@@ -246,7 +287,7 @@ export default function ReviewSectionCard({
                 {loadingMore ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : null}
-                Load more reviews
+                {reviewsCopy.loadMore || "Load more reviews"}
               </button>
             ) : null}
           </div>
@@ -256,21 +297,22 @@ export default function ReviewSectionCard({
       {/* === FORM ALTA ALINDI === */}
       <div className="mt-8">
         <div className="rounded-xl border border-border/60 bg-surface-light p-4">
-          <h3 className="text-sm font-semibold text-primary">Write a review</h3>
+          <h3 className="text-sm font-semibold text-primary">
+            {formCopy.title || "Write a review"}
+          </h3>
 
           {!isAuthenticated ? (
             <div className="mt-4 space-y-3 rounded-lg border border-border/60 bg-white p-4 text-sm text-secondary">
               <div className="flex items-start gap-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 text-accent" />
                 <p>
-                  Please{" "}
+                  {formCopy.loginPrompt || "Please sign in to leave a review."} {" "}
                   <Link
                     to="/account?view=login"
                     className="font-semibold text-accent hover:underline"
                   >
-                    sign in
-                  </Link>{" "}
-                  to leave a review.
+                    {formCopy.loginCta || "Sign in"}
+                  </Link>
                 </p>
               </div>
             </div>
@@ -278,7 +320,7 @@ export default function ReviewSectionCard({
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
-                  Rating
+                  {formCopy.ratingLabel || "Rating"}
                 </label>
                 <InteractiveRating
                   value={form.rating}
@@ -289,7 +331,10 @@ export default function ReviewSectionCard({
 
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
-                  Title <span className="text-secondary/60">(optional)</span>
+                  {titleLabel}{" "}
+                  {titleOptional ? (
+                    <span className="text-secondary/60">{titleOptional}</span>
+                  ) : null}
                 </label>
                 <input
                   type="text"
@@ -297,20 +342,23 @@ export default function ReviewSectionCard({
                   onChange={(e) => handleChange("title", e.target.value)}
                   disabled={submitting || hasSubmitted}
                   className="mt-1 w-full rounded-lg border border-border/70 bg-white px-3 py-2 text-sm text-primary outline-none transition focus:border-accent"
-                  placeholder="Summarise your experience"
+                  placeholder={formCopy.titlePlaceholder || "Summarise your experience"}
                 />
               </div>
 
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-secondary">
-                  Review
+                  {formCopy.reviewLabel || "Review"}
                 </label>
                 <textarea
                   value={form.body}
                   onChange={(e) => handleChange("body", e.target.value)}
                   disabled={submitting || hasSubmitted}
                   className="mt-1 min-h-[120px] w-full resize-y rounded-lg border border-border/70 bg-white px-3 py-2 text-sm text-primary outline-none transition focus:border-accent"
-                  placeholder={`Tell us what you liked about ${displayName}...`}
+                  placeholder={formatStaticText(
+                    formCopy.reviewPlaceholder || "Tell us what you liked about {target}...",
+                    { target: targetLabel }
+                  )}
                 />
               </div>
 
@@ -339,7 +387,9 @@ export default function ReviewSectionCard({
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                {hasSubmitted ? "Review submitted" : "Submit review"}
+                {hasSubmitted
+                  ? formCopy.submitted || "Review submitted"
+                  : formCopy.submit || "Submit review"}
               </button>
             </form>
           )}
@@ -351,14 +401,16 @@ export default function ReviewSectionCard({
 
 /* --- küçük yardımcı bileşenler & fn'ler --- */
 
-function RatingPreview({ value, count }) {
+function RatingPreview({ value, count, copy = {} }) {
   return (
     <div className="flex items-center gap-3 rounded-full border border-border/60 bg-white px-4 py-2 text-sm text-primary shadow-sm">
       <StaticRating value={value} />
       <span className="text-sm font-semibold text-primary">
         {value.toFixed(1)} / 5
       </span>
-      <span className="text-xs text-secondary">({count} reviews)</span>
+      <span className="text-xs text-secondary">
+        {formatStaticText(copy.countLabel || "({count} reviews)", { count })}
+      </span>
     </div>
   );
 }
@@ -407,15 +459,6 @@ function InteractiveRating({ value, onChange, disabled }) {
       })}
     </div>
   );
-}
-
-function formatDate(value) {
-  if (!value) return "—";
-  try {
-    return dateFormatter.format(new Date(value));
-  } catch {
-    return "—";
-  }
 }
 
 function normalizePagination(pagination = {}, fallbackPage = 1) {

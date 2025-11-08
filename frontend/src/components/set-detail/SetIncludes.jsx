@@ -1,4 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
+import {
+  useStaticTranslation,
+  formatStaticText,
+} from "../../i18n/staticContent.js";
 
 /**
  * SetIncludes
@@ -10,11 +14,22 @@ export default function SetIncludes({ products = [] }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(null); // { name, images: [...] }
   const [idx, setIdx] = useState(0);
+  const t = useStaticTranslation();
+  const copy = t("setDetail") || {};
+  const qtyLabel = copy.qtyLabel || "Qty";
+  const productFallback = copy.productFallback || "Product";
+  const noImage = copy.noImage || "No image";
+  const noImagesAvailable = copy.noImagesAvailable || "No images available";
+  const closeLabel = copy.close || "Close";
+  const sliderCopy = copy.slider || {};
+  const prevLabel = sliderCopy.prev || "Previous image";
+  const nextLabel = sliderCopy.next || "Next image";
+  const goToLabel = sliderCopy.goTo || "Go to image {index}";
 
   const openLightbox = (p) => {
     const pics = Array.isArray(p?.images) ? p.images : [];
     setActive({
-      name: p?.name || "Product",
+      name: p?.name || productFallback,
       images: pics.length ? pics : [],
     });
     setIdx(0);
@@ -66,23 +81,23 @@ export default function SetIncludes({ products = [] }) {
                 {cover ? (
                   <img
                     src={cover}
-                    alt={p?.name || "Product"}
+                    alt={p?.name || productFallback}
                     className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform"
                     loading="lazy"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-xs text-zinc-500">
-                    No image
+                    {noImage}
                   </div>
                 )}
               </div>
               <div className="p-2">
                 <div className="line-clamp-1 text-sm font-medium text-zinc-800">
-                  {p?.name || "Product"}
+                  {p?.name || productFallback}
                 </div>
                 {entry?.quantity ? (
                   <div className="mt-0.5 text-xs text-zinc-500">
-                    Qty: {entry.quantity}
+                    {qtyLabel}: {entry.quantity}
                   </div>
                 ) : null}
               </div>
@@ -109,9 +124,9 @@ export default function SetIncludes({ products = [] }) {
                 type="button"
                 onClick={closeLightbox}
                 className="rounded-full border border-zinc-200 px-3 py-1 text-sm text-zinc-700 hover:bg-zinc-50"
-                aria-label="Close"
+                aria-label={closeLabel}
               >
-                Close
+                {closeLabel}
               </button>
             </header>
 
@@ -131,7 +146,7 @@ export default function SetIncludes({ products = [] }) {
                         type="button"
                         onClick={prev}
                         className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 px-3 py-1 text-sm shadow hover:bg-white"
-                        aria-label="Previous image"
+                        aria-label={prevLabel}
                       >
                         ‹
                       </button>
@@ -139,7 +154,7 @@ export default function SetIncludes({ products = [] }) {
                         type="button"
                         onClick={next}
                         className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 px-3 py-1 text-sm shadow hover:bg-white"
-                        aria-label="Next image"
+                        aria-label={nextLabel}
                       >
                         ›
                       </button>
@@ -151,7 +166,7 @@ export default function SetIncludes({ products = [] }) {
                 </div>
               ) : (
                 <div className="flex aspect-[4/3] items-center justify-center text-sm text-zinc-500">
-                  No images available
+                  {noImagesAvailable}
                 </div>
               )}
             </div>
@@ -167,7 +182,7 @@ export default function SetIncludes({ products = [] }) {
                     className={`h-16 w-16 shrink-0 overflow-hidden rounded border ${
                       i === idx ? "border-zinc-800" : "border-zinc-200"
                     }`}
-                    aria-label={`Go to image ${i + 1}`}
+                    aria-label={formatStaticText(goToLabel, { index: i + 1 })}
                   >
                     <img
                       src={img.url}

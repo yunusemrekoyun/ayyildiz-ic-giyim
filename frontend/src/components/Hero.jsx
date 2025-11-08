@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  useStaticTranslation,
+  formatStaticText,
+} from "../i18n/staticContent.js";
 
 /**
  * slides item yapısı (backend'den heroApi.list ile geliyor):
@@ -15,6 +19,13 @@ export default function Hero({
   imageAutoMs = 6000, // fotoğraf slaytı için otomatik geçiş süresi
   className = "",
 }) {
+  const t = useStaticTranslation();
+  const heroCopy = t("heroComponent") || {};
+  const noMediaLabel = heroCopy.noMedia || "No media";
+  const prevLabel = heroCopy.prev || "Previous";
+  const nextLabel = heroCopy.next || "Next";
+  const goToSlideLabel = heroCopy.goToSlide || "Go to slide {index}";
+
   const [index, setIndex] = useState(0);
   const active = slides[index] || null;
 
@@ -125,7 +136,7 @@ export default function Hero({
               />
             ) : (
               <div className="absolute inset-0 grid place-items-center bg-black/5 text-white/80">
-                No media
+                {noMediaLabel}
               </div>
             )}
 
@@ -182,7 +193,7 @@ export default function Hero({
                 ? "scale-110 bg-white"
                 : "bg-white/70 hover:bg-white/90",
             ].join(" ")}
-            aria-label={`Go to slide ${i + 1}`}
+            aria-label={formatStaticText(goToSlideLabel, { index: i + 1 })}
           />
         ))}
       </div>
@@ -193,14 +204,14 @@ export default function Hero({
           <button
             onClick={() => go(-1)}
             className="absolute left-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/30 px-3 py-2 text-white backdrop-blur hover:bg-black/40"
-            aria-label="Prev"
+            aria-label={prevLabel}
           >
             ‹
           </button>
           <button
             onClick={() => go(1)}
             className="absolute right-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/30 px-3 py-2 text-white backdrop-blur hover:bg-black/40"
-            aria-label="Next"
+            aria-label={nextLabel}
           >
             ›
           </button>

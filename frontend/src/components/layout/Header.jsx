@@ -8,6 +8,7 @@ import { mapCategoryTree } from "../../utils/catalog";
 import { useCart } from "../../hooks/useCart";
 import LanguageSwitcher from "../LanguageSwitcher.jsx";
 import { useStorefrontLang } from "../../context/LangContext.jsx";
+import { useStaticTranslation } from "../../i18n/staticContent.js";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function Header() {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [navError, setNavError] = useState(null);
   const { lang } = useStorefrontLang();
+  const t = useStaticTranslation();
 
   useEffect(() => {
     let mounted = true;
@@ -86,7 +88,7 @@ export default function Header() {
                 <Search className="h-4 w-4 text-secondary" />
                 <input
                   type="text"
-                  placeholder="Search"
+                  placeholder={t("header.searchPlaceholder")}
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   className="ml-2 w-full border-none text-sm outline-none placeholder:text-secondary/60"
@@ -102,8 +104,8 @@ export default function Header() {
                   );
                 }}
                 className="md:hidden inline-flex rounded-full p-2 hover:bg-surface-hover"
-                aria-label="Search"
-                title="Search"
+                aria-label={t("header.searchLabel")}
+                title={t("header.searchLabel")}
               >
                 <Search className="h-6 w-6 text-secondary" />
               </button>
@@ -151,11 +153,13 @@ export default function Header() {
               "
             >
               {loadingCategories && (
-                <span className="text-sm text-secondary">Loading...</span>
+                <span className="text-sm text-secondary">
+                  {t("header.loadingCategories")}
+                </span>
               )}
               {!loadingCategories && navError && (
                 <span className="text-sm text-secondary">
-                  Categories unavailable
+                  {t("header.categoriesUnavailable")}
                 </span>
               )}
               {!loadingCategories &&
@@ -182,7 +186,7 @@ export default function Header() {
                 to="/sale"
                 className="shrink-0 text-accent hover:text-accent-hover"
               >
-                Sale
+                {t("header.sale")}
               </Link>
             </nav>
           </div>

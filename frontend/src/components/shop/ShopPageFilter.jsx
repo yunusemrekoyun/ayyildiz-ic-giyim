@@ -21,6 +21,7 @@ export default function ShopPageFilter({
   selectedPrice,
   onPriceChange,
   onReset,
+  labels = {},
 }) {
   const maxPrice = priceRange.max ?? 0;
   const minPrice = priceRange.min ?? 0;
@@ -56,23 +57,35 @@ export default function ShopPageFilter({
     });
   };
 
+  const text = {
+    title: labels.title || "Filters",
+    reset: labels.reset || "Reset",
+    categories: labels.categories || "Categories",
+    allProducts: labels.allProducts || "All products",
+    size: labels.size || "Size",
+    color: labels.color || "Color",
+    price: labels.price || "Price Range",
+    expand: labels.expand || "Expand",
+    collapse: labels.collapse || "Collapse",
+  };
+
   return (
     <aside className="rounded-xl bg-contact-bg p-5 ring-1 ring-border">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-primary">Filters</h3>
+        <h3 className="text-lg font-semibold text-primary">{text.title}</h3>
         <button
           type="button"
           onClick={onReset}
           className="text-sm text-secondary hover:text-accent"
         >
-          Reset
+          {text.reset}
         </button>
       </div>
 
       {/* Categories */}
       <section className="mt-5">
         <header className="mb-2 text-sm font-medium text-primary">
-          Categories
+          {text.categories}
         </header>
         <div className="flex flex-col gap-2">
           <button
@@ -84,7 +97,7 @@ export default function ShopPageFilter({
                 : "text-primary hover:bg-surface-hover"
             }`}
           >
-            All products
+            {text.allProducts}
           </button>
 
           <CategoryTreeList
@@ -93,6 +106,7 @@ export default function ShopPageFilter({
             onSelect={(id) => onCategoryChange?.({ id })}
             openNodes={openNodes}
             onToggle={toggleNode}
+            labels={text}
           />
         </div>
       </section>
@@ -100,7 +114,7 @@ export default function ShopPageFilter({
       {/* Sizes */}
       {sizes.length > 0 && (
         <section className="mt-6">
-          <header className="mb-2 text-sm font-medium text-primary">Size</header>
+          <header className="mb-2 text-sm font-medium text-primary">{text.size}</header>
           <div className="flex flex-wrap gap-2">
             {sizes.map((option) => (
               <button
@@ -122,7 +136,7 @@ export default function ShopPageFilter({
       {/* Colors */}
       {colors.length > 0 && (
         <section className="mt-6">
-          <header className="mb-2 text-sm font-medium text-primary">Color</header>
+          <header className="mb-2 text-sm font-medium text-primary">{text.color}</header>
           <div className="flex flex-wrap items-center gap-3">
             {colors.map((option) => {
               const isActive = selectedColor === option.value;
@@ -155,7 +169,7 @@ export default function ShopPageFilter({
       {maxPrice > 0 && (
         <section className="mt-6">
           <header className="mb-2 text-sm font-medium text-primary">
-            Price Range
+            {text.price}
           </header>
           <input
             type="range"
@@ -177,7 +191,15 @@ export default function ShopPageFilter({
   );
 }
 
-function CategoryTreeList({ tree = [], selectedId, onSelect, openNodes, onToggle, depth = 0 }) {
+function CategoryTreeList({
+  tree = [],
+  selectedId,
+  onSelect,
+  openNodes,
+  onToggle,
+  depth = 0,
+  labels = {},
+}) {
   if (!tree?.length) return null;
   return (
     <ul className="space-y-1">
@@ -190,16 +212,27 @@ function CategoryTreeList({ tree = [], selectedId, onSelect, openNodes, onToggle
           onSelect={onSelect}
           openNodes={openNodes}
           onToggle={onToggle}
+          labels={labels}
         />
       ))}
     </ul>
   );
 }
 
-function CategoryTreeItem({ node, depth, selectedId, onSelect, openNodes, onToggle }) {
+function CategoryTreeItem({
+  node,
+  depth,
+  selectedId,
+  onSelect,
+  openNodes,
+  onToggle,
+  labels = {},
+}) {
   const hasChildren = node.children && node.children.length > 0;
   const isOpen = openNodes.has(node.id);
   const isActive = String(selectedId) === String(node.id);
+  const expandLabel = labels?.expand || "Expand";
+  const collapseLabel = labels?.collapse || "Collapse";
 
   return (
     <li>
@@ -214,7 +247,7 @@ function CategoryTreeItem({ node, depth, selectedId, onSelect, openNodes, onTogg
             type="button"
             onClick={() => onToggle(node.id)}
             className="mr-2 text-xs text-secondary"
-            aria-label={isOpen ? "Collapse" : "Expand"}
+            aria-label={isOpen ? collapseLabel : expandLabel}
           >
             {isOpen ? "–" : "+"}
           </button>
@@ -238,6 +271,7 @@ function CategoryTreeItem({ node, depth, selectedId, onSelect, openNodes, onTogg
           onSelect={onSelect}
           openNodes={openNodes}
           onToggle={onToggle}
+          labels={labels}
           depth={depth + 1}
         />
       )}

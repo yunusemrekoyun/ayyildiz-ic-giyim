@@ -1,8 +1,14 @@
 // src/components/footer/Footer.jsx
 import { Link } from "react-router-dom";
 import { Mail, Phone } from "lucide-react";
+import { useStaticTranslation } from "../../i18n/staticContent.js";
 
 export default function Footer() {
+  const t = useStaticTranslation();
+  const links = t("footer.links") || {};
+  const year = new Date().getFullYear();
+  const copy = t("footer.copyright", { year }) || `© ${year} Ayyıldız İç Giyim.`;
+
   return (
     <footer className="border-t border-border bg-white">
       <div className="mx-auto max-w-7xl px-6 py-10">
@@ -19,28 +25,28 @@ export default function Footer() {
         {/* Linkler */}
         <nav className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-[15px] font-medium text-primary">
           <Link to="/about" className="hover:text-accent">
-            About Us
+            {links.about}
           </Link>
           <Link to="/contact" className="hover:text-accent">
-            Contact
+            {links.contact}
           </Link>
           <Link to="/faq" className="hover:text-accent">
-            FAQ
+            {links.faq}
           </Link>
           <Link to="/shipping-returns" className="hover:text-accent">
-            Shipping &amp; Returns
+            {links.shippingReturns}
           </Link>
           <Link to="/privacy" className="hover:text-accent">
-            Privacy Policy
+            {links.privacy}
           </Link>
           <Link to="/terms" className="hover:text-accent">
-            Terms of Service
+            {links.terms}
           </Link>
         </nav>
 
         {/* Copyright */}
         <p className="pt-6 text-center text-sm text-secondary/70">
-          © {new Date().getFullYear()} Ayyıldız İç Giyim. All rights reserved.
+          {copy}
         </p>
       </div>
     </footer>

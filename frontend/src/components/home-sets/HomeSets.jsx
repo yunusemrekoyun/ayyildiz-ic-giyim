@@ -1,6 +1,7 @@
 // src/components/home-sets/HomeSets.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import HomeSetItem from "./HomeSetItem";
+import { useStaticTranslation } from "../../i18n/staticContent.js";
 
 const pillBase =
   "inline-flex items-center rounded-full border px-4 py-2 text-sm transition";
@@ -8,7 +9,7 @@ const pillActive = "bg-accent border-accent text-white shadow";
 const pillIdle = "border-border text-primary hover:bg-surface-hover";
 
 export default function HomeSets({
-  title = "Trousseau Packages",
+  title,
   subtitle,
   tabs = [],
   items = [],
@@ -16,12 +17,22 @@ export default function HomeSets({
   viewAllHref = "/sets",
   loading = false, // <<< NEW
 }) {
-  const [active, setActive] = useState(tabs[0] ?? "All");
+  const t = useStaticTranslation();
+  const defaultAll = t("homeSets.tabsAll") || "All";
+  const displayTabs = useMemo(
+    () => (tabs.length ? tabs : [defaultAll]),
+    [tabs, defaultAll]
+  );
+  const [active, setActive] = useState(displayTabs[0]);
+
+  useEffect(() => {
+    setActive(displayTabs[0]);
+  }, [displayTabs]);
 
   const shown = useMemo(() => {
-    if (active === "All") return items;
+    if (active === defaultAll || active === displayTabs[0]) return items;
     return items.filter((i) => i.tags?.includes(active));
-  }, [active, items]);
+  }, [active, items, defaultAll, displayTabs]);
 
   const isCompact = variant === "compact";
 
@@ -47,9 +58,9 @@ export default function HomeSets({
                 isCompact ? "text-2xl" : "text-4xl",
               ].join(" ")}
             >
-              {title}
+              {title || t("homePage.sections.setsTitle")}
             </h2>
-            {subtitle && (
+            {(subtitle ?? t("homePage.sections.setsSubtitle")) && (
               <p
                 className={[
                   "text-secondary",
@@ -58,7 +69,7 @@ export default function HomeSets({
                     : "mx-auto mt-3 max-w-2xl",
                 ].join(" ")}
               >
-                {subtitle}
+                {subtitle ?? t("homePage.sections.setsSubtitle")}
               </p>
             )}
           </div>
@@ -69,7 +80,7 @@ export default function HomeSets({
               href={viewAllHref}
               className="inline-flex items-center rounded-full border border-border px-3 py-1.5 text-sm text-primary hover:bg-surface-hover"
             >
-              View all
+              {t("homeSets.viewAll")}
             </a>
           )}
         </div>
@@ -89,17 +100,17 @@ export default function HomeSets({
                   className="h-8 w-20 animate-pulse rounded-full bg-surface-hover/80"
                 />
               ))
-            : tabs.map((t) => (
+            : displayTabs.map((tab) => (
                 <button
-                  key={t}
-                  onClick={() => setActive(t)}
+                  key={tab}
+                  onClick={() => setActive(tab)}
                   className={[
                     pillBase,
-                    active === t ? pillActive : pillIdle,
+                    active === tab ? pillActive : pillIdle,
                     isCompact && "px-3 py-1 text-xs",
                   ].join(" ")}
                 >
-                  {t}
+                  {tab}
                 </button>
               ))}
         </div>
@@ -144,7 +155,7 @@ export default function HomeSets({
 
           {!loading && shown.length === 0 && (
             <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border p-10 text-secondary">
-              No packages match this filter.
+              {t("homeSets.noResults")}
             </div>
           )}
         </div>
@@ -156,7 +167,7 @@ export default function HomeSets({
               href={viewAllHref}
               className="inline-flex items-center rounded-full border border-border px-4 py-2 text-sm text-primary hover:bg-surface-hover"
             >
-              View all packages
+              {t("homeSets.viewAllPackages")}
             </a>
           </div>
         )}

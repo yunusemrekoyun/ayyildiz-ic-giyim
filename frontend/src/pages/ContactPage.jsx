@@ -3,6 +3,7 @@ import { Mail, Phone, MapPin, Clock, Send, Loader2, AlertCircle } from "lucide-r
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { contactPageApi, contactMessageApi } from "../api/contact";
 import { useStorefrontLang } from "../context/LangContext.jsx";
+import { useStaticTranslation } from "../i18n/staticContent.js";
 
 const makeBlock = (title = "", lines = []) => ({
   title,
@@ -14,32 +15,51 @@ const clone = (value) =>
     ? structuredClone(value)
     : JSON.parse(JSON.stringify(value));
 
-const defaultConfig = {
-  heroTitle: "We're here to help",
-  heroSubtitle:
-    "Our customer care team is available Monday to Friday, 09:00–18:00 CET. Send us a note and we'll respond within one business day.",
-  heroImage: null,
-  addressBlock: makeBlock("Visit our European studio", [
-    "Kurfürstendamm 45, 10719 Berlin",
-    "Showroom & click-and-collect (appointment recommended)",
-  ]),
-  hoursBlock: makeBlock("Opening hours (CET)", [
-    "Mon – Fri: 09:00 – 18:00",
-    "Sat: 10:00 – 16:00 (showroom only)",
-    "Sun & public holidays: closed",
-  ]),
-  emailBlock: makeBlock("Customer service", [
-    "support@evimstil.com",
-    "Average response time: < 24 h",
-  ]),
-  phoneBlock: makeBlock("Phone", [
-    "+49 (0) 30 234 567 89",
-    "WhatsApp & Signal available on the same number",
-  ]),
-  formEnabled: true,
-  successMessage:
-    "Thank you for your message. We have received your enquiry and will reply via e-mail shortly. If you need immediate assistance, call us on the number below.",
-};
+function buildDefaultConfig(copy = {}) {
+  const hero = copy.heroFallback || {};
+  const blocks = copy.defaultBlocks || {};
+  const form = copy.form || {};
+  return {
+    heroTitle: hero.title || "We're here to help",
+    heroSubtitle:
+      hero.subtitle ||
+      "Our customer care team is available Monday to Friday, 09:00–18:00 CET. Send us a note and we'll respond within one business day.",
+    heroImage: null,
+    addressBlock: makeBlock(
+      blocks.addressTitle || "Visit our European studio",
+      blocks.addressLines || [
+        "Kurfürstendamm 45, 10719 Berlin",
+        "Showroom & click-and-collect (appointment recommended)",
+      ]
+    ),
+    hoursBlock: makeBlock(
+      blocks.hoursTitle || "Opening hours (CET)",
+      blocks.hoursLines || [
+        "Mon – Fri: 09:00 – 18:00",
+        "Sat: 10:00 – 16:00 (showroom only)",
+        "Sun & public holidays: closed",
+      ]
+    ),
+    emailBlock: makeBlock(
+      blocks.emailTitle || "Customer service",
+      blocks.emailLines || [
+        "support@evimstil.com",
+        "Average response time: < 24 h",
+      ]
+    ),
+    phoneBlock: makeBlock(
+      blocks.phoneTitle || "Phone",
+      blocks.phoneLines || [
+        "+49 (0) 30 234 567 89",
+        "WhatsApp & Signal available on the same number",
+      ]
+    ),
+    formEnabled: true,
+    successMessage:
+      form.success ||
+      "Thank you for your message. We have received your enquiry and will reply via e-mail shortly. If you need immediate assistance, call us on the number below.",
+  };
+}
 
 const asString = (value, fallback = "") =>
   value === undefined || value === null ? fallback : String(value);
@@ -54,9 +74,10 @@ const mergeBlock = (block, fallback) => {
   );
 };
 
-const mergeConfig = (raw) => {
-  if (!raw) return clone(defaultConfig);
-  const merged = clone(defaultConfig);
+const mergeConfig = (raw, defaults) => {
+  const base = clone(defaults || {});
+  if (!raw) return base;
+  const merged = clone(base);
   merged.heroTitle = asString(raw.heroTitle, merged.heroTitle);
   merged.heroSubtitle = asString(raw.heroSubtitle, merged.heroSubtitle);
   merged.formEnabled =
@@ -104,7 +125,6 @@ const getErrorMessage = (err) => {
 };
 
 export default function ContactPage() {
-  const [config, setConfig] = useState(() => mergeConfig(null));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [formData, setFormData] = useState(initialFormState);
@@ -112,6 +132,17 @@ export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const { lang } = useStorefrontLang();
+  const t = useStaticTranslation();
+  const breadcrumbs = t("breadcrumbs") || {};
+  const contactCopy = t("contactPage") || {};
+  const formCopy = contactCopy.form || {};
+  const formFields = formCopy.fields || {};
+  const baseConfig = useMemo(() => buildDefaultConfig(contactCopy), [contactCopy]);
+  const [config, setConfig] = useState(() => mergeConfig(null, baseConfig));
+
+  useEffect(() => {
+    setConfig(mergeConfig(null, baseConfig));
+  }, [baseConfig]);
 
   useEffect(() => {
     let active = true;
@@ -120,12 +151,13 @@ export default function ContactPage() {
         setLoading(true);
         const response = await contactPageApi.get(lang);
         if (!active) return;
-        setConfig(mergeConfig(response));
+        setConfig(mergeConfig(response, baseConfig));
         setLoadError(null);
       } catch (err) {
         if (!active) return;
-        setLoadError(getErrorMessage(err));
-        setConfig(mergeConfig(null));
+        const message = getErrorMessage(err);
+        setLoadError(message || formCopy.loadError || "");
+        setConfig(mergeConfig(null, baseConfig));
       } finally {
         if (active) setLoading(false);
       }
@@ -133,7 +165,7 @@ export default function ContactPage() {
     return () => {
       active = false;
     };
-  }, [lang]);
+  }, [lang, baseConfig, formCopy.loadError]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -181,8 +213,8 @@ export default function ContactPage() {
       <section className="mx-auto max-w-[1400px] px-4 pt-6 sm:px-6">
         <BreadCrumb
           items={[
-            { label: "Home", to: "/" },
-            { label: "Contact" },
+            { label: breadcrumbs.home || "Home", to: "/" },
+            { label: breadcrumbs.contact || "Contact" },
           ]}
         />
       </section>
@@ -222,7 +254,7 @@ export default function ContactPage() {
               {loadError ? (
                 <div className="mb-6 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
                   <AlertCircle className="h-5 w-5 shrink-0" />
-                  <span>{loadError}</span>
+                  <span>{loadError || formCopy.loadError || ""}</span>
                 </div>
               ) : null}
 
@@ -234,50 +266,51 @@ export default function ContactPage() {
 
               {!config.formEnabled ? (
                 <div className="mb-6 rounded-xl border border-border bg-surface-light/70 p-5 text-sm text-secondary">
-                  Our contact form is temporarily unavailable. Please reach us via the email or phone numbers listed on this page.
+                  {formCopy.disabled ||
+                    "Our contact form is temporarily unavailable. Please reach us via the email or phone numbers listed on this page."}
                 </div>
               ) : null}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <TextField
-                    label="Full name"
+                    label={formFields.nameLabel || "Full name"}
                     id="contact-name"
                     name="name"
                     required
-                    placeholder="Jane Doe"
+                    placeholder={formFields.namePlaceholder || "Jane Doe"}
                     value={formData.name}
                     onChange={handleChange}
                     disabled={!config.formEnabled || submitting || loading}
                   />
                   <TextField
-                    label="Email"
+                    label={formFields.emailLabel || "Email"}
                     id="contact-email"
                     name="email"
                     type="email"
                     required
-                    placeholder="you@example.com"
+                    placeholder={formFields.emailPlaceholder || "you@example.com"}
                     value={formData.email}
                     onChange={handleChange}
                     disabled={!config.formEnabled || submitting || loading}
                   />
                 </div>
                 <TextField
-                  label="Phone (optional)"
+                  label={formFields.phoneLabel || "Phone (optional)"}
                   id="contact-phone"
                   name="phone"
                   type="tel"
-                  placeholder="+49 170 123 4567"
+                  placeholder={formFields.phonePlaceholder || "+49 170 123 4567"}
                   value={formData.phone}
                   onChange={handleChange}
                   disabled={!config.formEnabled || submitting || loading}
                 />
                 <TextField
-                  label="Subject"
+                  label={formFields.subjectLabel || "Subject"}
                   id="contact-subject"
                   name="subject"
                   required
-                  placeholder="How can we support you?"
+                  placeholder={formFields.subjectPlaceholder || "How can we support you?"}
                   value={formData.subject}
                   onChange={handleChange}
                   disabled={!config.formEnabled || submitting || loading}
@@ -287,14 +320,17 @@ export default function ContactPage() {
                     htmlFor="contact-message"
                     className="block text-sm font-semibold text-primary"
                   >
-                    Message
+                    {formFields.messageLabel || "Message"}
                   </label>
                   <textarea
                     id="contact-message"
                     name="message"
                     required
                     rows={5}
-                    placeholder="Tell us a little more about your question, order or project."
+                    placeholder={
+                      formFields.messagePlaceholder ||
+                      "Tell us a little more about your question, order or project."
+                    }
                     value={formData.message}
                     onChange={handleChange}
                     disabled={!config.formEnabled || submitting || loading}
@@ -327,22 +363,22 @@ export default function ContactPage() {
                   {submitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Sending…
+                      {formCopy.submitting || "Sending…"}
                     </>
                   ) : (
                     <>
                       <Send className="h-4 w-4" />
-                      Send message
+                      {formCopy.submit || "Send message"}
                     </>
                   )}
                 </button>
               </form>
 
               <p className="mt-6 text-xs text-secondary">
-                By submitting this form you acknowledge that we will process your data to
-                answer your enquiry in line with our {" "}
+                {formCopy.policyNote ||
+                  "By submitting this form you acknowledge that we will process your data to answer your enquiry in line with our"}{" "}
                 <a href="/privacy" className="text-accent underline">
-                  Privacy Policy
+                  {breadcrumbs.privacy || "Privacy Policy"}
                 </a>
                 .
               </p>

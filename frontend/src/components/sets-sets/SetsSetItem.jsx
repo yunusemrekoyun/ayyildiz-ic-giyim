@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
+import { formatStaticText } from "../../i18n/staticContent.js";
 
 export default function SetsSetItem({
   image,
@@ -10,11 +11,16 @@ export default function SetsSetItem({
   price,
   finalPrice,
   discount,
+  copy = {},
 }) {
   const isDisabled = !to;
   const basePrice = Number(price ?? 0);
   const computedFinal = Number(finalPrice ?? basePrice);
   const showStrike = Number.isFinite(basePrice) && computedFinal < basePrice;
+  const includesLabel = copy.includes || "Includes:";
+  const viewDetailsLabel = copy.viewDetails || "View details →";
+  const untitledLabel = copy.untitled || "Set";
+  const ariaLabelTemplate = copy.ariaLabel || "Open {title}";
 
   const Wrapper = ({ children }) =>
     isDisabled ? (
@@ -22,7 +28,9 @@ export default function SetsSetItem({
     ) : (
       <Link
         to={to}
-        aria-label={title ? `Open ${title}` : "Open set"}
+        aria-label={formatStaticText(ariaLabelTemplate, {
+          title: title || untitledLabel,
+        })}
         className="group block"
       >
         {children}
@@ -35,7 +43,7 @@ export default function SetsSetItem({
         <div className="relative overflow-hidden">
           <img
             src={image}
-            alt={title || "Set"}
+            alt={title || untitledLabel}
             className="h-56 w-full object-cover md:h-64 transition-transform duration-300 group-hover:scale-[1.02]"
             draggable="false"
           />
@@ -61,7 +69,7 @@ export default function SetsSetItem({
 
           {includes && (
             <p className="mt-3 text-sm text-secondary line-clamp-1">
-              <span className="font-medium text-primary">Includes:</span>{" "}
+              <span className="font-medium text-primary">{includesLabel}</span>{" "}
               {includes}
             </p>
           )}
@@ -79,7 +87,7 @@ export default function SetsSetItem({
 
           {!isDisabled && (
             <div className="mt-4 inline-flex items-center text-sm font-medium text-accent group-hover:underline">
-              View details →
+              {viewDetailsLabel}
             </div>
           )}
         </div>

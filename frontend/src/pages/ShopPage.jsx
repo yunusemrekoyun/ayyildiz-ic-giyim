@@ -10,6 +10,7 @@ import { campaignApi } from "../api/campaigns";
 import { mapCategoryTree } from "../utils/catalog";
 import SetsSetItem from "../components/sets-sets/SetsSetItem";
 import { useStorefrontLang } from "../context/LangContext.jsx";
+import { useStaticTranslation } from "../i18n/staticContent.js";
 
 const isObjectId = (v) => typeof v === "string" && /^[0-9a-fA-F]{24}$/.test(v);
 
@@ -34,6 +35,19 @@ export default function ShopPage() {
 
   const [error, setError] = useState(null);
   const { lang } = useStorefrontLang();
+  const t = useStaticTranslation();
+  const shopCopy = useMemo(() => t("shopPage") || {}, [t, lang]);
+  const matchingCopy = shopCopy.matchingSets || {};
+  const bannerCopy = shopCopy.campaignBanner || {};
+  const filtersCopy = useMemo(() => t("shopFilters") || {}, [t, lang]);
+  const breadcrumbs = useMemo(() => t("breadcrumbs") || {}, [t, lang]);
+  const shopProductsEmpty =
+    shopCopy.noProducts || "No products found for selected filters.";
+  const matchingEmpty = matchingCopy.empty || "No sets match this search.";
+  const setsCardCopy = useMemo(() => {
+    const setsPage = t("setsPage") || {};
+    return setsPage.cards || {};
+  }, [t, lang]);
 
   const campaignId = searchParams.get("campaign");
   const searchQuery = (searchParams.get("q") || "").trim();
@@ -118,12 +132,20 @@ export default function ShopPage() {
           if (searchQuery) {
             setLoadingSets(true);
             try {
-              const setResponse = await setApi.list({
-                search: searchQuery,
-                limit: 60,
-              }, lang);
+              const setResponse = await setApi.list(
+                {
+                  search: searchQuery,
+                  limit: 60,
+                },
+                lang
+              );
               if (!mounted) return;
-              setMatchingSets(mapSetsToCards(setResponse));
+              setMatchingSets(
+                mapSetsToCards(setResponse, {
+                  includesMoreLabel: setsCardCopy.includesMore,
+                  untitledLabel: setsCardCopy.untitled,
+                })
+              );
             } catch (setErr) {
               if (!mounted) return;
               console.error("set search failed", setErr);
@@ -149,7 +171,7 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignContext, lang, searchQuery]);
+  }, [campaignContext, lang, searchQuery, setsCardCopy]);
 
   // Fiyat aralığı (ürünlere göre)
   const priceRange = useMemo(() => {
@@ -241,7 +263,10 @@ export default function ShopPage() {
       if (normalizedQuery) {
         const name = String(product.name || "").toLowerCase();
         const slug = String(product.slug || "").toLowerCase();
-        if (!name.includes(normalizedQuery) && !slug.includes(normalizedQuery)) {
+        if (
+          !name.includes(normalizedQuery) &&
+          !slug.includes(normalizedQuery)
+        ) {
           return false;
         }
       }

@@ -1,4 +1,18 @@
+import { useStaticTranslation } from "../../i18n/staticContent.js";
+
 export default function CartItem({ item, onQty, onRemove }) {
+  const t = useStaticTranslation();
+  const cartCopy = t("cart") || {};
+  const optionCopy = cartCopy.options || {};
+  const colorLabel = optionCopy.color || "Color";
+  const sizeLabel = optionCopy.size || "Size";
+  const attributeLabel = optionCopy.option || "Option";
+  const selectionsLabel = cartCopy.selectionsLabel || "Selections";
+  const removeLabel = cartCopy.remove || "Remove";
+  const unitLabel = cartCopy.unitLabel || "Unit";
+  const totalLabel = cartCopy.totalLabel || "Total";
+  const itemFallback = cartCopy.itemFallback || "Item";
+
   const inc = () => onQty(item.lineId, item.qty + 1);
   const dec = () => onQty(item.lineId, item.qty - 1);
 
@@ -30,14 +44,16 @@ export default function CartItem({ item, onQty, onRemove }) {
 
       {/* Bilgiler */}
       <div className="sm:col-span-7">
-        <h4 className="text-base font-semibold text-primary">{item.title}</h4>
+        <h4 className="text-base font-semibold text-primary">
+          {item.title || itemFallback}
+        </h4>
 
         {/* Ürün varyant alanları (tekil ürün için) */}
         {!isSet && (
           <div className="mt-1 flex flex-wrap items-center gap-3 text-sm">
             {item.colorHex && (
               <span className="inline-flex items-center gap-1 text-secondary">
-                Color:
+                {colorLabel}:
                 <span
                   className="ml-1 inline-block h-3 w-3 rounded-full ring-1 ring-border"
                   style={{ backgroundColor: item.colorHex }}
@@ -46,10 +62,14 @@ export default function CartItem({ item, onQty, onRemove }) {
               </span>
             )}
             {item.size && (
-              <span className="text-secondary">Size: {item.size}</span>
+              <span className="text-secondary">
+                {sizeLabel}: {item.size}
+              </span>
             )}
             {item.attribute && (
-              <span className="text-secondary">Option: {item.attribute}</span>
+              <span className="text-secondary">
+                {attributeLabel}: {item.attribute}
+              </span>
             )}
           </div>
         )}
@@ -57,7 +77,9 @@ export default function CartItem({ item, onQty, onRemove }) {
         {/* SET seçim özetleri */}
         {isSet && selections.length > 0 && (
           <div className="mt-2 space-y-1">
-            <p className="text-sm font-medium text-primary">Selections</p>
+            <p className="text-sm font-medium text-primary">
+              {selectionsLabel}
+            </p>
             <ul className="space-y-1">
               {selections.map((s, i) => (
                 <li
@@ -70,18 +92,19 @@ export default function CartItem({ item, onQty, onRemove }) {
                     </span>
                     {s.color && (
                       <span className="inline-flex items-center gap-1">
-                        Color:{" "}
+                        {colorLabel}:{" "}
                         <strong className="text-primary">{s.color}</strong>
                       </span>
                     )}
                     {s.size && (
                       <span className="inline-flex items-center gap-1">
-                        Size: <strong className="text-primary">{s.size}</strong>
+                        {sizeLabel}:{" "}
+                        <strong className="text-primary">{s.size}</strong>
                       </span>
                     )}
                     {s.attribute && (
                       <span className="inline-flex items-center gap-1">
-                        Option:{" "}
+                        {attributeLabel}:{" "}
                         <strong className="text-primary">{s.attribute}</strong>
                       </span>
                     )}
@@ -108,14 +131,14 @@ export default function CartItem({ item, onQty, onRemove }) {
             onClick={onRemove}
             className="text-sm text-secondary hover:text-accent"
           >
-            Remove
+            {removeLabel}
           </button>
         </div>
       </div>
 
       {/* Fiyatlar */}
       <div className="sm:col-span-3 sm:text-right">
-        <p className="text-sm text-secondary">Unit</p>
+        <p className="text-sm text-secondary">{unitLabel}</p>
         <div className="flex items-baseline gap-2 sm:justify-end">
           <span className="font-semibold text-primary">
             €{unitFinal.toFixed(2)}
@@ -126,7 +149,7 @@ export default function CartItem({ item, onQty, onRemove }) {
             </span>
           )}
         </div>
-        <p className="mt-2 text-sm text-secondary">Total</p>
+        <p className="mt-2 text-sm text-secondary">{totalLabel}</p>
         <div className="flex items-baseline gap-2 sm:justify-end">
           <span className="font-semibold text-primary">
             €{lineTotal.toFixed(2)}

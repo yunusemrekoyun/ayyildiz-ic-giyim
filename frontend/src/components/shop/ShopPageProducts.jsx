@@ -1,7 +1,11 @@
 // src/components/shop/ShopPageProducts.jsx
 import ShopPageProductItem from "./ShopPageProductItem";
 
-export default function ShopPageProducts({ products = [], loading = false }) {
+export default function ShopPageProducts({
+  products = [],
+  loading = false,
+  emptyLabel = "No products found for selected filters.",
+}) {
   return (
     <div>
       {loading ? (
@@ -22,7 +26,7 @@ export default function ShopPageProducts({ products = [], loading = false }) {
           </div>
           {products.length === 0 && (
             <div className="mt-8 grid place-items-center rounded-xl border border-dashed border-border p-10 text-secondary">
-              No products found for selected filters.
+              {emptyLabel}
             </div>
           )}
         </>

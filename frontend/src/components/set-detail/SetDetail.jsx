@@ -8,12 +8,17 @@ import { getAccessToken } from "../../api/client";
 import { userDetailsApi } from "../../api/userDetails";
 import { useNavigate } from "react-router-dom";
 import ReviewSectionCard from "../reviews/ReviewSectionCard.jsx";
+import { useStaticTranslation } from "../../i18n/staticContent.js";
 
 export default function SetDetail({ setDoc }) {
   // Hook'lar her zaman çağrılıyor (ESLint hatası çözümü)
   const [qty, setQty] = useState(1);
   const [isFav, setIsFav] = useState(false);
   const navigate = useNavigate();
+  const t = useStaticTranslation();
+  const favoritesCopy = t("favorites") || {};
+  const favoriteAddLabel = favoritesCopy.add || "Add to favorites";
+  const favoriteRemoveLabel = favoritesCopy.remove || "Remove from favorites";
 
   // setDoc olmasa da güvenli hesaplama
   const maxStock = useMemo(() => {
@@ -93,14 +98,14 @@ export default function SetDetail({ setDoc }) {
               type="button"
               onClick={toggleFav}
               aria-pressed={isFav}
-              aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+              aria-label={isFav ? favoriteRemoveLabel : favoriteAddLabel}
               className={[
                 "inline-flex items-center justify-center rounded-full border px-3 py-2",
                 isFav
                   ? "border-accent text-accent bg-white"
                   : "border-border text-secondary hover:bg-surface-hover",
               ].join(" ")}
-              title={isFav ? "Favorilerden kaldır" : "Favorilere ekle"}
+              title={isFav ? favoriteRemoveLabel : favoriteAddLabel}
             >
               <Heart
                 className="h-5 w-5"

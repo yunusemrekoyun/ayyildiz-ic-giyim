@@ -1,5 +1,6 @@
 // src/components/home-products/HomeProducts.jsx
 import HomeProductItem from "./HomeProductItem";
+import { useStaticTranslation } from "../../i18n/staticContent.js";
 
 export default function HomeProducts({
   title = "New Arrivals",
@@ -8,8 +9,10 @@ export default function HomeProducts({
   className = "",
   loading = false,
 }) {
+  const t = useStaticTranslation();
   const isBoxed = variant === "boxed";
   const innerPad = "px-4 py-12 sm:px-6 lg:px-8";
+  const emptyLabel = t("homeProducts.empty") || "Products coming soon.";
 
   if (!isBoxed) {
     // Merge modunda: arka plan ve radius parent'ta; sadece içerik render'la
@@ -18,7 +21,7 @@ export default function HomeProducts({
         <h2 className="mb-8 text-center font-serif text-3xl font-bold tracking-tight text-primary">
           {title}
         </h2>
-        <ProductGrid items={items} loading={loading} />
+        <ProductGrid items={items} loading={loading} emptyLabel={emptyLabel} />
       </div>
     );
   }
@@ -33,13 +36,13 @@ export default function HomeProducts({
           {title}
         </h2>
 
-        <ProductGrid items={items} loading={loading} />
+        <ProductGrid items={items} loading={loading} emptyLabel={emptyLabel} />
       </div>
     </section>
   );
 }
 
-function ProductGrid({ items, loading }) {
+function ProductGrid({ items, loading, emptyLabel }) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -56,7 +59,7 @@ function ProductGrid({ items, loading }) {
   if (!items.length) {
     return (
       <div className="grid place-items-center rounded-xl border border-dashed border-border p-10 text-secondary">
-        Products coming soon.
+        {emptyLabel}
       </div>
     );
   }

@@ -5,6 +5,10 @@ import SetsSets from "../components/sets-sets/SetsSets";
 import { setApi } from "../api/sets";
 import { campaignApi } from "../api/campaigns";
 import { useStorefrontLang } from "../context/LangContext.jsx";
+import {
+  useStaticTranslation,
+  formatStaticText,
+} from "../i18n/staticContent.js";
 
 export default function SetsPage() {
   const navigate = useNavigate();
@@ -14,6 +18,13 @@ export default function SetsPage() {
   const [campaignContext, setCampaignContext] = useState(null);
   const [campaignError, setCampaignError] = useState("");
   const { lang } = useStorefrontLang();
+  const t = useStaticTranslation();
+  const breadcrumbs = useMemo(() => t("breadcrumbs") || {}, [t, lang]);
+  const setsCopy = useMemo(() => t("setsPage") || {}, [t, lang]);
+  const bannerCopy = setsCopy.campaignBanner || {};
+  const ctaCopy = setsCopy.cta || {};
+  const cardCopy = setsCopy.cards || {};
+  const gridCopy = setsCopy.grid || {};
 
   const campaignId = searchParams.get("campaign");
 
@@ -24,7 +35,10 @@ export default function SetsPage() {
         setLoading(true);
 
         if (campaignContext?.items) {
-          const mapped = mapSetsToCards(campaignContext.items);
+          const mapped = mapSetsToCards(campaignContext.items, {
+            includesMoreLabel: cardCopy.includesMore,
+            untitledLabel: cardCopy.untitled,
+          });
           if (mounted) setItems(mapped);
         } else {
           let res = await setApi.list({}, lang);
@@ -35,7 +49,10 @@ export default function SetsPage() {
             sets = normalizeSetsResponse(res2);
           }
 
-          const mapped = mapSetsToCards(sets);
+          const mapped = mapSetsToCards(sets, {
+            includesMoreLabel: cardCopy.includesMore,
+            untitledLabel: cardCopy.untitled,
+          });
           if (mounted) setItems(mapped);
         }
       } catch (e) {
@@ -48,7 +65,7 @@ export default function SetsPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignContext, lang]);
+  }, [campaignContext, lang, cardCopy]);
 
   useEffect(() => {
     if (!campaignId) {
@@ -83,8 +100,8 @@ export default function SetsPage() {
   const tabs = useMemo(() => {
     const tagSet = new Set();
     for (const s of items) (s.tags || []).forEach((t) => tagSet.add(String(t)));
-    return ["All", ...Array.from(tagSet)];
-  }, [items]);
+    return [setsCopy.tabsAll || "All", ...Array.from(tagSet)];
+  }, [items, setsCopy.tabsAll]);
 
   const activeCampaign = campaignContext?.campaign || null;
 
@@ -100,18 +117,17 @@ export default function SetsPage() {
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-8">
           <BreadCrumb
             items={[
-              { label: "Home", to: "/" },
-              { label: "Trousseau Packages" },
+              { label: breadcrumbs.home || "Home", to: "/" },
+              { label: setsCopy.breadcrumb || "Trousseau Packages" },
             ]}
           />
           <div className="mt-4 text-center">
             <h1 className="text-4xl font-serif font-extrabold tracking-tight text-primary">
-              Trousseau Packages
+              {setsCopy.title || "Trousseau Packages"}
             </h1>
             <p className="mx-auto mt-2 max-w-2xl text-secondary">
-              Curated collections for your perfect wedding trousseau — discover
-              elegant bridal, bedroom and bathroom packages crafted to match
-              your style.
+              {setsCopy.subtitle ||
+                "Curated collections for your perfect wedding trousseau — discover elegant bridal, bedroom and bathroom packages crafted to match your style."}
             </p>
           </div>
         </div>
@@ -126,7 +142,7 @@ export default function SetsPage() {
               onClick={handleClearCampaign}
               className="text-rose-700 underline underline-offset-4 hover:text-rose-800"
             >
-              Clear campaign filter
+              {bannerCopy.errorAction || "Clear campaign filter"}
             </button>
           </div>
         </div>
@@ -136,7 +152,8 @@ export default function SetsPage() {
         <div className="mx-auto mt-6 max-w-[1400px] px-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
             <div>
-              Showing campaign <span className="font-semibold">“{activeCampaign.name}”</span>
+              {bannerCopy.prefix || "Showing campaign"}{" "}
+              <span className="font-semibold">“{activeCampaign.name}”</span>
               {activeCampaign.description
                 ? ` — ${activeCampaign.description}`
                 : ""}
@@ -146,34 +163,36 @@ export default function SetsPage() {
               onClick={handleClearCampaign}
               className="text-primary underline underline-offset-4 hover:text-primary/80"
             >
-              Clear
+              {bannerCopy.clear || "Clear"}
             </button>
           </div>
         </div>
       )}
 
       <SetsSets
-        title="Explore the Collections"
-        subtitle="Use the filters to browse our Bridal, Bedroom and Bathroom packages."
+        title={setsCopy.listTitle || setsCopy.title || "Trousseau Packages"}
+        subtitle={setsCopy.listSubtitle || setsCopy.subtitle}
         tabs={tabs}
         items={items}
         loading={loading}
+        emptyLabel={gridCopy.empty || "No packages match this filter."}
+        cardCopy={cardCopy}
       />
 
       <section className="mx-auto mb-12 max-w-[1400px] px-4 sm:px-6">
         <div className="rounded-xl border border-border bg-contact-bg p-6 text-center">
           <h3 className="text-xl font-semibold text-primary">
-            Need help choosing a set?
+            {ctaCopy.heading || "Need help choosing a set?"}
           </h3>
           <p className="mt-1 text-secondary">
-            Our stylists can help you build the perfect trousseau package.
+            {ctaCopy.text || "Our stylists can help you build the perfect trousseau package."}
           </p>
           <div className="mt-4">
             <a
               href="/contact"
               className="inline-flex items-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
             >
-              Talk to a Stylist
+              {ctaCopy.button || "Talk to a Stylist"}
             </a>
           </div>
         </div>
@@ -190,10 +209,13 @@ function normalizeSetsResponse(res) {
 }
 
 /** backend set -> kart */
-function mapSetsToCards(sets) {
+function mapSetsToCards(
+  sets,
+  { includesMoreLabel = "+{count}", untitledLabel = "Untitled Set" } = {}
+) {
   return (sets || []).map((s) => {
     const image = s?.images?.[0]?.url || "/set-placeholder.jpg";
-    const title = s?.name || "Untitled Set";
+    const title = s?.name || untitledLabel || "Untitled Set";
     const desc = s?.description || "";
 
     const productNames = (s?.products || [])
@@ -203,7 +225,11 @@ function mapSetsToCards(sets) {
     const includes =
       productNames.length > 0
         ? productNames.slice(0, 3).join(", ") +
-          (productNames.length > 3 ? ` +${productNames.length - 3}` : "")
+          (productNames.length > 3
+            ? formatStaticText(includesMoreLabel || "+{count}", {
+                count: productNames.length - 3,
+              })
+            : "")
         : "";
 
     const tags = Array.from(

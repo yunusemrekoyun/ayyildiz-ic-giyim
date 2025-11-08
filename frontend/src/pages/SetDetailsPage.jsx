@@ -5,6 +5,7 @@ import SetDetail from "../components/set-detail/SetDetail";
 import SimilarSets from "../components/set-detail/SimilarSets";
 import { setApi } from "../api/sets";
 import { useStorefrontLang } from "../context/LangContext.jsx";
+import { useStaticTranslation } from "../i18n/staticContent.js";
 
 export default function SetDetailsPage() {
   const { slug } = useParams();
@@ -14,6 +15,10 @@ export default function SetDetailsPage() {
   const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [error, setError] = useState(null);
   const { lang } = useStorefrontLang();
+  const t = useStaticTranslation();
+  const breadcrumbCopy = t("breadcrumbs") || {};
+  const setPageCopy = t("setDetailPage") || {};
+  const setDetailCopy = t("setDetail") || {};
 
   useEffect(() => {
     if (!slug) return;
@@ -81,16 +86,18 @@ export default function SetDetailsPage() {
     const tags = extractSetTags(setDoc);
     const firstTag = tags?.[0];
     return [
-      { label: "Home", to: "/" },
+      { label: breadcrumbCopy.home || "Home", to: "/" },
       firstTag
         ? {
             label: firstTag,
             to: `/sets?tag=${encodeURIComponent(firstTag)}`,
           }
         : null,
-      { label: setDoc?.name || "Set" },
+      {
+        label: setDoc?.name || setDetailCopy.fallbackName || "Set",
+      },
     ].filter(Boolean);
-  }, [setDoc]);
+  }, [setDoc, breadcrumbCopy.home, setDetailCopy.fallbackName]);
 
   if (loading) {
     return (
@@ -124,7 +131,7 @@ export default function SetDetailsPage() {
       <section className="bg-surface-light/60">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-16">
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-6 py-8 text-center text-rose-700">
-            {error || "Set not found"}
+            {error || setPageCopy.notFound || "Set not found"}
           </div>
         </div>
       </section>

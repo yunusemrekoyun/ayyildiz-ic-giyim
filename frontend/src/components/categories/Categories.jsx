@@ -4,17 +4,23 @@ import CategoryItem from "./CategoryItem";
 import { categoryApi } from "../../api/categories";
 import { mapCategoryTree } from "../../utils/catalog";
 import { useStorefrontLang } from "../../context/LangContext.jsx";
+import { useStaticTranslation } from "../../i18n/staticContent.js";
 
 const DESKTOP_VISIBLE = 4;
 
 export default function Categories({
-  title = "Featured Categories",
+  title,
   items,
 }) {
   const [categories, setCategories] = useState(items || []);
   const [loading, setLoading] = useState(!items);
   const scrollRef = useRef(null);
   const { lang } = useStorefrontLang();
+  const t = useStaticTranslation();
+  const copy = t("categoriesComponent") || {};
+  const resolvedTitle = title || copy.title || "Featured Categories";
+  const prevAria = copy.prev || "Previous categories";
+  const nextAria = copy.next || "Next categories";
 
   useEffect(() => {
     if (items) return;
@@ -60,7 +66,7 @@ export default function Categories({
   return (
     <section className="mx-auto max-w-7xl px-6 py-16">
       <h2 className="mb-10 text-center text-3xl font-serif font-bold tracking-tight text-primary">
-        {title}
+        {resolvedTitle}
       </h2>
 
       {loading ? (
@@ -78,7 +84,7 @@ export default function Categories({
             type="button"
             onClick={() => scrollByCard(-1)}
             className="absolute left-0 top-1/2 z-10 hidden -translate-y-1/2 rounded-full bg-white/90 p-2 text-secondary shadow md:inline-flex hover:text-primary"
-            aria-label="Previous categories"
+            aria-label={prevAria}
           >
             ‹
           </button>
@@ -100,7 +106,7 @@ export default function Categories({
             type="button"
             onClick={() => scrollByCard(1)}
             className="absolute right-0 top-1/2 z-10 hidden -translate-y-1/2 rounded-full bg-white/90 p-2 text-secondary shadow md:inline-flex hover:text-primary"
-            aria-label="Next categories"
+            aria-label={nextAria}
           >
             ›
           </button>

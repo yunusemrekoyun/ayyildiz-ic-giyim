@@ -3,6 +3,10 @@ import React, { useMemo, useState } from "react";
 import QtyStepper from "./QtyStepper";
 import { useCart } from "../../hooks/useCart";
 import SetVariantPickerModal from "./SetVariantPickerModal";
+import {
+  useStaticTranslation,
+  formatStaticText,
+} from "../../i18n/staticContent.js";
 
 export default function SetSummary({
   setDoc,
@@ -15,6 +19,12 @@ export default function SetSummary({
 }) {
   const { addToCart } = useCart();
   const [openPicker, setOpenPicker] = useState(false);
+  const t = useStaticTranslation();
+  const copy = t("setDetail") || {};
+  const summaryCopy = copy.summary || {};
+  const quantityLabel = summaryCopy.quantityLabel || "Quantity";
+  const totalLabelTemplate = summaryCopy.totalLabel || "Total {amount}";
+  const addToCartLabel = summaryCopy.addToCart || "Add to cart";
 
   const hasStockInfo = stock !== null && stock !== undefined;
   const minQty = hasStockInfo && stock <= 0 ? 0 : 1;
@@ -67,7 +77,7 @@ export default function SetSummary({
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Qty */}
           <div className="flex items-center gap-3">
-            <span className="text-sm text-secondary">Quantity</span>
+            <span className="text-sm text-secondary">{quantityLabel}</span>
             <QtyStepper
               value={quantity}
               min={minQty}
@@ -87,7 +97,9 @@ export default function SetSummary({
                   {originalText}
                 </span>
               )}
-              <span className="text-xs text-secondary">Total {totalText}</span>
+              <span className="text-xs text-secondary">
+                {formatStaticText(totalLabelTemplate, { amount: totalText })}
+              </span>
             </div>
             <button
               type="button"
@@ -96,7 +108,7 @@ export default function SetSummary({
               className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white
                        hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Add to cart
+              {addToCartLabel}
             </button>
           </div>
         </div>

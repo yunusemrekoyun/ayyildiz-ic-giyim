@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
+import { useStaticTranslation } from "../../i18n/staticContent.js";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -8,13 +9,15 @@ const currency = new Intl.NumberFormat("en-US", {
 });
 
 export default function SimilarSets({ items = [] }) {
+  const t = useStaticTranslation();
+  const copy = t("similarSets") || {};
   if (!items.length) return null;
 
   return (
     <div className="rounded-xl bg-white ring-1 ring-black/5 p-5">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-primary">
-          You might also like
+          {copy.heading || "You might also like"}
         </h2>
       </div>
 
