@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { useEffect, useMemo, useState } from "react";
 import { PlusCircle, RefreshCw, Search } from "lucide-react";
 import { categoryApi } from "../../api/categories";
@@ -136,7 +135,6 @@ export default function AdminProducts() {
 
   useEffect(() => {
     loadCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

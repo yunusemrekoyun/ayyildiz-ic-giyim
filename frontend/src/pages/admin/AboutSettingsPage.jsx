@@ -47,7 +47,6 @@ export default function AboutSettingsPage() {
 
   useEffect(() => {
     loadAbout();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading)

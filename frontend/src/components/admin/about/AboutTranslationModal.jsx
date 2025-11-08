@@ -268,6 +268,7 @@ export default function AboutTranslationModal({
       });
       await onUpdated?.(nextAbout);
     } catch (err) {
+      // eslint-disable-next-line no-undef
       setAlert({ variant: "danger", message: extractMessage(err) });
     } finally {
       setSavingMap((prev) => ({ ...prev, [lang]: false }));

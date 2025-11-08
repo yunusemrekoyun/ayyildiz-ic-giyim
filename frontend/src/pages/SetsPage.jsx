@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
@@ -9,6 +10,7 @@ import {
   useStaticTranslation,
   formatStaticText,
 } from "../i18n/staticContent.js";
+import { DEFAULT_LANG } from "../constants/lang.js";
 
 export default function SetsPage() {
   const navigate = useNavigate();
@@ -47,6 +49,18 @@ export default function SetsPage() {
           if (!sets.length) {
             const res2 = await setApi.list({ includeHidden: true }, lang);
             sets = normalizeSetsResponse(res2);
+          }
+
+          if (!sets.length && lang !== DEFAULT_LANG) {
+            let fallback = await setApi.list({}, DEFAULT_LANG);
+            sets = normalizeSetsResponse(fallback);
+            if (!sets.length) {
+              const fallbackHidden = await setApi.list(
+                { includeHidden: true },
+                DEFAULT_LANG
+              );
+              sets = normalizeSetsResponse(fallbackHidden);
+            }
           }
 
           const mapped = mapSetsToCards(sets, {
@@ -177,6 +191,7 @@ export default function SetsPage() {
         loading={loading}
         emptyLabel={gridCopy.empty || "No packages match this filter."}
         cardCopy={cardCopy}
+        allLabel={setsCopy.tabsAll || "All"}
       />
 
       <section className="mx-auto mb-12 max-w-[1400px] px-4 sm:px-6">

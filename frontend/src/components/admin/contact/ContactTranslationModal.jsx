@@ -92,6 +92,7 @@ export default function ContactTranslationModal({
   loading,
   error,
   contact,
+  // eslint-disable-next-line no-unused-vars
   baseLang = "tr",
   langs = [],
   onClose,

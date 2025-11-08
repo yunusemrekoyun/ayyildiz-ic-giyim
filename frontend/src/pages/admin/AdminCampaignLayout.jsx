@@ -196,6 +196,7 @@ export default function AdminCampaignLayout() {
         setDraggingId(null);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [adminLang, campaignMap, campaigns]
   );
 

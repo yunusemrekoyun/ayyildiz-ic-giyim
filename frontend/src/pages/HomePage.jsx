@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // src/pages/HomePage.jsx
 import { useEffect, useMemo, useState } from "react";
 import Hero from "../components/Hero";

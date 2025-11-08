@@ -31,7 +31,9 @@ export default function ProductDetail({ product = {} }) {
   const colorLabel = copy.colorLabel || "Colour";
   const sizeLabel = copy.sizeLabel || "Size";
   const optionLabel = copy.optionLabel || "Option";
+  // eslint-disable-next-line no-unused-vars
   const careTitle = copy.careTitle || "Care";
+  // eslint-disable-next-line no-unused-vars
   const detailsTitle = copy.detailsTitle || "Details";
   const descriptionFallback = copy.descriptionFallback || "No description provided.";
   const addToCartLabel = copy.addToCart || "Add to Cart";

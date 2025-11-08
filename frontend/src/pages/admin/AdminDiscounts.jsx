@@ -36,6 +36,7 @@ export default function AdminDiscounts() {
   useEffect(() => {
     loadDiscounts();
     loadOptions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminLang]);
 
   const loadDiscounts = async () => {

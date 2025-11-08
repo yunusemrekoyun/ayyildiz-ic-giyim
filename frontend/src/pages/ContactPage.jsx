@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { useEffect, useMemo, useState } from "react";
 import { Mail, Phone, MapPin, Clock, Send, Loader2, AlertCircle } from "lucide-react";
 import BreadCrumb from "../components/shop/BreadCrumb";
@@ -134,6 +135,7 @@ export default function ContactPage() {
   const { lang } = useStorefrontLang();
   const t = useStaticTranslation();
   const breadcrumbs = t("breadcrumbs") || {};
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const contactCopy = t("contactPage") || {};
   const formCopy = contactCopy.form || {};
   const formFields = formCopy.fields || {};

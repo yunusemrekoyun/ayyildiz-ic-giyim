@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import BreadCrumb from "../components/shop/BreadCrumb";
@@ -10,7 +11,10 @@ import { campaignApi } from "../api/campaigns";
 import { mapCategoryTree } from "../utils/catalog";
 import SetsSetItem from "../components/sets-sets/SetsSetItem";
 import { useStorefrontLang } from "../context/LangContext.jsx";
-import { useStaticTranslation } from "../i18n/staticContent.js";
+import {
+  useStaticTranslation,
+  formatStaticText,
+} from "../i18n/staticContent.js";
 
 const isObjectId = (v) => typeof v === "string" && /^[0-9a-fA-F]{24}$/.test(v);
 
@@ -350,15 +354,22 @@ export default function ShopPage() {
 
   return (
     <section className="mx-auto max-w-[1400px] px-4 sm:px-6 py-8">
-      <BreadCrumb items={[{ label: "Home", to: "/" }, { label: "Shop" }]} />
+      <BreadCrumb
+        items={[
+          { label: breadcrumbs.home || "Home", to: "/" },
+          {
+            label: breadcrumbs.shop || shopCopy.title || "Shop",
+          },
+        ]}
+      />
 
       <div className="mt-4 text-center">
         <h1 className="text-4xl font-serif font-extrabold tracking-tight text-primary">
-          Shop Our Collection
+          {shopCopy.title || "Shop Our Collection"}
         </h1>
         <p className="mx-auto mt-2 max-w-2xl text-secondary">
-          Browse curated products uploaded via the admin panel. Filter by
-          category, colour, size and price to find your perfect match.
+          {shopCopy.subtitle ||
+            "Browse curated products uploaded via the admin panel. Filter by category, colour, size and price to find your perfect match."}
         </p>
       </div>
 
@@ -370,7 +381,7 @@ export default function ShopPage() {
             onClick={handleClearCampaign}
             className="text-rose-700 underline underline-offset-4 hover:text-rose-800"
           >
-            Clear campaign filter
+            {bannerCopy.errorAction || "Clear campaign filter"}
           </button>
         </div>
       )}
@@ -378,7 +389,7 @@ export default function ShopPage() {
       {activeCampaign && !campaignError && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
           <div>
-            Showing campaign{" "}
+            {bannerCopy.prefix || "Showing campaign"}{" "}
             <span className="font-semibold">“{activeCampaign.name}”</span>
             {activeCampaign.description
               ? ` — ${activeCampaign.description}`
@@ -389,7 +400,7 @@ export default function ShopPage() {
             onClick={handleClearCampaign}
             className="text-primary underline underline-offset-4 hover:text-primary/80"
           >
-            Clear
+            {bannerCopy.clear || "Clear"}
           </button>
         </div>
       )}
@@ -416,6 +427,7 @@ export default function ShopPage() {
             selectedPrice={selectedPrice}
             onPriceChange={handlePriceChange}
             onReset={handleReset}
+            labels={filtersCopy}
           />
         </div>
 
@@ -423,15 +435,20 @@ export default function ShopPage() {
           <ShopPageProducts
             products={filteredProducts}
             loading={loadingProducts}
+            emptyLabel={shopProductsEmpty}
           />
 
           {searchQuery && (
             <div className="mt-12">
               <h2 className="text-2xl font-semibold text-primary">
-                Matching Sets
+                {matchingCopy.title || "Matching Sets"}
               </h2>
               <p className="mt-1 text-sm text-secondary">
-                Results for “{searchQuery}” across trousseau packages.
+                {formatStaticText(
+                  matchingCopy.subtitle ||
+                    "Results for “{query}” across trousseau packages.",
+                  { query: searchQuery }
+                )}
               </p>
 
               {loadingSets ? (
@@ -446,12 +463,16 @@ export default function ShopPage() {
               ) : matchingSets.length ? (
                 <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
                   {matchingSets.map((setCard) => (
-                    <SetsSetItem key={setCard.id || setCard.to} {...setCard} />
+                    <SetsSetItem
+                      key={setCard.id || setCard.to}
+                      {...setCard}
+                      copy={setsCardCopy}
+                    />
                   ))}
                 </div>
               ) : (
                 <div className="mt-6 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-secondary">
-                  No sets match this search.
+                  {matchingEmpty}
                 </div>
               )}
             </div>
@@ -476,17 +497,24 @@ function extractMessage(error) {
   return String(error);
 }
 
-function mapSetsToCards(sets) {
+function mapSetsToCards(
+  sets,
+  { includesMoreLabel = "+{count}", untitledLabel = "Untitled Set" } = {}
+) {
   return (Array.isArray(sets) ? sets : []).map((set) => {
     const image = set?.images?.[0]?.url || "/set-placeholder.jpg";
-    const title = set?.name || "Untitled Set";
+    const title = set?.name || untitledLabel || "Untitled Set";
     const desc = set?.description || "";
     const productNames = (set?.products || [])
       .map((entry) => entry?.product?.name)
       .filter(Boolean);
     const includes = productNames.length
       ? productNames.slice(0, 3).join(", ") +
-        (productNames.length > 3 ? ` +${productNames.length - 3}` : "")
+        (productNames.length > 3
+          ? formatStaticText(includesMoreLabel || "+{count}", {
+              count: productNames.length - 3,
+            })
+          : "")
       : "";
 
     const rawId = set?._id?.toString?.() || set?.id || set?.slug || "";

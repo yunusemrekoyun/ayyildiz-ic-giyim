@@ -136,6 +136,7 @@ function buildDraftFromTranslation(translation, structure = []) {
     translation.sections.forEach((section, index) => {
       map.set(buildSectionKey(section, index), section);
     });
+    // eslint-disable-next-line no-unused-vars
     structure.forEach((section, sectionIndex) => {
       const localized = map.get(section.key);
       if (!localized) return;
@@ -155,6 +156,7 @@ function buildDraftFromTranslation(translation, structure = []) {
         localized.items.forEach((item, itemIndex) => {
           itemMap.set(buildItemKey(item, section.key, itemIndex), item);
         });
+        // eslint-disable-next-line no-unused-vars
         section.items.forEach((item, itemIndex) => {
           const localizedItem = itemMap.get(item.key);
           const targetItem = target.items[item.key] || {

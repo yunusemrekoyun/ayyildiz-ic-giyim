@@ -14,17 +14,20 @@ export default function SetsSets({
   loading = false,
   emptyLabel = "No packages match this filter.",
   cardCopy = {},
+  allLabel = "All",
 }) {
-  const [active, setActive] = useState(tabs[0] ?? "All");
+  const initialTab = tabs?.[0] ?? allLabel ?? "All";
+  const [active, setActive] = useState(initialTab);
 
   useEffect(() => {
-    const first = tabs?.[0] ?? "All";
+    const first = tabs?.[0] ?? allLabel ?? "All";
     if (!tabs?.includes(active)) setActive(first);
-  }, [tabs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tabs, allLabel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shown = useMemo(() => {
     if (!items?.length) return [];
-    const isAll = String(active || "").toLowerCase() === "all";
+    const normalizedAll = String(allLabel || "All").toLowerCase();
+    const isAll = String(active || "").toLowerCase() === normalizedAll;
     const activeIsValid = tabs?.includes(active);
     if (isAll || !activeIsValid) return items;
     return items.filter((i) =>
@@ -32,7 +35,7 @@ export default function SetsSets({
         (t) => String(t).toLowerCase() === String(active).toLowerCase()
       )
     );
-  }, [active, items, tabs]);
+  }, [active, items, tabs, allLabel]);
 
   return (
     <section className="mx-auto max-w-[1400px] px-4 sm:px-6 py-14">

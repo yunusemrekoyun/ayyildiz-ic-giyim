@@ -103,7 +103,6 @@ export default function AdminSets() {
     loadSets();
     loadProducts();
     loadCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSets = async () => {
