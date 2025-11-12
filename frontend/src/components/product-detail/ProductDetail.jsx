@@ -7,10 +7,12 @@ import { useNavigate } from "react-router-dom";
 import DiscountBadge from "../ui/DiscountBadge.jsx";
 import { getColorInfo } from "../../utils/colors.js";
 import ReviewSectionCard from "../reviews/ReviewSectionCard.jsx";
+import toast from "react-hot-toast";
 import {
   useStaticTranslation,
   formatStaticText,
 } from "../../i18n/staticContent.js";
+import { useStorefrontLang } from "../../context/LangContext.jsx";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -25,6 +27,7 @@ export default function ProductDetail({ product = {} }) {
   const [isFav, setIsFav] = useState(false);
   const productId = product?.id || product?._id || null;
   const t = useStaticTranslation();
+  const { lang } = useStorefrontLang();
   const copy = t("productDetail") || {};
   const stockCopy = copy.stock || {};
   const favoritesCopy = t("favorites") || {};
@@ -37,6 +40,7 @@ export default function ProductDetail({ product = {} }) {
   const detailsTitle = copy.detailsTitle || "Details";
   const descriptionFallback = copy.descriptionFallback || "No description provided.";
   const addToCartLabel = copy.addToCart || "Add to Cart";
+  const addedToast = copy.addedToCart || "Added to cart";
   const fallbackName = copy.fallbackName || "Product";
   const favoriteAddLabel = favoritesCopy.add || "Add to favorites";
   const favoriteRemoveLabel = favoritesCopy.remove || "Remove from favorites";
@@ -64,7 +68,7 @@ export default function ProductDetail({ product = {} }) {
 
     const register = (input) => {
       const raw = sanitizeOption(input);
-      const info = getColorInfo(raw);
+      const info = getColorInfo(raw, lang);
       if (!raw && !info.value) return;
       const key = (info.value || raw || "").toLowerCase();
       if (!map.has(key)) {
@@ -82,7 +86,7 @@ export default function ProductDetail({ product = {} }) {
     inventory.forEach((item) => register(item.color));
 
     return Array.from(map.values());
-  }, [inventory, product.colors, product.showColors]);
+  }, [inventory, lang, product.colors, product.showColors]);
 
   const sizeOptions = useMemo(() => {
     if (product.showSizes === false) return [];
@@ -224,6 +228,20 @@ export default function ProductDetail({ product = {} }) {
   };
   const dec = () => {
     setQuantity((q) => Math.max(canPurchase ? 1 : 0, q - 1));
+  };
+
+  const handleAddToCart = () => {
+    if (!canPurchase) return;
+    addToCart(product, {
+      kind: "product",
+      productId: product.id,
+      color: selectedColor,
+      colorHex: activeColorOption?.isHex ? activeColorOption.swatch : null,
+      size: selectedSize,
+      attribute: selectedAttribute,
+      qty: quantity,
+    });
+    toast.success(addedToast);
   };
 
   const stockLabel =
@@ -442,19 +460,7 @@ export default function ProductDetail({ product = {} }) {
               </button>
             </div>
             <button
-              onClick={() =>
-                addToCart(product, {
-                  kind: "product",
-                  productId: product.id,
-                  color: selectedColor,
-                  colorHex: activeColorOption?.isHex
-                    ? activeColorOption.swatch
-                    : null,
-                  size: selectedSize,
-                  attribute: selectedAttribute,
-                  qty: quantity,
-                })
-              }
+              onClick={handleAddToCart}
               className="inline-flex flex-1 items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white hover:bg-accent-hover disabled:opacity-60 md:flex-none md:px-8"
               disabled={!canPurchase}
             >

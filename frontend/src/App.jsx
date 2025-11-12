@@ -1,5 +1,6 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import LayoutSelector from "./components/layout/LayoutSelector";
 import HomePage from "./pages/HomePage";
 import ShopPage from "./pages/ShopPage";
@@ -54,7 +55,9 @@ export default function App() {
   useThemeInit();
 
   return (
-    <BrowserRouter>
+    <>
+      <Toaster position="top-right" toastOptions={{ duration: 2500 }} />
+      <BrowserRouter>
       <ScrollToTop />
 
       <Routes>
@@ -137,6 +140,7 @@ export default function App() {
           <Route path="/admin/settings" element={<AdminSettings />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </>
   );
 }

@@ -3,6 +3,7 @@ import React, { useMemo, useState } from "react";
 import QtyStepper from "./QtyStepper";
 import { useCart } from "../../hooks/useCart";
 import SetVariantPickerModal from "./SetVariantPickerModal";
+import toast from "react-hot-toast";
 import {
   useStaticTranslation,
   formatStaticText,
@@ -25,6 +26,7 @@ export default function SetSummary({
   const quantityLabel = summaryCopy.quantityLabel || "Quantity";
   const totalLabelTemplate = summaryCopy.totalLabel || "Total {amount}";
   const addToCartLabel = summaryCopy.addToCart || "Add to cart";
+  const addedToast = summaryCopy.addedToCart || "Set added to cart";
 
   const hasStockInfo = stock !== null && stock !== undefined;
   const minQty = hasStockInfo && stock <= 0 ? 0 : 1;
@@ -69,6 +71,7 @@ export default function SetSummary({
       items: selections, // sepete setin item seçimleri
     });
     setOpenPicker(false);
+    toast.success(addedToast);
   };
 
   return (

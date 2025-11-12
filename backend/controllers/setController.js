@@ -15,6 +15,11 @@ import {
   syncDocTranslations,
   composeResponseTranslations,
 } from "../utils/i18n.js";
+import {
+  fetchActiveDiscounts,
+  mapDiscountsToSets,
+  applyDiscount,
+} from "../utils/discountHelpers.js";
 
 const isId = (s) => typeof s === "string" && /^[0-9a-fA-F]{24}$/.test(s);
 
@@ -102,8 +107,47 @@ function applySetTrTranslation(doc, translation = {}) {
   }
 }
 
-function presentSet(doc, lang, { includeTranslations = true } = {}) {
+function resolveSetId(doc) {
+  if (!doc) return null;
+  if (typeof doc === "string") return doc;
+  if (doc._id) {
+    const val =
+      typeof doc._id.toString === "function" ? doc._id.toString() : doc._id;
+    if (val) return String(val);
+  }
+  if (doc.id) {
+    const val = typeof doc.id === "function" ? doc.id() : doc.id;
+    if (val) return String(val);
+  }
+  return null;
+}
+
+async function buildSetDiscountMap(sets = []) {
+  if (!sets?.length) return new Map();
+  const activeDiscounts = await fetchActiveDiscounts();
+  if (!activeDiscounts.length) return new Map();
+  const setIds = sets.map((set) => resolveSetId(set)).filter(Boolean);
+  if (!setIds.length) return new Map();
+  return mapDiscountsToSets(activeDiscounts, setIds);
+}
+
+function presentSet(
+  doc,
+  lang,
+  { includeTranslations = true, discount = null } = {}
+) {
   const localized = resolveTranslation(doc, lang);
+  const basePrice = Number(localized.price ?? doc.price ?? 0) || 0;
+  const { finalPrice, discount: normalizedDiscount } = applyDiscount(
+    basePrice,
+    discount || null
+  );
+  localized.price = basePrice;
+  localized.finalPrice = finalPrice;
+  localized.discount = normalizedDiscount;
+  localized.hasDiscount =
+    Boolean(normalizedDiscount) && basePrice !== finalPrice;
+
   const productsSource = Array.isArray(doc.products) ? doc.products : [];
   localized.products = productsSource.map((entry) => {
     const plainEntry =
@@ -217,8 +261,13 @@ export async function listSets(req, res) {
       set.stock = null;
     });
     await hydrateProductsWithInventory(products);
+    const setDiscountMap = await buildSetDiscountMap(sets);
     res.json({
-      sets: sets.map((set) => presentSet(set, lang)),
+      sets: sets.map((set) =>
+        presentSet(set, lang, {
+          discount: setDiscountMap.get(resolveSetId(set)) || null,
+        })
+      ),
     });
   } catch (err) {
     res.status(500).json({ message: err.message || "List failed" });
@@ -239,7 +288,9 @@ export async function getSet(req, res) {
       .filter(Boolean);
     await hydrateProductsWithInventory(componentProducts);
     set.set("stock", null, { strict: false });
-    res.json({ set: presentSet(set, lang) });
+    const setDiscountMap = await buildSetDiscountMap([set]);
+    const discount = setDiscountMap.get(resolveSetId(set)) || null;
+    res.json({ set: presentSet(set, lang, { discount }) });
   } catch (err) {
     res.status(500).json({ message: err.message || "Get failed" });
   }
@@ -344,7 +395,9 @@ export async function updateSet(req, res) {
       .filter(Boolean);
     await hydrateProductsWithInventory(componentProducts);
     set.set("stock", null, { strict: false });
-    res.json({ set: presentSet(set, lang) });
+    const setDiscountMap = await buildSetDiscountMap([set]);
+    const discount = setDiscountMap.get(resolveSetId(set)) || null;
+    res.json({ set: presentSet(set, lang, { discount }) });
   } catch (err) {
     if (err?.code === 11000 && err?.keyPattern?.sku)
       return res.status(400).json({ message: "SKU already exists" });

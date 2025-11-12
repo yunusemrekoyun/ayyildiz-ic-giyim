@@ -1,7 +1,11 @@
+import { useMemo } from "react";
 import { useStaticTranslation } from "../../i18n/staticContent.js";
+import { getColorInfo } from "../../utils/colors.js";
+import { useStorefrontLang } from "../../context/LangContext.jsx";
 
 export default function CartItem({ item, onQty, onRemove }) {
   const t = useStaticTranslation();
+  const { lang } = useStorefrontLang();
   const cartCopy = t("cart") || {};
   const optionCopy = cartCopy.options || {};
   const colorLabel = optionCopy.color || "Color";
@@ -12,6 +16,10 @@ export default function CartItem({ item, onQty, onRemove }) {
   const unitLabel = cartCopy.unitLabel || "Unit";
   const totalLabel = cartCopy.totalLabel || "Total";
   const itemFallback = cartCopy.itemFallback || "Item";
+  const productColorInfo = useMemo(() => {
+    if (!item.color) return null;
+    return getColorInfo(item.color, lang);
+  }, [item.color, lang]);
 
   const inc = () => onQty(item.lineId, item.qty + 1);
   const dec = () => onQty(item.lineId, item.qty - 1);
@@ -58,7 +66,9 @@ export default function CartItem({ item, onQty, onRemove }) {
                   className="ml-1 inline-block h-3 w-3 rounded-full ring-1 ring-border"
                   style={{ backgroundColor: item.colorHex }}
                 />
-                <span className="text-secondary/80">{item.color}</span>
+                <span className="text-secondary/80">
+                  {productColorInfo?.label || item.color}
+                </span>
               </span>
             )}
             {item.size && (
@@ -81,7 +91,11 @@ export default function CartItem({ item, onQty, onRemove }) {
               {selectionsLabel}
             </p>
             <ul className="space-y-1">
-              {selections.map((s, i) => (
+              {selections.map((s, i) => {
+                const selectionColorInfo = s.color
+                  ? getColorInfo(s.color, lang)
+                  : null;
+                return (
                 <li
                   key={`${s.productId || i}`}
                   className="text-sm text-secondary"
@@ -93,7 +107,9 @@ export default function CartItem({ item, onQty, onRemove }) {
                     {s.color && (
                       <span className="inline-flex items-center gap-1">
                         {colorLabel}:{" "}
-                        <strong className="text-primary">{s.color}</strong>
+                        <strong className="text-primary">
+                          {selectionColorInfo?.label || s.color}
+                        </strong>
                       </span>
                     )}
                     {s.size && (
@@ -110,7 +126,8 @@ export default function CartItem({ item, onQty, onRemove }) {
                     )}
                   </span>
                 </li>
-              ))}
+              );
+              })}
             </ul>
           </div>
         )}

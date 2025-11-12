@@ -3,6 +3,10 @@ import {
   COLOR_NAME_LOOKUP,
   COLOR_VALUE_LOOKUP,
 } from "../constants/colorPalette.js";
+import {
+  DEFAULT_LANG,
+  normalizeLang,
+} from "../constants/lang.js";
 
 const HEX_REGEX = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
@@ -60,37 +64,51 @@ export function dedupeColors(list = []) {
   return result;
 }
 
-export function getColorInfo(rawValue) {
+function resolveColorLabel(entry, lang) {
+  if (!entry) return "";
+  const labels = entry.labels || {};
+  return (
+    labels[lang] ||
+    labels[DEFAULT_LANG] ||
+    labels.en ||
+    entry.name ||
+    ""
+  );
+}
+
+export function getColorInfo(rawValue, lang = DEFAULT_LANG) {
+  const normalizedLang = normalizeLang(lang);
   const normalized = normalizeColorValue(rawValue);
   if (!normalized) {
+    const fallbackValue = rawValue ?? "";
     return {
-      value: null,
-      label: "",
-      swatch: "",
-      isHex: false,
+      value: fallbackValue || null,
+      label: String(fallbackValue || ""),
+      swatch: String(fallbackValue || ""),
+      isHex: isHexColor(fallbackValue),
     };
   }
 
   const paletteMatch = COLOR_VALUE_LOOKUP.get(normalized.toUpperCase());
-  const label = paletteMatch?.name || String(rawValue || normalized);
-  const swatch =
-    paletteMatch?.value ||
-    (isHexColor(normalized) ? normalized : String(rawValue || normalized));
+  const label = paletteMatch
+    ? resolveColorLabel(paletteMatch, normalizedLang)
+    : String(rawValue || normalized);
+  const swatch = paletteMatch?.value || (isHexColor(normalized) ? normalized : "");
 
   return {
-    value: normalized,
+    value: paletteMatch?.value || normalized,
     label,
     swatch,
     isHex: isHexColor(swatch),
   };
 }
 
-export function colorListToInfo(list = []) {
-  return dedupeColors(list).map((value) => getColorInfo(value));
+export function colorListToInfo(list = [], lang = DEFAULT_LANG) {
+  return dedupeColors(list).map((value) => getColorInfo(value, lang));
 }
 
-export function formatColorLabel(value) {
-  const info = getColorInfo(value);
+export function formatColorLabel(value, lang = DEFAULT_LANG) {
+  const info = getColorInfo(value, lang);
   return info.label;
 }
 

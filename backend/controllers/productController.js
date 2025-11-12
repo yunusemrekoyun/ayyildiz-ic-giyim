@@ -11,6 +11,11 @@ import {
 import cloudinary, { configureCloudinary } from "../config/cloudinary.js";
 import { hydrateProductsWithInventory } from "../utils/stockItemHelpers.js";
 import {
+  fetchActiveDiscounts,
+  computeProductDiscountMap,
+  applyDiscount,
+} from "../utils/discountHelpers.js";
+import {
   DEFAULT_LANG,
   normalizeLang,
   resolveTranslation,
@@ -189,6 +194,53 @@ function applyProductTrTranslation(doc, translation = {}) {
   }
 }
 
+function resolveDocId(doc) {
+  if (!doc) return null;
+  if (typeof doc === "string") return doc;
+  if (doc._id) {
+    const val =
+      typeof doc._id.toString === "function" ? doc._id.toString() : doc._id;
+    if (val) return String(val);
+  }
+  if (doc.id) {
+    const val = typeof doc.id === "function" ? doc.id() : doc.id;
+    if (val) return String(val);
+  }
+  return null;
+}
+
+function attachDiscountMeta(target, sourceDoc, discount) {
+  const basePrice = Number(target.price ?? sourceDoc?.price ?? 0) || 0;
+  const { finalPrice, discount: normalized } = applyDiscount(
+    basePrice,
+    discount || null
+  );
+  target.price = basePrice;
+  target.finalPrice = finalPrice;
+  target.discount = normalized;
+  target.hasDiscount = Boolean(normalized) && basePrice !== finalPrice;
+}
+
+async function buildProductDiscountMap(products = []) {
+  if (!products?.length) return new Map();
+  const activeDiscounts = await fetchActiveDiscounts();
+  if (!activeDiscounts.length) return new Map();
+  return computeProductDiscountMap(activeDiscounts, products);
+}
+
+function presentProduct(doc, lang, discount = null) {
+  const localized = resolveTranslation(doc, lang);
+  attachDiscountMeta(localized, doc, discount);
+  if (doc.category && typeof doc.category === "object") {
+    localized.category = resolveTranslation(doc.category, lang);
+  }
+  localized.translations = composeResponseTranslations(
+    doc,
+    buildProductTrTranslation
+  );
+  return localized;
+}
+
 // Cloudinary upload (buffer üzerinden)
 async function uploadImages(files = [], folderHint = "products") {
   if (!Array.isArray(files) || !files.length) return [];
@@ -297,15 +349,11 @@ export async function createProduct(req, res) {
     const populated = await doc.populate("category");
     await hydrateProductsWithInventory([populated]);
     await annotateProductsWithSetUsage([populated]);
-    const localized = resolveTranslation(populated, lang);
-    if (populated.category && typeof populated.category === "object") {
-      localized.category = resolveTranslation(populated.category, lang);
-    }
-    localized.translations = composeResponseTranslations(
-      populated,
-      buildProductTrTranslation
-    );
-    res.status(201).json({ product: localized });
+    const discountMap = await buildProductDiscountMap([populated]);
+    const discount = discountMap.get(resolveDocId(populated)) || null;
+    res.status(201).json({
+      product: presentProduct(populated, lang, discount),
+    });
   } catch (err) {
     if (err?.code === 11000 && err?.keyPattern?.sku)
       return res.status(400).json({ message: "SKU already exists" });
@@ -343,19 +391,12 @@ export async function listProducts(req, res) {
 
     await hydrateProductsWithInventory(items);
     await annotateProductsWithSetUsage(items);
+    const discountMap = await buildProductDiscountMap(items);
 
     res.json({
-      products: items.map((item) => {
-        const localized = resolveTranslation(item, lang);
-        if (item.category && typeof item.category === "object") {
-          localized.category = resolveTranslation(item.category, lang);
-        }
-        localized.translations = composeResponseTranslations(
-          item,
-          buildProductTrTranslation
-        );
-        return localized;
-      }),
+      products: items.map((item) =>
+        presentProduct(item, lang, discountMap.get(resolveDocId(item)) || null)
+      ),
       pagination: {
         page,
         limit,
@@ -389,15 +430,9 @@ export async function getProduct(req, res) {
     }
     await hydrateProductsWithInventory([product]);
     await annotateProductsWithSetUsage([product]);
-    const localized = resolveTranslation(product, lang);
-    if (product.category && typeof product.category === "object") {
-      localized.category = resolveTranslation(product.category, lang);
-    }
-    localized.translations = composeResponseTranslations(
-      product,
-      buildProductTrTranslation
-    );
-    res.json({ product: localized });
+    const discountMap = await buildProductDiscountMap([product]);
+    const discount = discountMap.get(resolveDocId(product)) || null;
+    res.json({ product: presentProduct(product, lang, discount) });
   } catch (err) {
     res.status(500).json({ message: err.message || "Get failed" });
   }
@@ -474,6 +509,22 @@ export async function updateProduct(req, res) {
         product.details = normalizedDetails;
       } else {
         ensureLangBucket().details = normalizedDetails;
+      }
+    }
+    if (category !== undefined) {
+      let normalizedCategory =
+        typeof category === "string" ? category.trim() : category;
+      const shouldUnset =
+        normalizedCategory === null ||
+        normalizedCategory === "" ||
+        (typeof normalizedCategory === "string" &&
+          ["null", "undefined"].includes(normalizedCategory.toLowerCase()));
+
+      if (shouldUnset) {
+        product.category = null;
+      } else {
+        const categoryDoc = await resolveCategory(normalizedCategory);
+        product.category = categoryDoc?._id ?? null;
       }
     }
     if (colors !== undefined) product.colors = normalizeArray(colors);
@@ -553,15 +604,9 @@ export async function updateProduct(req, res) {
     const populated = await product.populate("category");
     await hydrateProductsWithInventory([populated]);
     await annotateProductsWithSetUsage([populated]);
-    const localized = resolveTranslation(populated, lang);
-    if (populated.category && typeof populated.category === "object") {
-      localized.category = resolveTranslation(populated.category, lang);
-    }
-    localized.translations = composeResponseTranslations(
-      populated,
-      buildProductTrTranslation
-    );
-    res.json({ product: localized });
+    const discountMap = await buildProductDiscountMap([populated]);
+    const discount = discountMap.get(resolveDocId(populated)) || null;
+    res.json({ product: presentProduct(populated, lang, discount) });
   } catch (err) {
     if (err?.code === 11000 && err?.keyPattern?.sku)
       return res.status(400).json({ message: "SKU already exists" });

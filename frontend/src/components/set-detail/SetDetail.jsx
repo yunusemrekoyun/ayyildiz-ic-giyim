@@ -22,8 +22,9 @@ export default function SetDetail({ setDoc }) {
 
   // setDoc olmasa da güvenli hesaplama
   const maxStock = useMemo(() => {
+    if (setDoc?.stock === null || setDoc?.stock === undefined) return Infinity;
     const s = Number(setDoc?.stock);
-    if (!Number.isFinite(s)) return 99;
+    if (!Number.isFinite(s)) return Infinity;
     return Math.max(0, s);
   }, [setDoc?.stock]);
 

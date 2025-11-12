@@ -30,11 +30,7 @@ export default function ShopPageFilter({
   const [openNodes, setOpenNodes] = useState(new Set());
 
   useEffect(() => {
-    const initial = new Set();
-    (categoryTree || []).forEach((node) => {
-      initial.add(node.id);
-    });
-    setOpenNodes(initial);
+    setOpenNodes(new Set());
   }, [categoryTree]);
 
   useEffect(() => {
@@ -140,7 +136,8 @@ export default function ShopPageFilter({
           <div className="flex flex-wrap items-center gap-3">
             {colors.map((option) => {
               const isActive = selectedColor === option.value;
-              const isHex = isHexColor(option.value);
+              const swatch = option.swatch || option.value;
+              const isHex = isHexColor(swatch);
               return (
                 <button
                   key={option.value}
@@ -150,16 +147,16 @@ export default function ShopPageFilter({
                   className={`flex items-center gap-2 rounded-full border px-3 py-1 text-sm transition ${
                     isActive ? "border-accent bg-accent text-white" : pillIdle
                   }`}
-                >
-                  {isHex && (
-                    <span
-                      className="inline-block h-4 w-4 rounded-full border border-border"
-                      style={{ backgroundColor: option.value }}
-                    />
-                  )}
-                  <span>{option.label}</span>
-                </button>
-              );
+                  >
+                    {isHex && (
+                      <span
+                        className="inline-block h-4 w-4 rounded-full border border-border"
+                        style={{ backgroundColor: swatch }}
+                      />
+                    )}
+                    <span>{option.label}</span>
+                  </button>
+                );
             })}
           </div>
         </section>

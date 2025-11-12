@@ -7,11 +7,23 @@ export default function QtyStepper({
   onChange,
   className = "",
 }) {
-  const dec = () => onChange?.(Math.max(min, Number(value) - 1 || 0));
-  const inc = () => onChange?.(Math.min(max, Number(value) + 1 || 0));
+  const parseNumber = (input, fallback) => {
+    const numeric = Number(input);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  };
 
-  const canDec = Number(value) > min;
-  const canInc = Number(value) < max;
+  const dec = () => {
+    const current = parseNumber(value, min);
+    onChange?.(Math.max(min, current - 1));
+  };
+  const inc = () => {
+    const current = parseNumber(value, min);
+    onChange?.(Math.min(max, current + 1));
+  };
+
+  const numericValue = parseNumber(value, min);
+  const canDec = numericValue > min;
+  const canInc = numericValue < max;
 
   return (
     <div className={["inline-flex items-center gap-2", className].join(" ")}>
@@ -27,7 +39,7 @@ export default function QtyStepper({
       </button>
 
       <div className="w-8 text-center text-sm font-semibold tabular-nums">
-        {value}
+        {numericValue}
       </div>
 
       <button

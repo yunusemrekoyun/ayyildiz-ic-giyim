@@ -1,6 +1,7 @@
 // src/components/set-detail/SetVariantPickerModal.jsx
 import { useEffect, useMemo, useState } from "react";
 import { getColorInfo } from "../../utils/colors.js";
+import { useStorefrontLang } from "../../context/LangContext.jsx";
 
 function normalize(v) {
   if (v === undefined || v === null) return null;
@@ -27,7 +28,7 @@ function getInventory(product = {}) {
   return Array.isArray(product.inventory) ? product.inventory : [];
 }
 
-function buildOptions(product = {}) {
+function buildOptions(product = {}, lang) {
   const inventory = getInventory(product);
 
   // Renkler
@@ -36,7 +37,7 @@ function buildOptions(product = {}) {
     const map = new Map();
     const register = (input) => {
       const raw = sanitizeOption(input);
-      const info = getColorInfo(raw);
+      const info = getColorInfo(raw, lang);
       if (!raw && !info.value) return;
       const key = (info.value || raw || "").toLowerCase();
       if (!map.has(key)) {
@@ -108,6 +109,7 @@ export default function SetVariantPickerModal({
   // onConfirm(selections: Array<{ productId, color, colorHex, size, attribute, qtyInSet }>)
   onConfirm,
 }) {
+  const { lang } = useStorefrontLang();
   const setQuantity = Math.max(0, Number(setQty) || 0);
   const items = useMemo(
     () => (Array.isArray(setDoc?.products) ? setDoc.products : []),
@@ -151,7 +153,7 @@ export default function SetVariantPickerModal({
     return items.map((entry, idx) => {
       const p = entry?.product || entry || {};
       const { inventory, colorOptions, sizeOptions, attribute } =
-        buildOptions(p);
+        buildOptions(p, lang);
 
       const sel = selections[idx] || {};
       const current = {
@@ -165,7 +167,7 @@ export default function SetVariantPickerModal({
       const required = setQuantity * perSet;
       const ok = stock >= required;
 
-      const cInfo = current.color ? getColorInfo(current.color) : null;
+      const cInfo = current.color ? getColorInfo(current.color, lang) : null;
 
       return {
         product: p,
@@ -180,7 +182,7 @@ export default function SetVariantPickerModal({
         ok,
       };
     });
-  }, [items, selections, setQuantity]);
+  }, [items, lang, selections, setQuantity]);
 
   const allOk = rows.every((r) => r.ok);
 

@@ -19,6 +19,7 @@ export default function StockManagerPanel({
   const [addForm, setAddForm] = useState(() =>
     emptyAddForm(ownerModel, ownerId)
   );
+  const [savingAll, setSavingAll] = useState(false);
 
   const themeCard = {
     borderColor: "var(--color-border-admin)",
@@ -129,35 +130,87 @@ export default function StockManagerPanel({
     setRows((prev) => prev.map((r) => (r.rowId === id ? { ...r, ...patch } : r)));
   }
 
-  async function saveRow(r) {
-    try {
-      if (ownerModel === "Product") {
+  async function persistRow(r) {
+    if (ownerModel === "Product") {
+      if (r._id) {
         await stocksApi.update(r._id, {
           qtyOnHand: Number(r.qtyOnHand || 0),
           sku: r.sku || undefined,
           isActive: !!r.isActive,
           note: r.note || "",
         });
-      } else if (ownerModel === "Set") {
+      } else {
         await stocksApi.upsert(
           stocksApi.helpers.forProduct({
-            owner: r.productId,
+            owner: ownerId,
             color: norm(r.color),
             size: norm(r.size),
             attributeValue: norm(r.attributeValue),
             qtyOnHand: Number(r.qtyOnHand || 0),
-            sku: norm(r.sku) || undefined,
             note: r.note || "",
             isActive: !!r.isActive,
             mode: "set",
+            sku: norm(r.sku) || undefined,
           })
         );
+      }
+      return false;
+    }
+    if (ownerModel === "Set") {
+      await stocksApi.upsert(
+        stocksApi.helpers.forProduct({
+          owner: r.productId,
+          color: norm(r.color),
+          size: norm(r.size),
+          attributeValue: norm(r.attributeValue),
+          qtyOnHand: Number(r.qtyOnHand || 0),
+          sku: norm(r.sku) || undefined,
+          note: r.note || "",
+          isActive: !!r.isActive,
+          mode: "set",
+        })
+      );
+      return true;
+    }
+    return false;
+  }
+
+  async function saveRow(r) {
+    try {
+      const shouldReload = await persistRow(r);
+      if (shouldReload) {
         await load();
-        return;
       }
     } catch (e) {
       console.error(e);
       alert(e?.message || "Güncelleme başarısız.");
+    }
+  }
+
+  async function saveAllRows() {
+    if (!rows.length || savingAll) return;
+    setSavingAll(true);
+    let shouldReload = false;
+    const errors = [];
+    for (const row of rows) {
+      try {
+        const reloadNeeded = await persistRow(row);
+        if (reloadNeeded) shouldReload = true;
+      } catch (e) {
+        console.error(e);
+        errors.push(e?.message || "Kaydedilemedi");
+      }
+    }
+    if (shouldReload) {
+      await load();
+    }
+    setSavingAll(false);
+    if (errors.length) {
+      alert(
+        `Bazı satırlar kaydedilemedi:\n${errors
+          .slice(0, 5)
+          .join("\n")}${errors.length > 5 ? "\n..." : ""}`
+      );
     }
   }
 
@@ -186,7 +239,6 @@ export default function StockManagerPanel({
           qtyOnHand: Number(addForm.qtyOnHand || 0),
           note: addForm.note || "",
           isActive: !!addForm.isActive,
-          sku: norm(addForm.sku) || undefined,
           mode: "set",
         })
       );
@@ -240,16 +292,26 @@ export default function StockManagerPanel({
             </div>
             <div className="text-xs opacity-60">Toplam stok: {total}</div>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg border p-2"
-            style={{
-              borderColor: "var(--color-border-admin)",
-              background: "var(--color-bg-card)",
-            }}
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={saveAllRows}
+              disabled={savingAll || !rows.length}
+              className="rounded-lg px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+              style={{ background: "var(--color-accent)" }}
+            >
+              {savingAll ? "Kaydediliyor…" : "Tümünü Kaydet"}
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-lg border p-2"
+              style={{
+                borderColor: "var(--color-border-admin)",
+                background: "var(--color-bg-card)",
+              }}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* body */}
@@ -275,7 +337,7 @@ export default function StockManagerPanel({
                     className="grid gap-3 px-3 py-3 md:grid-cols-12 md:items-center"
                   >
                   {/* varyant bilgisi */}
-                  <div className="md:col-span-4 space-y-1">
+                  <div className="md:col-span-5 space-y-1">
                     {ownerModel === "Set" && (
                       <div className="flex items-baseline gap-2 text-sm font-semibold text-[var(--color-text-admin)]">
                         <span>{r.productName || "Ürün"}</span>
@@ -351,17 +413,8 @@ export default function StockManagerPanel({
                     </div>
                   </div>
 
-                  {/* sku */}
-                  <div className="md:col-span-2">
-                    <TextInput
-                      label="SKU"
-                      value={r.sku || ""}
-                      onChange={(v) => patchRowLocal(r.rowId, { sku: v })}
-                    />
-                  </div>
-
                   {/* aktif + not */}
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-3">
                     <label className="text-xs opacity-70 block mb-1">
                       Durum
                     </label>
@@ -466,7 +519,7 @@ export default function StockManagerPanel({
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <TextInput
                       label="Miktar"
                       type="number"
@@ -474,11 +527,6 @@ export default function StockManagerPanel({
                       onChange={(v) =>
                         setAddForm((f) => ({ ...f, qtyOnHand: v }))
                       }
-                    />
-                    <TextInput
-                      label="SKU (ops.)"
-                      value={addForm.sku}
-                      onChange={(v) => setAddForm((f) => ({ ...f, sku: v }))}
                     />
                     <div className="flex items-center gap-2">
                       <input
@@ -532,7 +580,6 @@ function emptyAddForm(ownerModel, owner) {
     attributeValue: "",
     components: [],
     qtyOnHand: 0,
-    sku: "",
     isActive: true,
     note: "",
   };

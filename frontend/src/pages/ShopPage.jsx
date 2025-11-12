@@ -15,6 +15,7 @@ import {
   useStaticTranslation,
   formatStaticText,
 } from "../i18n/staticContent.js";
+import { getColorInfo } from "../utils/colors.js";
 
 const isObjectId = (v) => typeof v === "string" && /^[0-9a-fA-F]{24}$/.test(v);
 
@@ -230,17 +231,25 @@ export default function ShopPage() {
 
   // Renk/S beden seçenekleri
   const availableColors = useMemo(() => {
-    const m = new Map();
+    const map = new Map();
     products.forEach((product) => {
       if (!product?.showColors) return;
-      (product.colors || []).forEach((color) => {
-        const key = (color || "").toLowerCase();
-        if (!key) return;
-        if (!m.has(key)) m.set(key, { value: color, label: color });
+      (product.colors || []).forEach((rawColor) => {
+        const value = typeof rawColor === "string" ? rawColor.trim() : rawColor;
+        if (!value) return;
+        const info = getColorInfo(value, lang);
+        const key = (info.value || value || "").toLowerCase();
+        if (map.has(key)) return;
+        map.set(key, {
+          value,
+          normalizedValue: info.value || value,
+          label: info.label || String(value),
+          swatch: info.isHex ? info.swatch : null,
+        });
       });
     });
-    return Array.from(m.values());
-  }, [products]);
+    return Array.from(map.values());
+  }, [products, lang]);
 
   const availableSizes = useMemo(() => {
     const set = new Set();
