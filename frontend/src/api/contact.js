@@ -50,4 +50,19 @@ export const mediaApi = {
 export const contactPageApi = {
   get: contactConfigApi.get,
   upsert: contactConfigApi.update,
+  async updateTranslations(payload, lang = DEFAULT_LANG) {
+    const normalizedLang = lang ?? DEFAULT_LANG;
+    const qs = toQueryString({ lang: normalizedLang });
+    const body = {
+      translations: {
+        [normalizedLang]: payload,
+      },
+    };
+    const data = await http(`${CONTACT_ENDPOINT}${qs}`, {
+      method: "PUT",
+      body,
+      auth: true,
+    });
+    return data?.contact || null;
+  },
 };

@@ -1,6 +1,14 @@
 /* eslint-disable no-undef */
 import { useEffect, useMemo, useState } from "react";
-import { Mail, Phone, MapPin, Clock, Send, Loader2, AlertCircle } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  Send,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import { contactPageApi, contactMessageApi } from "../api/contact";
 import { useStorefrontLang } from "../context/LangContext.jsx";
@@ -66,12 +74,15 @@ const asString = (value, fallback = "") =>
   value === undefined || value === null ? fallback : String(value);
 
 const mergeBlock = (block, fallback) => {
-  if (!block || typeof block !== "object") return makeBlock(fallback.title, [...fallback.lines]);
+  const safeFallback =
+    fallback && typeof fallback === "object" ? fallback : makeBlock("", []);
+  if (!block || typeof block !== "object")
+    return makeBlock(safeFallback.title, [...safeFallback.lines]);
   return makeBlock(
-    asString(block.title, fallback.title),
+    asString(block.title, safeFallback.title),
     Array.isArray(block.lines)
       ? block.lines.map((line) => asString(line))
-      : [...fallback.lines]
+      : [...safeFallback.lines]
   );
 };
 
@@ -82,12 +93,14 @@ const mergeConfig = (raw, defaults) => {
   merged.heroTitle = asString(raw.heroTitle, merged.heroTitle);
   merged.heroSubtitle = asString(raw.heroSubtitle, merged.heroSubtitle);
   merged.formEnabled =
-    raw.formEnabled === undefined ? merged.formEnabled : Boolean(raw.formEnabled);
+    raw.formEnabled === undefined
+      ? merged.formEnabled
+      : Boolean(raw.formEnabled);
   merged.successMessage = asString(raw.successMessage, merged.successMessage);
-  merged.addressBlock = mergeBlock(raw.addressBlock, defaultConfig.addressBlock);
-  merged.hoursBlock = mergeBlock(raw.hoursBlock, defaultConfig.hoursBlock);
-  merged.emailBlock = mergeBlock(raw.emailBlock, defaultConfig.emailBlock);
-  merged.phoneBlock = mergeBlock(raw.phoneBlock, defaultConfig.phoneBlock);
+  merged.addressBlock = mergeBlock(raw.addressBlock, base.addressBlock);
+  merged.hoursBlock = mergeBlock(raw.hoursBlock, base.hoursBlock);
+  merged.emailBlock = mergeBlock(raw.emailBlock, base.emailBlock);
+  merged.phoneBlock = mergeBlock(raw.phoneBlock, base.phoneBlock);
   merged.heroImage =
     raw.heroImage && raw.heroImage.url
       ? {
@@ -97,7 +110,7 @@ const mergeConfig = (raw, defaults) => {
           height: raw.heroImage.height,
           format: raw.heroImage.format,
         }
-      : null;
+      : base.heroImage || null;
   return merged;
 };
 
@@ -136,15 +149,15 @@ export default function ContactPage() {
   const t = useStaticTranslation();
   const breadcrumbs = t("breadcrumbs") || {};
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const contactCopy = t("contactPage") || {};
-  const formCopy = contactCopy.form || {};
-  const formFields = formCopy.fields || {};
-  const baseConfig = useMemo(() => buildDefaultConfig(contactCopy), [contactCopy]);
-  const [config, setConfig] = useState(() => mergeConfig(null, baseConfig));
+  const contactCopy = useMemo(() => t("contactPage") || {}, [lang]); // gerekiyorsa [lang, t]
+  const formCopy = useMemo(() => contactCopy.form || {}, [contactCopy]);
+  const formFields = useMemo(() => formCopy.fields || {}, [formCopy]);
+  const baseConfig = useMemo(() => buildDefaultConfig(contactCopy), [lang]);
 
+  const [config, setConfig] = useState(() => mergeConfig(null, baseConfig));
   useEffect(() => {
     setConfig(mergeConfig(null, baseConfig));
-  }, [baseConfig]);
+  }, [lang]);
 
   useEffect(() => {
     let active = true;
@@ -158,7 +171,8 @@ export default function ContactPage() {
       } catch (err) {
         if (!active) return;
         const message = getErrorMessage(err);
-        setLoadError(message || formCopy.loadError || "");
+        const fallbackMsg = formCopy?.loadError || "";
+        setLoadError(message || fallbackMsg);
         setConfig(mergeConfig(null, baseConfig));
       } finally {
         if (active) setLoading(false);
@@ -167,7 +181,7 @@ export default function ContactPage() {
     return () => {
       active = false;
     };
-  }, [lang, baseConfig, formCopy.loadError]);
+  }, [lang]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -291,7 +305,9 @@ export default function ContactPage() {
                     name="email"
                     type="email"
                     required
-                    placeholder={formFields.emailPlaceholder || "you@example.com"}
+                    placeholder={
+                      formFields.emailPlaceholder || "you@example.com"
+                    }
                     value={formData.email}
                     onChange={handleChange}
                     disabled={!config.formEnabled || submitting || loading}
@@ -302,7 +318,9 @@ export default function ContactPage() {
                   id="contact-phone"
                   name="phone"
                   type="tel"
-                  placeholder={formFields.phonePlaceholder || "+49 170 123 4567"}
+                  placeholder={
+                    formFields.phonePlaceholder || "+49 170 123 4567"
+                  }
                   value={formData.phone}
                   onChange={handleChange}
                   disabled={!config.formEnabled || submitting || loading}
@@ -312,7 +330,9 @@ export default function ContactPage() {
                   id="contact-subject"
                   name="subject"
                   required
-                  placeholder={formFields.subjectPlaceholder || "How can we support you?"}
+                  placeholder={
+                    formFields.subjectPlaceholder || "How can we support you?"
+                  }
                   value={formData.subject}
                   onChange={handleChange}
                   disabled={!config.formEnabled || submitting || loading}
@@ -419,7 +439,10 @@ function TextField({
   const inputId = id || name;
   return (
     <div>
-      <label htmlFor={inputId} className="block text-sm font-semibold text-primary">
+      <label
+        htmlFor={inputId}
+        className="block text-sm font-semibold text-primary"
+      >
         {label}
       </label>
       <input

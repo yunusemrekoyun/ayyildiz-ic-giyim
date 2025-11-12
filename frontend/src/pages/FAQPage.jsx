@@ -39,12 +39,12 @@ export default function FAQPage() {
 
   return (
     <main className="bg-surface-light/60">
-      <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-6">
+      <section className="mx-auto max-w-[1400px] px-4 pt-6 sm:px-6">
         <BreadCrumb items={[{ label: "Home", to: "/" }, { label: "FAQ" }]} />
       </section>
 
-      <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-14">
-        <div className="rounded-2xl border border-border bg-white/90 p-8 sm:p-12 shadow-sm">
+      <section className="mx-auto max-w-[1400px] px-4 pb-14 sm:px-6">
+        <div className="rounded-2xl border border-border bg-white/90 p-8 shadow-sm sm:p-12">
           {/* Header */}
           <div className="flex flex-col items-center text-center">
             <span className="mb-4 grid h-14 w-14 place-items-center rounded-full bg-accent/10 text-accent">
@@ -125,11 +125,13 @@ export default function FAQPage() {
 function FAQSection({ section }) {
   const items = Array.isArray(section.items) ? section.items : [];
   return (
-    <div>
+    <section>
       <h2 className="font-serif text-2xl font-semibold text-primary">
         {section.title || "Untitled Section"}
       </h2>
-      <div className="mt-4 divide-y divide-border/70 rounded-2xl border border-border bg-surface-light">
+
+      {/* sabit border ve divide -> tıklamada kayma yok */}
+      <div className="mt-4 divide-y divide-border/70 overflow-hidden rounded-2xl border border-border bg-surface-light">
         {items.length ? (
           items.map((item) => (
             <FAQItem key={item.id || item.question} item={item} />
@@ -140,7 +142,7 @@ function FAQSection({ section }) {
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -148,28 +150,53 @@ function FAQItem({ item }) {
   const [open, setOpen] = useState(false);
   const q = item?.question || "Untitled question";
   const a = item?.answer || "";
+
+  const contentId = `faq-${hashKey(q)}`;
+
   return (
-    <div>
+    <div data-open={open ? "true" : "false"}>
+      {/* başlık satırı: border/padding sabit -> layout stabil */}
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left text-primary transition hover:bg-white"
+        className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left text-primary transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
         aria-expanded={open}
+        aria-controls={contentId}
       >
         <span className="font-medium">{q}</span>
         <ChevronDown
-          className={`h-5 w-5 transition-transform ${
+          className={`h-5 w-5 shrink-0 transition-transform duration-200 ${
             open ? "rotate-180 text-accent" : "text-secondary"
           }`}
         />
       </button>
-      {open ? (
-        <div className="px-4 pb-5 text-sm text-secondary sm:px-6">
-          {a || <em className="text-secondary/70">No answer yet.</em>}
+
+      {/* içerik: sabit dış padding, iç wrapper animasyonlu -> kayma hissi yok */}
+      <div
+        id={contentId}
+        role="region"
+        aria-hidden={!open}
+        className="px-4 pb-4 sm:px-6"
+      >
+        <div
+          className={`overflow-hidden transition-all duration-200 ${
+            open ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="pb-1 text-sm text-secondary">
+            {a || <em className="text-secondary/70">No answer yet.</em>}
+          </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
+}
+
+/** küçük, stabil bir key üretici (UI için yeterli) */
+function hashKey(s = "") {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
 }
 
 function extractMessage(err) {

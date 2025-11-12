@@ -29,6 +29,22 @@ export const faqApi = {
     return data?.faq;
   },
 
+  async updateTranslations(payload, lang = DEFAULT_LANG) {
+    const normalizedLang = lang ?? DEFAULT_LANG;
+    const qs = toQueryString({ lang: normalizedLang });
+    const body = {
+      translations: {
+        [normalizedLang]: payload,
+      },
+    };
+    const data = await http(`/faq${qs}`, {
+      method: "PUT",
+      body,
+      auth: true,
+    });
+    return data?.faq || null;
+  },
+
   // 🔹 Public: Kullanıcıların sitede gördüğü dinamik FAQ verisini çekmek için
   async public(lang = DEFAULT_LANG) {
     const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });

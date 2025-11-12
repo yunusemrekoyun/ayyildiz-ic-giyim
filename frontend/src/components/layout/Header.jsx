@@ -183,7 +183,7 @@ export default function Header() {
                   )
                 )}
               <Link
-                to="/sale"
+                to="/shop?sale=true"
                 className="shrink-0 text-accent hover:text-accent-hover"
               >
                 {t("header.sale")}

@@ -56,6 +56,9 @@ export default function ShopPage() {
 
   const campaignId = searchParams.get("campaign");
   const searchQuery = (searchParams.get("q") || "").trim();
+  const saleParam = (searchParams.get("sale") || "").toLowerCase();
+  const isSaleMode = saleParam === "true" || saleParam === "1";
+  const saleBannerCopy = shopCopy.saleBanner || {};
 
   // Kampanya parametresi aşaması
   useEffect(() => {
@@ -132,9 +135,18 @@ export default function ShopPage() {
             lang
           );
           if (!mounted) return;
-          setProducts(productList);
+          const resolvedProducts = isSaleMode
+            ? productList.filter(
+                (item) =>
+                  Boolean(item?.hasDiscount) ||
+                  Boolean(item?.discount) ||
+                  Number(item?.finalPrice ?? item?.price ?? 0) <
+                    Number(item?.price ?? 0)
+              )
+            : productList;
+          setProducts(resolvedProducts);
 
-          if (searchQuery) {
+          if (searchQuery && !isSaleMode) {
             setLoadingSets(true);
             try {
               const setResponse = await setApi.list(
@@ -176,7 +188,7 @@ export default function ShopPage() {
     return () => {
       mounted = false;
     };
-  }, [campaignContext, lang, searchQuery, setsCardCopy]);
+  }, [campaignContext, isSaleMode, lang, searchQuery, setsCardCopy]);
 
   // Fiyat aralığı (ürünlere göre)
   const priceRange = useMemo(() => {
@@ -314,9 +326,19 @@ export default function ShopPage() {
         if (!sizes.includes(selectedSize)) return false;
       }
 
+      if (isSaleMode) {
+        const hasDeal =
+          Boolean(product.hasDiscount) ||
+          Boolean(product.discount) ||
+          Number(product.finalPrice ?? product.price ?? 0) <
+            Number(product.price ?? 0);
+        if (!hasDeal) return false;
+      }
+
       return true;
     });
   }, [
+    isSaleMode,
     products,
     selectedCategory,
     selectedColor,
@@ -361,6 +383,12 @@ export default function ShopPage() {
     setSearchParams(params);
   };
 
+  const handleClearSale = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("sale");
+    setSearchParams(params);
+  };
+
   return (
     <section className="mx-auto max-w-[1400px] px-4 sm:px-6 py-8">
       <BreadCrumb
@@ -381,6 +409,22 @@ export default function ShopPage() {
             "Browse curated products uploaded via the admin panel. Filter by category, colour, size and price to find your perfect match."}
         </p>
       </div>
+
+      {isSaleMode && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 text-sm text-accent">
+          <div>
+            {saleBannerCopy.text ||
+              "Only discounted products are shown. Hurry before they sell out!"}
+          </div>
+          <button
+            type="button"
+            onClick={handleClearSale}
+            className="text-accent underline underline-offset-4 hover:text-accent/80"
+          >
+            {saleBannerCopy.clear || "Show all products"}
+          </button>
+        </div>
+      )}
 
       {campaignError && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -447,7 +491,7 @@ export default function ShopPage() {
             emptyLabel={shopProductsEmpty}
           />
 
-          {searchQuery && (
+          {searchQuery && !isSaleMode && (
             <div className="mt-12">
               <h2 className="text-2xl font-semibold text-primary">
                 {matchingCopy.title || "Matching Sets"}

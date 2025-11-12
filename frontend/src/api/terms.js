@@ -3,6 +3,9 @@ import { http, toQueryString } from "./client";
 import { DEFAULT_LANG } from "../constants/lang.js";
 
 export const termsApi = {
+  async get(lang = DEFAULT_LANG) {
+    return this.manage(lang);
+  },
   async public(lang = DEFAULT_LANG) {
     const qs = toQueryString({ lang: lang ?? DEFAULT_LANG });
     const data = await http(`/terms${qs}`);
@@ -31,5 +34,21 @@ export const termsApi = {
       auth: true,
     });
     return data?.terms || null; // her zaman unwrap
+  },
+
+  async updateTranslations(payload, lang = DEFAULT_LANG) {
+    const normalizedLang = lang ?? DEFAULT_LANG;
+    const qs = toQueryString({ lang: normalizedLang });
+    const body = {
+      translations: {
+        [normalizedLang]: payload,
+      },
+    };
+    const data = await http(`/terms${qs}`, {
+      method: "PUT",
+      body,
+      auth: true,
+    });
+    return data?.terms || null;
   },
 };

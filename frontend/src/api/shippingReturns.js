@@ -49,4 +49,26 @@ export const shippingReturnsApi = {
     // fallback
     return payload;
   },
+
+  async updateTranslations(payload, lang = DEFAULT_LANG) {
+    const normalizedLang = lang ?? DEFAULT_LANG;
+    const qs = toQueryString({ lang: normalizedLang });
+    const body = {
+      translations: {
+        [normalizedLang]: payload,
+      },
+    };
+    const data = await http(`/shipping-returns${qs}`, {
+      method: "PUT",
+      body,
+      auth: true,
+    });
+    if (data?.page) return data.page;
+    try {
+      const fallback = await this.manage(lang);
+      return fallback;
+    } catch {
+      return null;
+    }
+  },
 };

@@ -40,6 +40,28 @@ export const privacyApi = {
       return null;
     }
   },
+
+  async updateTranslations(payload, lang = DEFAULT_LANG) {
+    const normalizedLang = lang ?? DEFAULT_LANG;
+    const qs = toQueryString({ lang: normalizedLang });
+    const body = {
+      translations: {
+        [normalizedLang]: payload,
+      },
+    };
+    const data = await http(`/privacy${qs}`, {
+      method: "PUT",
+      body,
+      auth: true,
+    });
+    if (data?.privacy) return data.privacy;
+    try {
+      const fallback = await this.manage(lang);
+      return fallback;
+    } catch {
+      return null;
+    }
+  },
 };
 
 export default privacyApi;
