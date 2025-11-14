@@ -13,12 +13,33 @@ import {
   capturePayPalCheckout,
 } from "../controllers/paymentController.js";
 import { requireRole } from "../middleware/roles.js";
+import { validateBody } from "../middleware/validate.js";
+import {
+  orderCreateSchema,
+  paypalCreateSchema,
+  paypalCaptureSchema,
+} from "../validation/schemas.js";
 
 const router = Router();
 
-router.post("/paypal/create", requireAuth, createPayPalCheckout);
-router.post("/paypal/capture", requireAuth, capturePayPalCheckout);
-router.post("/", requireAuth, createOrder);
+router.post(
+  "/paypal/create",
+  requireAuth,
+  validateBody(paypalCreateSchema),
+  createPayPalCheckout
+);
+router.post(
+  "/paypal/capture",
+  requireAuth,
+  validateBody(paypalCaptureSchema),
+  capturePayPalCheckout
+);
+router.post(
+  "/",
+  requireAuth,
+  validateBody(orderCreateSchema),
+  createOrder
+);
 router.get("/mine", requireAuth, myOrders);
 router.get(
   "/admin",

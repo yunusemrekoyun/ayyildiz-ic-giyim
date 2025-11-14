@@ -13,6 +13,10 @@ const COLOR_POOL = [
   "#3B82F6",
 ];
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ??
+  "http://localhost:5000";
+
 function stringToColor(input) {
   if (!input) return "#475569";
   let hash = 0;
@@ -59,13 +63,49 @@ export default function Avatar({
 
   const resolvedSrc = useMemo(() => {
     if (!src) return null;
-    if (typeof src === "string") return src;
-    if (typeof src === "object") {
-      if (src.secure_url) return src.secure_url;
-      if (src.url) return src.url;
-      if (src.path) return src.path;
+
+    let raw = null;
+
+    if (typeof src === "string") {
+      raw = src;
+    } else if (typeof src === "object" && src !== null) {
+      if (src.secure_url) raw = src.secure_url;
+      else if (src.url) raw = src.url;
+      else if (src.path) raw = src.path;
     }
-    return null;
+
+    if (!raw) return null;
+
+    try {
+      const apiUrl = new URL(API_BASE_URL);
+
+      // Eğer tam URL ise
+      if (/^https?:\/\//i.test(raw)) {
+        const url = new URL(raw);
+
+        const sameHost =
+          url.hostname === apiUrl.hostname && url.port === apiUrl.port;
+
+        // Aynı backend host/port ise path'i alıp /api altında normalize et
+        if (sameHost) {
+          raw = url.pathname; // ör: "/c1.png"
+        } else {
+          // Cloudinary gibi başka domain ise aynen bırak
+          return raw;
+        }
+      }
+    } catch {
+      // URL parse hatası olursa alttaki generic mantığa düşsün
+    }
+
+    // Eğer path zaten /api ile başlıyorsa
+    if (raw.startsWith("/api/")) {
+      return `${API_BASE_URL}${raw}`;
+    }
+
+    // Sadece "c1.png" veya "/c1.png" gibi ise → /api prefix ekle
+    const normalized = raw.replace(/^\/+/, "");
+    return `${API_BASE_URL}/api/${normalized}`;
   }, [src]);
 
   const showFallback = !resolvedSrc || errored;
@@ -77,6 +117,17 @@ export default function Avatar({
     ...(size ? { width: size, height: size } : null),
     ...(showFallback ? { backgroundColor } : null),
   };
+
+  // // 🔍 DEBUG LOGS 
+  // useEffect(() => {
+  //   console.log("------ AVATAR DEBUG ------");
+  //   console.log("Name:", name);
+  //   console.log("Raw src:", src);
+  //   console.log("Resolved src:", resolvedSrc);
+  //   console.log("Show fallback:", showFallback);
+  //   console.log("Errored (load fail):", errored);
+  //   console.log("---------------------------");
+  // }, [src, resolvedSrc, showFallback, errored, name]);
 
   return (
     <div
@@ -91,7 +142,11 @@ export default function Avatar({
       aria-label={alt || name || "Avatar"}
     >
       {showFallback ? (
-        <span className={["select-none", fallbackClassName, textClassName].filter(Boolean).join(" ")}>
+        <span
+          className={["select-none", fallbackClassName, textClassName]
+            .filter(Boolean)
+            .join(" ")}
+        >
           {initials}
         </span>
       ) : (

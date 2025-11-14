@@ -10,6 +10,21 @@ const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || "15m";
 const REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES || "7d";
 
+const resolveSameSite = (value = "strict") => {
+  const normalized = String(value).trim().toLowerCase();
+  if (["strict", "lax", "none"].includes(normalized)) return normalized;
+  return "strict";
+};
+
+const secureCookieDefault =
+  process.env.COOKIE_SECURE === "false"
+    ? false
+    : process.env.COOKIE_SECURE === "true"
+    ? true
+    : process.env.NODE_ENV !== "development";
+
+const sameSiteDefault = resolveSameSite(process.env.COOKIE_SAMESITE || "strict");
+
 function signAccessToken(payload) {
   return jwt.sign(payload, ACCESS_SECRET, { expiresIn: ACCESS_EXPIRES });
 }
@@ -19,11 +34,10 @@ function signRefreshToken(payload) {
 }
 
 function setRefreshCookie(res, token) {
-  const isProd = process.env.NODE_ENV === "production";
   res.cookie("refreshToken", token, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    secure: secureCookieDefault,
+    sameSite: sameSiteDefault,
     path: "/api/auth/refresh",
     maxAge: 1000 * 60 * 60 * 24 * 30,
   });
@@ -139,7 +153,11 @@ export const logout = async (req, res) => {
       // ignore invalid token
     }
   }
-  res.clearCookie("refreshToken", { path: "/api/auth/refresh" });
+  res.clearCookie("refreshToken", {
+    path: "/api/auth/refresh",
+    sameSite: sameSiteDefault,
+    secure: secureCookieDefault,
+  });
   res.json({ ok: true });
 };
 

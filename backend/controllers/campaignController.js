@@ -25,6 +25,7 @@ import {
   syncDocTranslations,
   composeResponseTranslations,
 } from "../utils/i18n.js";
+import { logger } from "../utils/logger.js";
 
 const isValidObjectId = (value) =>
   typeof value === "string" && /^[0-9a-fA-F]{24}$/.test(value);
@@ -266,7 +267,7 @@ async function resolveProductCampaignItems(campaign, lang) {
   discounts.forEach((discount) => {
     const appliesTo = discount.appliesTo || {};
     if (process.env.DEBUG_CAMPAIGNS === "true") {
-      console.log("[campaign:resolve] discount coverage", {
+      logger.debug("[campaign:resolve] discount coverage", {
         discountId: discount._id?.toString?.(),
         products: appliesTo.products?.map?.((id) => id.toString()),
         sets: appliesTo.sets?.map?.((id) => id.toString()),
@@ -301,7 +302,7 @@ async function resolveProductCampaignItems(campaign, lang) {
 
   const finalProductIds = Array.from(directProductIds);
   if (process.env.DEBUG_CAMPAIGNS === "true") {
-    console.log("[campaign:resolveProduct] coverage", {
+    logger.debug("[campaign:resolveProduct] coverage", {
       directProductIds: Array.from(directProductIds),
       directCategoryIds,
       discountCategoryIds,
@@ -344,7 +345,7 @@ async function resolveSetCampaignItems(campaign, lang) {
 
   discounts.forEach((discount) => {
     if (process.env.DEBUG_CAMPAIGNS === "true") {
-      console.log("[campaign:resolve] discount coverage set", {
+      logger.debug("[campaign:resolve] discount coverage set", {
         discountId: discount._id?.toString?.(),
         sets: discount.appliesTo?.sets?.map?.((id) => id.toString()),
       });
@@ -356,7 +357,7 @@ async function resolveSetCampaignItems(campaign, lang) {
 
   const finalSetIds = Array.from(directSetIds);
   if (process.env.DEBUG_CAMPAIGNS === "true") {
-    console.log("[campaign:resolveSet] coverage", {
+    logger.debug("[campaign:resolveSet] coverage", {
       directSetIds: Array.from(directSetIds),
       finalSetIds,
     });
@@ -554,7 +555,7 @@ async function parsePayload(req, { isUpdate = false } = {}) {
 
   if (process.env.DEBUG_CAMPAIGNS === "true") {
   if (process.env.DEBUG_CAMPAIGNS === "true") {
-    console.log("[campaign:parsePayload] raw ids", {
+    logger.debug("[campaign:parsePayload] raw ids", {
       productIds,
       setIds,
       categoryIds,
@@ -610,7 +611,7 @@ async function parsePayload(req, { isUpdate = false } = {}) {
   const normalizedDiscountIds = discountIds.map((id) => toObjectId(id));
   if (process.env.DEBUG_CAMPAIGNS === "true") {
   if (process.env.DEBUG_CAMPAIGNS === "true") {
-    console.log("[campaign:parsePayload] coverage", {
+    logger.debug("[campaign:parsePayload] coverage", {
       derivedProducts,
       derivedSets,
       derivedCategories,
@@ -663,7 +664,7 @@ export async function createCampaign(req, res) {
   try {
     if (process.env.DEBUG_CAMPAIGNS === "true") {
     if (process.env.DEBUG_CAMPAIGNS === "true") {
-      console.log("[campaign:create] body", req.body);
+      logger.debug("[campaign:create] body", req.body);
     }
     }
     const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
@@ -741,7 +742,7 @@ export async function updateCampaign(req, res) {
 
     if (process.env.DEBUG_CAMPAIGNS === "true") {
     if (process.env.DEBUG_CAMPAIGNS === "true") {
-      console.log("[campaign:update] body", req.body);
+      logger.debug("[campaign:update] body", req.body);
     }
     }
     const payload = await parsePayload(req, {
@@ -899,7 +900,7 @@ export async function resolveCampaign(req, res) {
     if (targetType === "SETS") {
       const items = await resolveSetCampaignItems(campaignObject, lang);
       if (process.env.DEBUG_CAMPAIGNS === "true") {
-        console.log("[campaign:resolve] sets", {
+        logger.debug("[campaign:resolve] sets", {
           id,
           targetType,
           count: items.length,
@@ -918,7 +919,7 @@ export async function resolveCampaign(req, res) {
 
     const items = await resolveProductCampaignItems(campaignObject, lang);
     if (process.env.DEBUG_CAMPAIGNS === "true") {
-      console.log("[campaign:resolve] products", {
+      logger.debug("[campaign:resolve] products", {
         id,
         targetType,
         count: items.length,

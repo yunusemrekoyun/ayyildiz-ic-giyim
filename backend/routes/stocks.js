@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/roles.js";
+import { validateBody } from "../middleware/validate.js";
 import {
   listStocks,
   listByOwner,
@@ -11,6 +12,11 @@ import {
   syncOwnerStocks,
   getStockSummary,
 } from "../controllers/stockController.js";
+import {
+  stockUpsertSchema,
+  stockUpdateSchema,
+  stockSyncSchema,
+} from "../validation/schemas.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("admin"));
@@ -52,13 +58,13 @@ router.get("/summary", getStockSummary);
  *
  *   Set için: { ownerModel:"Set", owner:"<setId>", components:[{product,quantity,color,size,attributeValue}], qtyOnHand, ... }
  */
-router.post("/", upsertStock);
+router.post("/", validateBody(stockUpsertSchema), upsertStock);
 
 /**
  * PATCH /api/stocks/:id
  *   kısmi güncelleme (qtyOnHand veya delta ile)
  */
-router.patch("/:id", updateStock);
+router.patch("/:id", validateBody(stockUpdateSchema), updateStock);
 
 /**
  * DELETE /api/stocks/:id
@@ -70,6 +76,6 @@ router.delete("/:id", deleteStock);
  *   Tek owner’ın tüm satırlarını gelen listeyle replace eder.
  *   body: { ownerModel, owner, rows: [{color,size,attributeValue,components,qtyOnHand,sku,isActive,note}] }
  */
-router.put("/sync", syncOwnerStocks);
+router.put("/sync", validateBody(stockSyncSchema), syncOwnerStocks);
 
 export default router;

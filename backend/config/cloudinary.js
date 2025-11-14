@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
+import { logger } from "../utils/logger.js";
 
 let configured = false;
 
@@ -27,7 +28,7 @@ export function configureCloudinary() {
 
   cloudinary.uploadFolder = CLOUDINARY_UPLOAD_FOLDER;
   configured = true;
-  console.log("✅ Cloudinary configured");
+  logger.info("✅ Cloudinary configured");
   return cloudinary;
 }
 
