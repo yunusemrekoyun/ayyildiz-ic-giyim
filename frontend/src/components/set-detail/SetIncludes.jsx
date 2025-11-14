@@ -66,7 +66,7 @@ export default function SetIncludes({ products = [] }) {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {products.map((entry, i) => {
           const p = entry?.product || entry; // API shape güvenliği
           const cover = p?.images?.[0]?.url;
@@ -75,7 +75,7 @@ export default function SetIncludes({ products = [] }) {
               key={p?.id || p?._id || i}
               type="button"
               onClick={() => openLightbox(p)}
-              className="group text-left rounded-xl border border-zinc-200 hover:border-zinc-300 transition overflow-hidden bg-white"
+              className="group w-full text-left rounded-xl border border-zinc-200 bg-white transition hover:border-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <div className="aspect-[1/1] w-full overflow-hidden bg-zinc-100">
                 {cover ? (

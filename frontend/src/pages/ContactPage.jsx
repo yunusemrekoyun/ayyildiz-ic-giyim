@@ -264,7 +264,7 @@ export default function ContactPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-0 lg:grid-cols-12">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-0">
             <div className="lg:col-span-7 border-t border-border/70 p-6 sm:p-10 lg:border-t-0">
               {loadError ? (
                 <div className="mb-6 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
@@ -406,7 +406,7 @@ export default function ContactPage() {
             </div>
 
             <aside className="lg:col-span-5 border-t border-border/70 bg-contact-bg/70 p-6 sm:p-10 lg:border-l lg:border-t-0">
-              <div className="space-y-6">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
                 {blockItems.map((block, index) => (
                   <ContactBlock
                     key={`${block.title || "block"}-${index}`}

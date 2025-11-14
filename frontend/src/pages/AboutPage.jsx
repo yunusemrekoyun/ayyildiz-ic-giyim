@@ -120,7 +120,7 @@ export default function AboutPage() {
       {/* Stats */}
       {stats.length > 0 && (
         <section className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-12">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {stats.map((s, i) => (
               <Stat key={i} value={s.value} label={s.label} />
             ))}

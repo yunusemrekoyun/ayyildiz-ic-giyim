@@ -39,9 +39,11 @@ export default function HomeSets({
   return (
     <section
       className={[
-        "mx-auto max-w-[1400px] px-4 sm:px-6",
-        isCompact ? "py-10" : "py-14",
-      ].join(" ")}
+        "app-section",
+        isCompact ? "app-section--tight" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div
         className={[
@@ -120,8 +122,8 @@ export default function HomeSets({
           className={[
             "mt-6 grid gap-4",
             isCompact
-              ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-              : "grid-cols-1 md:grid-cols-2 gap-6",
+              ? "grid-cols-1 min-[440px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+              : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6",
           ].join(" ")}
         >
           {loading

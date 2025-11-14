@@ -11,7 +11,7 @@ export default function HomeProductCommentItem({
   // const avatarSrc = avatar ? extractAvatarUrl(avatar) : null;
 
   return (
-    <article className="rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-black/5">
+    <article className="flex h-full flex-col rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-black/5">
       {/* Avatar */}
       {/* <Avatar
         src={avatarSrc}
@@ -41,7 +41,7 @@ export default function HomeProductCommentItem({
       </div>
 
       {/* Quote */}
-      <p className="mx-auto max-w-md italic leading-relaxed text-gray-600">
+      <p className="mx-auto max-w-md text-balance italic leading-relaxed text-gray-600">
         “{quote}”
       </p>
 

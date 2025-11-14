@@ -210,13 +210,15 @@ export default function SetVariantPickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose?.();
       }}
+      role="dialog"
+      aria-modal="true"
     >
       <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl">
-        <header className="flex items-center justify-between border-b px-5 py-3">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
           <h3 className="text-sm font-semibold text-primary">
             Choose variants for set items
           </h3>
@@ -235,7 +237,7 @@ export default function SetVariantPickerModal({
                 key={row.product?.id || row.product?._id || idx}
                 className="rounded-xl border border-border bg-contact-bg p-3"
               >
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-primary">
                       {row.product?.name || "Product"}
@@ -352,7 +354,7 @@ export default function SetVariantPickerModal({
           </div>
         </div>
 
-        <footer className="flex items-center justify-between border-t px-5 py-3">
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3">
           <div className="text-xs text-secondary">
             You’re adding{" "}
             <strong className="text-primary">{setQuantity}</strong> set

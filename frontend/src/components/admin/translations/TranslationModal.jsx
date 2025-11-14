@@ -15,7 +15,7 @@ function PanelCard({
   return (
     <section className="rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4 shadow-sm">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-admin)]">
             <Languages className="h-4 w-4" />
             {label}
@@ -26,7 +26,7 @@ function PanelCard({
             )}
           </div>
           {summary && (
-            <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
+            <p className="mt-1 break-words text-xs text-[var(--color-text-admin-muted)]">
               {summary}
             </p>
           )}
