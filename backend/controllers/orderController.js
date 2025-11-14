@@ -744,8 +744,7 @@ async function finalizeOrder(prepared, options = {}) {
  *     // kind === 'set' için zorunlu:
  *     selections?: [{ productId, color, size, attribute, qtyInSet }]
  *   }],
- *   couponCode?: string,
- *   paymentSimulation?: "success"|"failure"
+ *   couponCode?: string
  * }
  * Not: Fiyat güvenliği için backend fiyatı DB'den çeker.
  */
@@ -756,7 +755,6 @@ export async function createOrder(req, res) {
       addressId,
       items = [],
       couponCode = null,
-      paymentSimulation = null,
     } = req.body || {};
 
     const { details } = await buildOrderPreparation({
@@ -766,15 +764,8 @@ export async function createOrder(req, res) {
       couponCode,
     });
 
-    const simulation = normalizeSimulation(paymentSimulation);
-    if (simulation === "failure") {
-      return res.status(402).json({ message: "Payment simulation failed" });
-    }
-
     const order = await finalizeOrder(details, {
       userId,
-      paymentMethod: simulation === "success" ? "simulated" : "cod",
-      simulation,
       currency: PAYPAL_CURRENCY,
     });
 
@@ -969,17 +960,6 @@ function decodeVariantKey(key) {
     size: size || null,
     attribute: attribute || null,
   };
-}
-
-function normalizeSimulation(value) {
-  if (value === undefined || value === null) return null;
-  const normalized = String(value).trim().toLowerCase();
-  if (!normalized) return null;
-  if (["success", "ok", "paid", "true", "yes"].includes(normalized))
-    return "success";
-  if (["failure", "fail", "failed", "error", "false", "no"].includes(normalized))
-    return "failure";
-  return null;
 }
 
 async function ensureProductLoaded(map, id) {

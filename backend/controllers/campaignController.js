@@ -265,12 +265,14 @@ async function resolveProductCampaignItems(campaign, lang) {
 
   discounts.forEach((discount) => {
     const appliesTo = discount.appliesTo || {};
-    console.log('[campaign:resolve] discount coverage', {
-      discountId: discount._id?.toString?.(),
-      products: appliesTo.products?.map?.((id) => id.toString()),
-      sets: appliesTo.sets?.map?.((id) => id.toString()),
-      categories: appliesTo.categories?.map?.((id) => id.toString()),
-    });
+    if (process.env.DEBUG_CAMPAIGNS === "true") {
+      console.log("[campaign:resolve] discount coverage", {
+        discountId: discount._id?.toString?.(),
+        products: appliesTo.products?.map?.((id) => id.toString()),
+        sets: appliesTo.sets?.map?.((id) => id.toString()),
+        categories: appliesTo.categories?.map?.((id) => id.toString()),
+      });
+    }
     (appliesTo.products || []).forEach((id) =>
       directProductIds.add(id.toString())
     );
@@ -298,12 +300,14 @@ async function resolveProductCampaignItems(campaign, lang) {
   }
 
   const finalProductIds = Array.from(directProductIds);
-  console.log("[campaign:resolveProduct] coverage", {
-    directProductIds: Array.from(directProductIds),
-    directCategoryIds,
-    discountCategoryIds,
-    finalProductIds,
-  });
+  if (process.env.DEBUG_CAMPAIGNS === "true") {
+    console.log("[campaign:resolveProduct] coverage", {
+      directProductIds: Array.from(directProductIds),
+      directCategoryIds,
+      discountCategoryIds,
+      finalProductIds,
+    });
+  }
   if (!finalProductIds.length) return [];
 
   const products = await Product.find({
@@ -339,20 +343,24 @@ async function resolveSetCampaignItems(campaign, lang) {
   }).lean();
 
   discounts.forEach((discount) => {
-    console.log('[campaign:resolve] discount coverage set', {
-      discountId: discount._id?.toString?.(),
-      sets: discount.appliesTo?.sets?.map?.((id) => id.toString()),
-    });
+    if (process.env.DEBUG_CAMPAIGNS === "true") {
+      console.log("[campaign:resolve] discount coverage set", {
+        discountId: discount._id?.toString?.(),
+        sets: discount.appliesTo?.sets?.map?.((id) => id.toString()),
+      });
+    }
     (discount.appliesTo?.sets || []).forEach((id) =>
       directSetIds.add(id.toString())
     );
   });
 
   const finalSetIds = Array.from(directSetIds);
-  console.log('[campaign:resolveSet] coverage', {
-    directSetIds: Array.from(directSetIds),
-    finalSetIds,
-  });
+  if (process.env.DEBUG_CAMPAIGNS === "true") {
+    console.log("[campaign:resolveSet] coverage", {
+      directSetIds: Array.from(directSetIds),
+      finalSetIds,
+    });
+  }
   if (!finalSetIds.length) return [];
 
   const sets = await SetModel.find({
@@ -544,12 +552,16 @@ async function parsePayload(req, { isUpdate = false } = {}) {
   const categoryIds = normalizeIds(req.body.categories);
   const discountIds = normalizeIds(req.body.discounts);
 
-  console.log("[campaign:parsePayload] raw ids", {
-    productIds,
-    setIds,
-    categoryIds,
-    discountIds,
-  });
+  if (process.env.DEBUG_CAMPAIGNS === "true") {
+  if (process.env.DEBUG_CAMPAIGNS === "true") {
+    console.log("[campaign:parsePayload] raw ids", {
+      productIds,
+      setIds,
+      categoryIds,
+      discountIds,
+    });
+  }
+  }
 
   const targetInputProvided =
     productIds.length || setIds.length || categoryIds.length || discountIds.length;
@@ -596,12 +608,16 @@ async function parsePayload(req, { isUpdate = false } = {}) {
   const derivedSets = Array.from(setIdSet);
   const derivedCategories = Array.from(categoryIdSet);
   const normalizedDiscountIds = discountIds.map((id) => toObjectId(id));
-  console.log("[campaign:parsePayload] coverage", {
-    derivedProducts,
-    derivedSets,
-    derivedCategories,
-    discountDocs: discountDocs.map((doc) => doc._id?.toString?.() || null),
-  });
+  if (process.env.DEBUG_CAMPAIGNS === "true") {
+  if (process.env.DEBUG_CAMPAIGNS === "true") {
+    console.log("[campaign:parsePayload] coverage", {
+      derivedProducts,
+      derivedSets,
+      derivedCategories,
+      discountDocs: discountDocs.map((doc) => doc._id?.toString?.() || null),
+    });
+  }
+  }
 
   const mixedDiscounts = findMixedDiscounts(discountDocs);
   if (mixedDiscounts.length) {
@@ -645,7 +661,11 @@ async function parsePayload(req, { isUpdate = false } = {}) {
 
 export async function createCampaign(req, res) {
   try {
-    console.log("[campaign:create] body", req.body);
+    if (process.env.DEBUG_CAMPAIGNS === "true") {
+    if (process.env.DEBUG_CAMPAIGNS === "true") {
+      console.log("[campaign:create] body", req.body);
+    }
+    }
     const lang = normalizeLang(req.query.lang || DEFAULT_LANG);
     if (lang !== DEFAULT_LANG) {
       return res.status(400).json({
@@ -719,7 +739,11 @@ export async function updateCampaign(req, res) {
       return res.status(404).json({ message: "Campaign not found" });
     }
 
-    console.log("[campaign:update] body", req.body);
+    if (process.env.DEBUG_CAMPAIGNS === "true") {
+    if (process.env.DEBUG_CAMPAIGNS === "true") {
+      console.log("[campaign:update] body", req.body);
+    }
+    }
     const payload = await parsePayload(req, {
       isUpdate: true,
     });
@@ -874,7 +898,13 @@ export async function resolveCampaign(req, res) {
     );
     if (targetType === "SETS") {
       const items = await resolveSetCampaignItems(campaignObject, lang);
-      console.log("[campaign:resolve] sets", { id, targetType, count: items.length });
+      if (process.env.DEBUG_CAMPAIGNS === "true") {
+        console.log("[campaign:resolve] sets", {
+          id,
+          targetType,
+          count: items.length,
+        });
+      }
       return res.json({
         campaign: shapeCampaign(
           localized,
@@ -887,7 +917,13 @@ export async function resolveCampaign(req, res) {
     }
 
     const items = await resolveProductCampaignItems(campaignObject, lang);
-    console.log("[campaign:resolve] products", { id, targetType, count: items.length });
+    if (process.env.DEBUG_CAMPAIGNS === "true") {
+      console.log("[campaign:resolve] products", {
+        id,
+        targetType,
+        count: items.length,
+      });
+    }
     return res.json({
       campaign: shapeCampaign(
         localized,

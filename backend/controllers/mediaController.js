@@ -1,4 +1,5 @@
 import cloudinary, { configureCloudinary } from "../config/cloudinary.js";
+import { uploadBufferToCloudinary } from "../utils/cloudinaryUpload.js";
 
 configureCloudinary();
 
@@ -97,5 +98,40 @@ export async function deleteCloudinaryResource(req, res) {
     res.json({ result });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+}
+
+export async function uploadMediaAsset(req, res) {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ message: "File is required" });
+    }
+
+    const folder =
+      req.body?.folder ||
+      cloudinary.uploadFolder ||
+      "ayyildiz/uploads";
+    const resourceType =
+      req.body?.resourceType ||
+      (req.file.mimetype?.startsWith("video/") ? "video" : "image");
+
+    const result = await uploadBufferToCloudinary(req.file.buffer, {
+      folder,
+      resource_type: resourceType,
+    });
+
+    res.status(201).json({
+      asset: {
+        url: result.secure_url,
+        publicId: result.public_id,
+        width: result.width,
+        height: result.height,
+        format: result.format,
+        bytes: result.bytes,
+        resourceType: result.resource_type,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Upload failed" });
   }
 }

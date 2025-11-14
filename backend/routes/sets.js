@@ -1,6 +1,8 @@
 // backend/routes/sets.js
 import { Router } from "express";
-import multer from "multer";
+import { requireAuth } from "../middleware/auth.js";
+import { requireRole } from "../middleware/roles.js";
+import { upload } from "../middleware/upload.js";
 import {
   createSet,
   listSets,
@@ -9,23 +11,27 @@ import {
   deleteSet,
 } from "../controllers/setController.js";
 
-const upload = multer({ storage: multer.memoryStorage() });
-
 const router = Router();
+const adminGuard = [requireAuth, requireRole("admin")];
 
 // Liste
 router.get("/", listSets);
 
 // Oluştur (opsiyonel görsel upload)
-router.post("/", upload.array("images", 8), createSet);
+router.post("/", adminGuard, upload.array("images", 8), createSet);
 
 // Detay (id veya slug)
 router.get("/:idOrSlug", getSet);
 
 // Güncelle
-router.put("/:idOrSlug", upload.array("images", 8), updateSet);
+router.put(
+  "/:idOrSlug",
+  adminGuard,
+  upload.array("images", 8),
+  updateSet
+);
 
 // Sil
-router.delete("/:idOrSlug", deleteSet);
+router.delete("/:idOrSlug", adminGuard, deleteSet);
 
 export default router;

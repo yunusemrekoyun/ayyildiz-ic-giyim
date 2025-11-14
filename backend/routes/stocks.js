@@ -1,5 +1,7 @@
 // backend/routes/stocks.js
 import { Router } from "express";
+import { requireAuth } from "../middleware/auth.js";
+import { requireRole } from "../middleware/roles.js";
 import {
   listStocks,
   listByOwner,
@@ -11,6 +13,7 @@ import {
 } from "../controllers/stockController.js";
 
 const router = Router();
+router.use(requireAuth, requireRole("admin"));
 
 /**
  * GET /api/stocks

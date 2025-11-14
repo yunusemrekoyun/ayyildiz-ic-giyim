@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import { useEffect, useMemo, useState } from "react";
 import {
   Mail,

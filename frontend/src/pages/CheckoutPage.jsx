@@ -72,7 +72,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     const token = getAccessToken();
     if (!token) {
-      navigate(`/auth?view=login&redirect=/checkout`, { replace: true });
+      navigate(`/account?view=login&redirect=/checkout`, { replace: true });
       return;
     }
     setAuthChecked(true);
@@ -266,7 +266,7 @@ export default function CheckoutPage() {
         if (!mounted) return;
         const { status, message } = parseError(error);
         if (status === 401) {
-          navigate(`/auth?view=login&redirect=/checkout`, { replace: true });
+          navigate(`/account?view=login&redirect=/checkout`, { replace: true });
           return;
         }
         setAddresses([]);

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { contactPageApi } from "../../api/contact";
+import { mediaApi } from "../../api/media";
 import ContactTranslationModal from "../../components/admin/contact/ContactTranslationModal.jsx";
 import {
   MapPin,
@@ -159,6 +160,7 @@ export default function AdminContactSettingsPageInner() {
   const [data, setData] = useState(() => deepClone(emptyConfig));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [heroUploading, setHeroUploading] = useState(false);
   const [banner, setBanner] = useState(null);
   const [translationState, setTranslationState] = useState({
     open: false,
@@ -194,6 +196,7 @@ export default function AdminContactSettingsPageInner() {
 
   const canSave = useMemo(() => !saving && !loading, [saving, loading]);
   const disabled = loading || saving;
+  const heroFileInputRef = useRef(null);
 
   const update = (patch) => setData((prev) => ({ ...prev, ...patch }));
 
@@ -230,6 +233,33 @@ export default function AdminContactSettingsPageInner() {
       lines[index] = value;
       return { ...block, lines };
     });
+
+  const handleHeroFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setHeroUploading(true);
+    try {
+      const asset = await mediaApi.upload(file, { folder: "contact/hero" });
+      update({ heroImage: asset });
+      setBanner({
+        variant: "success",
+        message: "Hero görseli yüklendi.",
+      });
+    } catch (err) {
+      setBanner({ variant: "danger", message: getMessage(err) });
+    } finally {
+      setHeroUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const triggerHeroUpload = () => {
+    heroFileInputRef.current?.click();
+  };
+
+  const clearHeroImage = () => {
+    update({ heroImage: null });
+  };
 
   const save = async () => {
     setSaving(true);
@@ -374,7 +404,53 @@ export default function AdminContactSettingsPageInner() {
                   placeholder="İletişim politikanızı anlatan kısa paragraf."
                   disabled={disabled}
                 />
-                <div></div>
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-[var(--color-text-admin)]">
+                    Hero görseli (opsiyonel)
+                  </label>
+                  {data.heroImage ? (
+                    <div className="overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-white shadow-sm">
+                      <img
+                        src={data.heroImage.url}
+                        alt="Hero görseli"
+                        className="h-48 w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-admin)]/40 text-sm text-[var(--color-text-admin-muted)]">
+                      Henüz görsel seçilmedi
+                    </div>
+                  )}
+                  <input
+                    ref={heroFileInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    className="hidden"
+                    onChange={handleHeroFileChange}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={triggerHeroUpload}
+                      disabled={disabled || heroUploading}
+                      className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] disabled:opacity-60"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {heroUploading ? "Yükleniyor..." : "Görsel Yükle"}
+                    </button>
+                    {data.heroImage && (
+                      <button
+                        type="button"
+                        onClick={clearHeroImage}
+                        disabled={disabled || heroUploading}
+                        className="inline-flex items-center gap-2 rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Görseli Kaldır
+                      </button>
+                    )}
+                  </div>
+                </div>
               </Card>
 
               <Card

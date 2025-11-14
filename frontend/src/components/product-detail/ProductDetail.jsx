@@ -162,7 +162,7 @@ export default function ProductDetail({ product = {} }) {
     if (!productId) return;
     if (!getAccessToken()) {
       // login sayfasına yönlendir (istersen ?next= ekleyebilirsin)
-      navigate("/auth");
+      navigate("/account?view=login");
       return;
     }
     try {

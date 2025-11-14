@@ -66,7 +66,7 @@ export default function SetDetail({ setDoc }) {
   const toggleFav = async () => {
     if (!setDoc?.id) return;
     if (!getAccessToken()) {
-      navigate("/auth");
+      navigate("/account?view=login");
       return;
     }
     try {
