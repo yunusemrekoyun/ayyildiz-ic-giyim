@@ -198,17 +198,19 @@ export default function HomePage() {
     <>
       {/* Hata bandı (error state'i aktif kullanımı) */}
       {error && (
-        <div
-          role="alert"
-          className="mx-auto mb-4 max-w-[1400px] rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
-          {error}
+        <div className="app-section app-section--tight pt-6">
+          <div
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            {error}
+          </div>
         </div>
       )}
       {/* Dinamik HERO */}
       <Hero slides={heroSlides} imageAutoMs={6000} loading={loadingHeroes} />
       <Categories />
-      <section className="mx-auto my-10 max-w-[1400px] px-4 sm:px-6">
+      <section className="app-section app-section--tight">
         <div className="rounded-xl bg-surface shadow-sm">
           <HomeProducts
             variant="merge-top"
@@ -235,7 +237,7 @@ export default function HomePage() {
         viewAllHref="/sets"
         loading={loadingSets}
       />
-      <HomeProductComments items={commentsToRender} />{" "}
+      <HomeProductComments items={commentsToRender} />
       <HomeCampaigns items={campaignsToRender} loading={loadingCampaigns} />
       <HomeContact />
     </>

@@ -19,19 +19,19 @@ export default function HomeContact({
   const hoursLabel = copy.hoursLabel || "Opening Hours:";
 
   return (
-    <section className="mx-auto max-w-[1400px] px-4 sm:px-6 py-14">
-      <h2 className="mb-8 text-center font-serif text-3xl font-bold tracking-tight text-primary">
+    <section className="app-section">
+      <h2 className="mb-8 text-balance text-center font-serif text-3xl font-bold tracking-tight text-primary">
         {resolvedTitle}
       </h2>
 
-      <div className="rounded-xl bg-contact-bg p-6 shadow-sm ring-1 ring-black/5">
-        <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">
+      <div className="rounded-xl bg-contact-bg p-6 shadow-sm ring-1 ring-black/5 md:p-8">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
           {/* Map */}
           <div className="rounded-xl bg-white p-1 shadow-md ring-1 ring-black/5">
             <iframe
               title="store-location"
               src={mapSrc}
-              className="h-[360px] w-full rounded-lg"
+              className="h-[260px] w-full rounded-lg sm:h-[320px] lg:h-[360px]"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />

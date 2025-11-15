@@ -8,7 +8,7 @@ export default function RootLayout({ children }) {
       {/* kart hissi */}
       <div className="mx-auto max-w-[1440px] overflow-visible rounded-[18px] bg-white shadow-sm">
         <Header />
-        <main>{children}</main>
+        <main className="pb-20 md:pb-0">{children}</main>
         <Footer />
       </div>
     </div>

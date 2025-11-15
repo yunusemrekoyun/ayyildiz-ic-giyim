@@ -24,7 +24,7 @@ export default function HomeCampaignItem({
   return (
     <Link
       to={to}
-      className={`group relative overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-sm ${span} ${className}`}
+      className={`group relative min-h-[220px] overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-sm ${span} ${className}`}
     >
       {/* BG image */}
       <img
@@ -51,9 +51,9 @@ export default function HomeCampaignItem({
         {subtitle && (
           <p className="mt-1 max-w-md text-sm text-white/90">{subtitle}</p>
         )}
-        <button className="mt-4 inline-flex items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-accent-hover">
+        <span className="mt-4 inline-flex items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-accent-hover">
           {resolvedCta}
-        </button>
+        </span>
       </div>
     </Link>
   );

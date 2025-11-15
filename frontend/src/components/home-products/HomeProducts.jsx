@@ -29,7 +29,9 @@ export default function HomeProducts({
   // Varsayılan "boxed" görünüm (tek başına kullanılırken)
   return (
     <section
-      className={`mx-auto my-10 max-w-[1400px] px-4 sm:px-6 ${className}`}
+      className={["app-section", "app-section--tight", className]
+        .filter(Boolean)
+        .join(" ")}
     >
       <div className={`rounded-xl bg-surface ${innerPad}`}>
         <h2 className="mb-8 text-center font-serif text-3xl font-bold tracking-tight text-primary">

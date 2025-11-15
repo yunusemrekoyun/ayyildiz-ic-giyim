@@ -11,13 +11,13 @@ export default function HomeCampaigns({ items = [], loading = false }) {
   };
 
   return (
-    <section className="mx-auto max-w-[1400px] px-4 py-14 sm:px-6">
-      <div className="grid auto-rows-[220px] grid-cols-1 gap-6 md:grid-cols-4 md:grid-rows-2 md:auto-rows-[210px]">
+    <section className="app-section">
+      <div className="grid auto-rows-[minmax(220px,1fr)] grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4 md:grid-rows-2 md:auto-rows-[210px]">
         {loading && items.length === 0
           ? Array.from({ length: 4 }).map((_, index) => (
               <div
                 key={index}
-                className={`rounded-2xl bg-[var(--color-bg-card)]/60 ${
+                className={`min-h-[220px] rounded-2xl bg-[var(--color-bg-card)]/60 ${
                   fallbackVariant(index) === "big"
                     ? "md:col-span-2 md:row-span-2"
                     : fallbackVariant(index) === "wide"

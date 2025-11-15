@@ -8,10 +8,7 @@ import { useStaticTranslation } from "../../i18n/staticContent.js";
 
 const DESKTOP_VISIBLE = 4;
 
-export default function Categories({
-  title,
-  items,
-}) {
+export default function Categories({ title, items }) {
   const [categories, setCategories] = useState(items || []);
   const [loading, setLoading] = useState(!items);
   const scrollRef = useRef(null);
@@ -63,14 +60,17 @@ export default function Categories({
     });
   };
 
+  const gridClass =
+    "grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-4";
+
   return (
-    <section className="mx-auto max-w-7xl px-6 py-16">
-      <h2 className="mb-10 text-center text-3xl font-serif font-bold tracking-tight text-primary">
+    <section className="app-section app-section--tight">
+      <h2 className="mb-10 text-balance text-center text-3xl font-serif font-bold tracking-tight text-primary">
         {resolvedTitle}
       </h2>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={gridClass}>
           {Array.from({ length: DESKTOP_VISIBLE }).map((_, index) => (
             <div
               key={index}
@@ -112,12 +112,9 @@ export default function Categories({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={gridClass}>
           {categories.map((category) => (
-            <CategoryItem
-              key={category.id || category.title}
-              {...category}
-            />
+            <CategoryItem key={category.id || category.title} {...category} />
           ))}
         </div>
       )}
