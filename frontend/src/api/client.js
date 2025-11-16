@@ -59,19 +59,28 @@ async function request(
   return response;
 }
 
-export async function refreshAccessToken() {
-  try {
-    const response = await request("/auth/refresh", { method: "POST" });
-    if (!response.ok) return false;
-    const data = await response.json();
-    if (data?.accessToken) {
-      setAccessToken(data.accessToken);
-      return true;
-    }
-  } catch {
-    /* ignore */
+let refreshPromise = null;
+
+export function refreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const response = await request("/auth/refresh", { method: "POST" });
+        if (!response.ok) return false;
+        const data = await response.json();
+        if (data?.accessToken) {
+          setAccessToken(data.accessToken);
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
   }
-  return false;
+  return refreshPromise;
 }
 
 export async function http(

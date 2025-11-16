@@ -7,7 +7,11 @@ const OPTIONS = [
   { value: "de", label: "DE" },
 ];
 
-export default function LanguageSwitcher({ className = "" }) {
+export default function LanguageSwitcher({
+  className = "",
+  hideText = false,
+  label = "Dil",
+}) {
   const { lang, setLang } = useStorefrontLang();
 
   const onChange = useCallback(
@@ -26,7 +30,13 @@ export default function LanguageSwitcher({ className = "" }) {
         .filter(Boolean)
         .join(" ")}
     >
-      <span className="hidden sm:inline text-secondary/70">Dil</span>
+      <span
+        className={
+          hideText ? "sr-only" : "hidden sm:inline text-secondary/70"
+        }
+      >
+        {label}
+      </span>
       <select
         value={lang}
         onChange={onChange}

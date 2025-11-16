@@ -9,7 +9,7 @@ export default function ShopPageProducts({
   return (
     <div>
       {loading ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-6">
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
@@ -19,7 +19,7 @@ export default function ShopPageProducts({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-6">
             {products.map((product) => (
               <ShopPageProductItem key={product.id || product.slug} product={product} />
             ))}

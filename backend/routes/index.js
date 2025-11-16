@@ -21,13 +21,12 @@ import privacyRoutes from "./privacy.js";
 import termsRoutes from "./terms.js";
 import themeRoutes from "./theme.js";
 import stocksRoutes from "./stocks.js";
-import { strictLimiter } from "../middleware/rateLimiters.js";
 
 const router = Router();
 
 // ileride burada /products, /categories vs. mount edeceğiz
 router.get("/health", (req, res) => res.json({ ok: true }));
-router.use("/auth", strictLimiter, auth);
+router.use("/auth", auth);
 router.use("/products", products);
 router.use("/categories", categories);
 router.use("/media", media);

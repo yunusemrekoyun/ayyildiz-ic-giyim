@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   Layers,
+  Home,
 } from "lucide-react";
 import MegaMenu from "./MegaMenu";
 import { categoryApi } from "../../api/categories";
@@ -89,6 +90,12 @@ export default function Header() {
 
   const mobileNavItems = [
     {
+      key: "home",
+      label: t("header.home") || "Home",
+      icon: Home,
+      to: "/",
+    },
+    {
       key: "categories",
       label: t("header.categories") || "Kategoriler",
       icon: Layers,
@@ -126,7 +133,11 @@ export default function Header() {
           {/* Mobile top */}
           <div className="md:hidden border-b border-border/70 px-4 py-3">
             <div className="flex items-center justify-center">
-              <Link to="/" className="inline-flex items-center gap-2" aria-label="Ayyıldız">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2"
+                aria-label="Ayyıldız"
+              >
                 <img
                   src="/logo.png"
                   alt=""
@@ -243,7 +254,9 @@ export default function Header() {
                           key={item.id}
                           label={item.label}
                           data={item.menu}
-                          onRootClick={() => navigate(`/shop?category=${item.id}`)}
+                          onRootClick={() =>
+                            navigate(`/shop?category=${item.id}`)
+                          }
                         />
                       ) : (
                         <Link
@@ -270,10 +283,9 @@ export default function Header() {
 
       {/* Mobile bottom nav */}
       <div className="fixed inset-x-0 bottom-0 z-[60] border-t border-border/60 bg-white/95 shadow-[0_-8px_20px_rgba(0,0,0,0.05)] md:hidden">
-        <nav className="grid grid-cols-4 text-xs font-medium text-primary">
+        <nav className="grid grid-cols-5 text-xs font-medium text-primary">
           {mobileNavItems.map((item) => {
-            const { key, label, to, onClick } = item;
-            const IconComponent = item.icon;
+            const { key, label, to, onClick, icon: IconComponent } = item;
             const content = (
               <span className="flex flex-col items-center gap-1 py-2">
                 <span className="relative">
@@ -312,14 +324,14 @@ export default function Header() {
         </nav>
       </div>
 
-      {/* Mobile categories sheet */}
+      {/* Mobile categories explorer */}
       {mobileCategoryOpen && (
         <div className="fixed inset-0 z-[80] bg-black/50 md:hidden">
           <div
             className="absolute inset-0"
             onClick={() => setMobileCategoryOpen(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] rounded-t-3xl bg-white shadow-2xl">
+          <div className="absolute inset-0 flex flex-col bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b px-4 py-4">
               <div>
                 <p className="text-base font-semibold text-primary">
@@ -327,7 +339,7 @@ export default function Header() {
                 </p>
                 <p className="text-xs text-secondary">
                   {t("header.categoriesHint") ||
-                    "Ana kategoriyi seç ve alt başlıkları görüntüle"}
+                    "Ana kategoriyi seç ve alt başlıkları keşfet"}
                 </p>
               </div>
               <button
@@ -339,7 +351,7 @@ export default function Header() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="px-4 pb-5 pt-4">
+            <div className="flex-1 overflow-hidden px-4 pb-6 pt-4">
               {loadingCategories ? (
                 <p className="text-sm text-secondary">
                   {t("header.loadingCategories")}
@@ -349,46 +361,124 @@ export default function Header() {
                   {t("header.categoriesUnavailable")}
                 </p>
               ) : (
-                <>
-                  <div className="flex gap-4 overflow-x-auto pb-3 no-scrollbar">
-                    {categoryTree.map((root) => (
-                      <button
-                        type="button"
-                        key={root.id}
-                        onClick={() => setActiveCategoryId(root.id)}
-                        className="flex flex-col items-center gap-2 min-w-[72px]"
-                      >
-                        <span
-                          className={`grid h-16 w-16 place-items-center rounded-full border text-sm font-semibold ${
-                            root.id === activeCategoryId
-                              ? "border-primary bg-primary text-white shadow"
-                              : "border-border bg-surface text-primary"
-                          }`}
-                        >
-                          {root.name.slice(0, 2)}
-                        </span>
-                        <span
-                          className={`text-center text-xs ${
-                            root.id === activeCategoryId
-                              ? "text-primary font-semibold"
-                              : "text-secondary"
-                          }`}
-                        >
-                          {root.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex h-full flex-col gap-4 lg:flex-row">
+                  <section className="space-y-4 rounded-2xl border border-border/70 bg-white p-4 shadow-sm lg:w-1/3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                      {t("header.mainCategories") || "Ana Kategoriler"}
+                    </p>
+                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar lg:hidden">
+                      {categoryTree.map((root) => {
+                        const initials = root.name
+                          .split(" ")
+                          .map((part) => part[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase();
+                        const active = root.id === activeCategoryId;
+                        return (
+                          <button
+                            type="button"
+                            key={root.id}
+                            onClick={() => setActiveCategoryId(root.id)}
+                            className={`min-w-[84px] rounded-2xl border px-3 py-2 text-center text-xs font-semibold transition ${
+                              active
+                                ? "border-primary bg-primary/10 text-primary shadow"
+                                : "border-border bg-surface text-secondary hover:text-primary"
+                            }`}
+                          >
+                            <span className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-bold text-primary">
+                              {initials}
+                            </span>
+                            <span className="block truncate text-xs">
+                              {root.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="hidden max-h-[70vh] flex-1 overflow-auto lg:block">
+                      {categoryTree.map((root) => {
+                        const active = root.id === activeCategoryId;
+                        return (
+                          <button
+                            key={root.id}
+                            type="button"
+                            onClick={() => setActiveCategoryId(root.id)}
+                            className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                              active
+                                ? "bg-primary/10 text-primary font-semibold"
+                                : "text-secondary hover:text-primary"
+                            }`}
+                          >
+                            {root.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
 
-                  <div className="mt-4 grid gap-6 border-t border-border/60 pt-4 sm:grid-cols-2">
-                    <div>
+                  <section className="flex flex-1 flex-col gap-4 overflow-hidden rounded-2xl border border-border/60 bg-white p-4 shadow-inner">
+                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-secondary">
+                      <span>
+                        {t("header.subCategories") || "Alt Kategoriler"}
+                      </span>
+                      {activeRoot && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigate(`/shop?category=${activeRoot.id}`);
+                            setMobileCategoryOpen(false);
+                          }}
+                          className="text-accent hover:text-accent-hover"
+                        >
+                          {t("header.viewAll") || "Tümü"}
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 overflow-auto sm:grid-cols-3">
+                      {rootChildren.length ? (
+                        rootChildren.map((child) => {
+                          const badge = child.children?.length || 0;
+                          const active = child.id === activeChildId;
+                          return (
+                            <button
+                              key={child.id}
+                              type="button"
+                              onClick={() => setActiveChildId(child.id)}
+                              className={`rounded-2xl border px-3 py-3 text-left transition ${
+                                active
+                                  ? "border-primary bg-white text-primary shadow"
+                                  : "border-transparent bg-surface text-secondary hover:border-primary/40 hover:text-primary"
+                              }`}
+                            >
+                              <p className="text-sm font-semibold">
+                                {child.name}
+                              </p>
+                              <p className="text-xs text-secondary">
+                                {badge > 0
+                                  ? t("header.subcount", { count: badge }) ||
+                                    `${badge} alt kategori`
+                                  : t("header.seeProducts") ||
+                                    "Ürünleri görüntüle"}
+                              </p>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p className="col-span-full text-sm text-secondary">
+                          {t("header.noSubcategories") || "Alt kategori yok."}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl border border-border/70 p-4">
                       <div className="flex items-center justify-between text-xs uppercase tracking-wide text-secondary">
-                        <span>{t("header.subCategories") || "Alt Kategoriler"}</span>
-                        {activeRoot && (
+                        <span>{t("header.subLevel") || "Detaylı Liste"}</span>
+                        {activeChild && (
                           <button
                             type="button"
                             onClick={() => {
-                              navigate(`/shop?category=${activeRoot.id}`);
+                              navigate(`/shop?category=${activeChild.id}`);
                               setMobileCategoryOpen(false);
                             }}
                             className="text-accent hover:text-accent-hover"
@@ -397,60 +487,29 @@ export default function Header() {
                           </button>
                         )}
                       </div>
-                      <div className="mt-3 space-y-2">
-                        {rootChildren.length ? (
-                          rootChildren.map((child) => (
-                            <button
-                              key={child.id}
-                              type="button"
-                              onClick={() => setActiveChildId(child.id)}
-                              className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${
-                                child.id === activeChildId
-                                  ? "border-primary bg-primary/5 text-primary"
-                                  : "border-border text-secondary hover:text-primary"
-                              }`}
-                            >
-                              {child.name}
-                            </button>
-                          ))
-                        ) : (
-                          <p className="text-sm text-secondary">
-                            {t("header.noSubcategories") || "Alt kategori yok."}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs uppercase tracking-wide text-secondary">
-                        {t("header.subLevel") || "Detaylar"}
-                      </div>
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-3 max-h-[35vh] space-y-2 overflow-auto">
                         {grandChildren.length ? (
                           grandChildren.map((grand) => (
                             <button
                               key={grand.id}
                               type="button"
-                              className="w-full rounded-xl border border-border px-3 py-2 text-left text-sm text-secondary hover:border-primary hover:text-primary"
+                              className="flex w-full items-center justify-between rounded-xl border border-border px-3 py-2 text-sm text-secondary hover:border-primary hover:text-primary"
                               onClick={() => {
                                 navigate(`/shop?category=${grand.id}`);
                                 setMobileCategoryOpen(false);
                               }}
                             >
-                              {grand.name}
+                              <span>{grand.name}</span>
+                              <span className="text-xs text-accent">
+                                {t("header.seeProducts") || "Görüntüle"}
+                              </span>
                             </button>
                           ))
                         ) : activeChild ? (
-                          <button
-                            type="button"
-                            className="w-full rounded-xl border border-border px-3 py-2 text-left text-sm text-secondary hover:border-primary hover:text-primary"
-                            onClick={() => {
-                              navigate(`/shop?category=${activeChild.id}`);
-                              setMobileCategoryOpen(false);
-                            }}
-                          >
-                            {t("header.goToCategory", { name: activeChild.name }) ||
-                              `Tüm ${activeChild.name} ürünleri`}
-                          </button>
+                          <p className="text-sm text-secondary">
+                            {t("header.noThirdLevel") ||
+                              "Bu kategoride daha fazla alt bölüm yok. Yine de tüm ürünleri görüntüleyebilirsin."}
+                          </p>
                         ) : (
                           <p className="text-sm text-secondary">
                             {t("header.selectCategory") ||
@@ -458,9 +517,23 @@ export default function Header() {
                           </p>
                         )}
                       </div>
+                      {activeChild && !grandChildren.length && (
+                        <button
+                          type="button"
+                          className="mt-3 inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white"
+                          onClick={() => {
+                            navigate(`/shop?category=${activeChild.id}`);
+                            setMobileCategoryOpen(false);
+                          }}
+                        >
+                          {t("header.goToCategory", {
+                            name: activeChild.name,
+                          }) || `${activeChild.name} ürünlerini görüntüle`}
+                        </button>
+                      )}
                     </div>
-                  </div>
-                </>
+                  </section>
+                </div>
               )}
             </div>
           </div>

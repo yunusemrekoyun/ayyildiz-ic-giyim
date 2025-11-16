@@ -59,6 +59,8 @@ export default function ShopPage() {
   const saleParam = (searchParams.get("sale") || "").toLowerCase();
   const isSaleMode = saleParam === "true" || saleParam === "1";
   const saleBannerCopy = shopCopy.saleBanner || {};
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(null);
 
   // Kampanya parametresi aşaması
   useEffect(() => {
@@ -348,6 +350,68 @@ export default function ShopPage() {
   ]);
 
   const activeCampaign = campaignContext?.campaign || null;
+  const priceFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "EUR",
+        maximumFractionDigits: 0,
+      }),
+    []
+  );
+  const selectedCategoryLabel = useMemo(() => {
+    if (selectedCategory === "all") return null;
+    return findCategoryById(categoryTree, selectedCategory)?.name || null;
+  }, [categoryTree, selectedCategory]);
+  const selectedColorLabel = useMemo(() => {
+    if (!selectedColor) return null;
+    const match = availableColors.find(
+      (color) => String(color.value) === String(selectedColor)
+    );
+    return match?.label || selectedColor;
+  }, [availableColors, selectedColor]);
+  const priceChipActive =
+    priceRange.max > 0 &&
+    selectedPrice &&
+    selectedPrice < priceRange.max;
+
+  const handleOpenFilters = () => {
+    setDraftFilters({
+      category: selectedCategory,
+      color: selectedColor,
+      size: selectedSize,
+      price: selectedPrice ?? priceRange.max,
+    });
+    setFiltersOpen(true);
+  };
+
+  const handleCloseFilters = () => {
+    setFiltersOpen(false);
+    setDraftFilters(null);
+  };
+
+  const handleDraftReset = () => {
+    setDraftFilters({
+      category: "all",
+      color: "",
+      size: "",
+      price: priceRange.max,
+    });
+  };
+
+  const handleApplyDraftFilters = () => {
+    if (!draftFilters) {
+      handleCloseFilters();
+      return;
+    }
+    handleCategoryChange(draftFilters.category || "all");
+    setSelectedColor(draftFilters.color || "");
+    setSelectedSize(draftFilters.size || "");
+    handlePriceChange(
+      draftFilters.price === undefined ? priceRange.max : draftFilters.price
+    );
+    handleCloseFilters();
+  };
 
   // Filtre eventleri (URL senkron)
   const handleCategoryChange = (id) => {
@@ -389,8 +453,49 @@ export default function ShopPage() {
     setSearchParams(params);
   };
 
+  const activeFilterBadges = [];
+  if (selectedCategoryLabel) {
+    activeFilterBadges.push({
+      key: "category",
+      label: selectedCategoryLabel,
+      onClear: () => handleCategoryChange("all"),
+    });
+  }
+  if (selectedColor) {
+    activeFilterBadges.push({
+      key: "color",
+      label: selectedColorLabel || selectedColor,
+      onClear: () => setSelectedColor(""),
+    });
+  }
+  if (selectedSize) {
+    activeFilterBadges.push({
+      key: "size",
+      label: selectedSize,
+      onClear: () => setSelectedSize(""),
+    });
+  }
+  if (priceChipActive) {
+    activeFilterBadges.push({
+      key: "price",
+      label: `${filtersCopy.price || "Price"} ≤ ${priceFormatter.format(
+        selectedPrice
+      )}`,
+      onClear: () => handlePriceChange(priceRange.max),
+    });
+  }
+
+  const pendingFilterValues = {
+    category: draftFilters?.category ?? selectedCategory,
+    color: draftFilters?.color ?? selectedColor,
+    size: draftFilters?.size ?? selectedSize,
+    price:
+      draftFilters?.price ??
+      (selectedPrice === undefined ? priceRange.max : selectedPrice),
+  };
+
   return (
-    <section className="mx-auto max-w-[1400px] px-4 sm:px-6 py-8">
+    <section className="app-section">
       <BreadCrumb
         items={[
           { label: breadcrumbs.home || "Home", to: "/" },
@@ -464,8 +569,39 @@ export default function ShopPage() {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <div className="lg:col-span-3">
+      <div className="mt-6 flex flex-wrap items-center gap-3 md:hidden">
+        <button
+          type="button"
+          onClick={handleOpenFilters}
+          className="inline-flex flex-1 items-center justify-center rounded-full border border-border px-4 py-2 text-sm font-semibold text-primary shadow-sm"
+        >
+          {filtersCopy.title || "Filters"}
+        </button>
+        {searchQuery && (
+          <span className="text-xs uppercase tracking-wide text-secondary">
+            “{searchQuery}”
+          </span>
+        )}
+      </div>
+
+      {activeFilterBadges.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2 text-xs text-primary/80">
+          {activeFilterBadges.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={chip.onClear}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 shadow-sm hover:border-accent hover:text-accent"
+            >
+              <span>{chip.label}</span>
+              <span aria-hidden="true">×</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-8 flex flex-col gap-8 lg:grid lg:grid-cols-[320px,1fr]">
+        <div className="hidden lg:block">
           <ShopPageFilter
             categoryTree={categoryTree}
             selectedCategory={selectedCategory}
@@ -484,7 +620,7 @@ export default function ShopPage() {
           />
         </div>
 
-        <div className="lg:col-span-9">
+        <div>
           <ShopPageProducts
             products={filteredProducts}
             loading={loadingProducts}
@@ -505,7 +641,7 @@ export default function ShopPage() {
               </p>
 
               {loadingSets ? (
-                <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-6">
                   {Array.from({ length: 4 }).map((_, idx) => (
                     <div
                       key={idx}
@@ -514,7 +650,7 @@ export default function ShopPage() {
                   ))}
                 </div>
               ) : matchingSets.length ? (
-                <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-6">
                   {matchingSets.map((setCard) => (
                     <SetsSetItem
                       key={setCard.id || setCard.to}
@@ -532,6 +668,80 @@ export default function ShopPage() {
           )}
         </div>
       </div>
+
+      {filtersOpen && (
+        <div className="fixed inset-0 z-[90] bg-black/60 md:hidden">
+          <div className="absolute inset-0" onClick={handleCloseFilters} />
+          <div className="absolute inset-y-0 right-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h2 className="text-base font-semibold text-primary">
+                {filtersCopy.title || "Filters"}
+              </h2>
+              <button
+                type="button"
+                onClick={handleCloseFilters}
+                className="rounded-full border border-border px-3 py-1 text-sm text-secondary hover:bg-surface-hover"
+              >
+                {filtersCopy.close || "Close"}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <ShopPageFilter
+                categoryTree={categoryTree}
+                selectedCategory={pendingFilterValues.category}
+                onCategoryChange={(category) =>
+                  setDraftFilters((prev) => ({
+                    ...(prev || {}),
+                    category: category.id,
+                  }))
+                }
+                colors={availableColors}
+                selectedColor={pendingFilterValues.color}
+                onColorChange={(value) =>
+                  setDraftFilters((prev) => ({
+                    ...(prev || {}),
+                    color: value,
+                  }))
+                }
+                sizes={availableSizes}
+                selectedSize={pendingFilterValues.size}
+                onSizeChange={(value) =>
+                  setDraftFilters((prev) => ({
+                    ...(prev || {}),
+                    size: value,
+                  }))
+                }
+                priceRange={priceRange}
+                selectedPrice={pendingFilterValues.price}
+                onPriceChange={(value) =>
+                  setDraftFilters((prev) => ({
+                    ...(prev || {}),
+                    price: value,
+                  }))
+                }
+                onReset={handleDraftReset}
+                labels={filtersCopy}
+              />
+            </div>
+            <div className="flex items-center gap-3 border-t border-border/60 px-4 py-3">
+              <button
+                type="button"
+                onClick={handleDraftReset}
+                className="flex-1 rounded-full border border-border px-4 py-2 text-sm font-semibold text-secondary hover:bg-surface-hover"
+              >
+                {filtersCopy.reset || "Reset"}
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyDraftFilters}
+                className="flex-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+              >
+                {filtersCopy.apply || "Apply"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -590,4 +800,17 @@ function mapSetsToCards(
       discount,
     };
   });
+}
+
+function findCategoryById(tree = [], targetId) {
+  if (!targetId || !tree?.length) return null;
+  const stack = [...tree];
+  while (stack.length) {
+    const node = stack.pop();
+    if (String(node.id) === String(targetId)) return node;
+    if (node.children?.length) {
+      stack.push(...node.children);
+    }
+  }
+  return null;
 }

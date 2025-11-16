@@ -26,7 +26,7 @@ export default function ShopPageProductItem({ product }) {
         <img
           src={imageSrc}
           alt={title}
-          className="h-80 w-full object-cover"
+          className="h-72 w-full object-cover sm:h-80"
           draggable="false"
         />
         {showStrike && (

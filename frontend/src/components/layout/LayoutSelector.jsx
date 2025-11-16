@@ -1,5 +1,5 @@
 // src/components/layout/LayoutSelector.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Outlet,
   useLocation,
@@ -14,6 +14,7 @@ import {
   setUser as setUserCache,
   getAccessToken,
   refreshAccessToken,
+  setAccessToken,
 } from "../../api/client";
 
 export default function LayoutSelector() {
@@ -23,38 +24,59 @@ export default function LayoutSelector() {
   const [user, setUser] = useState(null);
 
   const isAdminSection = /^\/admin(\/|$)/.test(location.pathname);
+  const paramsKey = useMemo(() => params.toString(), [params]);
 
   useEffect(() => {
     let mounted = true;
 
+    const finish = (nextUser) => {
+      if (!mounted) return;
+      setUser(nextUser);
+      setLoading(false);
+    };
+
+    setLoading(true);
+
     (async () => {
-      try {
-        // 1) Cache’i oku (flicker azaltır)
-        let u = getUserCache();
+      const cachedUser = getUserCache();
+      let token = getAccessToken();
 
-        // 2) Access yoksa refresh dene (cookie varsa alır)
-        if (!getAccessToken()) {
-          await refreshAccessToken();
+      if (!token && !cachedUser) {
+        finish(null);
+        return;
+      }
+
+      if (!token) {
+        const refreshed = await refreshAccessToken();
+        if (!refreshed) {
+          setAccessToken(null);
+          setUserCache(null);
+          finish(null);
+          return;
         }
+        token = getAccessToken();
+      }
 
-        // 3) Sunucudan daima doğrula (tek gerçek kaynak)
-        const me = await authApi.me().catch(() => null);
-        if (me) {
-          setUserCache(me); // cache’i güncelle
-          u = me;
-        }
+      if (!token) {
+        finish(null);
+        return;
+      }
 
-        if (mounted) setUser(u || null);
-      } finally {
-        if (mounted) setLoading(false);
+      const me = await authApi.me().catch(() => null);
+      if (me) {
+        setUserCache(me);
+        finish(me);
+      } else {
+        setAccessToken(null);
+        setUserCache(null);
+        finish(null);
       }
     })();
 
     return () => {
       mounted = false;
     };
-    // her route ve query değişiminde tekrar çalışır
-  }, [location, params]);
+  }, [location.pathname, paramsKey]);
 
   if (loading) return null;
 
