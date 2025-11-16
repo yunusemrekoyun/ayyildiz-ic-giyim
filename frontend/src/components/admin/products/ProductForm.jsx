@@ -665,8 +665,8 @@ export default function ProductForm({
             </button>
           </div>
           {inventoryOpen && (
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
+            <div className="admin-table-container mt-4 overflow-x-auto">
+              <table className="admin-table min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
                 <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
                   <tr>
                     {variantColumns.map((column) => (
@@ -686,11 +686,15 @@ export default function ProductForm({
                     return (
                       <tr key={comboKey}>
                         {variantColumns.map((column) => (
-                          <td key={column.key} className="px-3 py-2">
+                          <td
+                            key={column.key}
+                            className="px-3 py-2"
+                            data-label={column.label}
+                          >
                             {renderVariantValue(column.key, combo)}
                           </td>
                         ))}
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2" data-label="Stok">
                           <input
                             type="number"
                             min="0"
@@ -698,7 +702,7 @@ export default function ProductForm({
                             onChange={(event) =>
                               handleStockChange(comboKey, event.target.value)
                             }
-                            className="w-32 rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-1.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)]"
+                            className="w-full rounded-lg border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-1.5 text-sm text-[var(--color-text-admin)] outline-none focus:border-[var(--color-text-admin)] md:w-32"
                           />
                         </td>
                       </tr>

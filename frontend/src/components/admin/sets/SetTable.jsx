@@ -49,8 +49,8 @@ export default function SetTable({
 
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-sm">
-        <table className="min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
+      <div className="admin-table-container overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-sm">
+        <table className="admin-table min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
           <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
             <tr>
               <th className="px-4 py-3 text-left font-medium">Set</th>
@@ -63,7 +63,7 @@ export default function SetTable({
           <tbody className="divide-y divide-[var(--color-border-admin)]/60 text-[var(--color-text-admin)]">
             {sets.map((set) => (
               <tr key={set.id} className="hover:bg-[var(--color-bg-hover)]/40">
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" data-label="Set">
                   <div className="flex items-center gap-3">
                     {set.images?.[0]?.url ? (
                       <img
@@ -84,8 +84,10 @@ export default function SetTable({
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3">{currency.format(set.price || 0)}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" data-label="Fiyat">
+                  {currency.format(set.price || 0)}
+                </td>
+                <td className="px-4 py-3" data-label="Stok">
                   <div className="flex items-center gap-2">
                     <span>{displaySetStock(set.stock)}</span>
                     <button
@@ -102,7 +104,7 @@ export default function SetTable({
                     </button>
                   </div>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" data-label="Görünürlük">
                   <span
                     className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
                       set.show
@@ -113,23 +115,23 @@ export default function SetTable({
                     {set.show ? "Görünür" : "Gizli"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-2">
+                <td className="px-4 py-3 text-left md:text-right" data-label="İşlemler">
+                  <div className="mobile-full flex flex-col gap-2 md:flex-row md:items-center md:justify-end">
                     <button
                       onClick={() => onTranslate?.(set)}
-                      className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                      className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-auto"
                     >
                       <Languages className="h-4 w-4" /> Dil varyantı
                     </button>
                     <button
                       onClick={() => onEdit?.(set)}
-                      className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                      className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-auto"
                     >
                       <Edit3 className="h-4 w-4" /> Düzenle
                     </button>
                     <button
                       onClick={() => onDelete?.(set)}
-                      className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                      className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 md:w-auto"
                     >
                       <Trash2 className="h-4 w-4" /> Sil
                     </button>
@@ -223,7 +225,7 @@ function StockInspectModal({ setItem, onClose }) {
         </header>
 
         <div className="max-h-[70vh] overflow-auto p-5">
-          <table className="min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
+          <table className="admin-table min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
             <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Ürün</th>
@@ -243,20 +245,26 @@ function StockInspectModal({ setItem, onClose }) {
             <tbody className="divide-y divide-[var(--color-border-admin)]/60 text-[var(--color-text-admin)]">
               {rows.map((r) => (
                 <tr key={r.key} className="hover:bg-[var(--color-bg-hover)]/40">
-                  <td className="px-3 py-2">{r.productName}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2" data-label="Ürün">{r.productName}</td>
+                  <td className="px-3 py-2" data-label="Varyant">
                     <VariantLabel
                       color={r.variant.color}
                       size={r.variant.size}
                       attributeValue={r.variant.attributeValue}
                     />
                   </td>
-                  <td className="px-3 py-2 text-right">{r.qtyInSet}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-left md:text-right" data-label="Set içi adet">
+                    {r.qtyInSet}
+                  </td>
+                  <td className="px-3 py-2 text-left md:text-right" data-label="Stok (Katalog)">
                     {r.stockCatalog ?? "—"}
                   </td>
-                  <td className="px-3 py-2 text-right">{r.stockSet ?? "—"}</td>
-                  <td className="px-3 py-2 text-right">{r.stock ?? "—"}</td>
+                  <td className="px-3 py-2 text-left md:text-right" data-label="Stok (Set)">
+                    {r.stockSet ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 text-left md:text-right" data-label="Stok (Eski)">
+                    {r.stock ?? "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

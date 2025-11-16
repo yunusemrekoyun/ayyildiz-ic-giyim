@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Search } from "lucide-react";
 import BreadCrumb from "../components/shop/BreadCrumb";
 import ShopPageFilter from "../components/shop/ShopPageFilter";
 import ShopPageProducts from "../components/shop/ShopPageProducts";
@@ -45,6 +46,12 @@ export default function ShopPage() {
   const matchingCopy = shopCopy.matchingSets || {};
   const bannerCopy = shopCopy.campaignBanner || {};
   const filtersCopy = useMemo(() => t("shopFilters") || {}, [t, lang]);
+  const searchPlaceholder =
+    filtersCopy.searchPlaceholder || "Search products";
+  const searchButtonLabel = filtersCopy.searchButton || "Search";
+  const clearSearchLabel = filtersCopy.clearSearch || "Clear";
+  const quickCategoriesLabel =
+    filtersCopy.quickCategories || filtersCopy.categories || "Categories";
   const breadcrumbs = useMemo(() => t("breadcrumbs") || {}, [t, lang]);
   const shopProductsEmpty =
     shopCopy.noProducts || "No products found for selected filters.";
@@ -61,6 +68,19 @@ export default function ShopPage() {
   const saleBannerCopy = shopCopy.saleBanner || {};
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState(null);
+  const [searchText, setSearchText] = useState(searchQuery);
+
+  useEffect(() => {
+    setSearchText(searchQuery);
+  }, [searchQuery]);
+
+  const quickCategoryChips = useMemo(() => {
+    if (!Array.isArray(categoryTree) || !categoryTree.length) return [];
+    return categoryTree.map((node) => ({
+      id: node.id,
+      label: node.name,
+    }));
+  }, [categoryTree]);
 
   // Kampanya parametresi aşaması
   useEffect(() => {
@@ -441,6 +461,22 @@ export default function ShopPage() {
     setSearchParams(params);
   };
 
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const next = (searchText || "").trim();
+    const params = new URLSearchParams(searchParams);
+    if (next) params.set("q", next);
+    else params.delete("q");
+    setSearchParams(params);
+  };
+
+  const handleClearSearch = () => {
+    setSearchText("");
+    const params = new URLSearchParams(searchParams);
+    params.delete("q");
+    setSearchParams(params);
+  };
+
   const handleClearCampaign = () => {
     const params = new URLSearchParams(searchParams);
     params.delete("campaign");
@@ -493,6 +529,7 @@ export default function ShopPage() {
       draftFilters?.price ??
       (selectedPrice === undefined ? priceRange.max : selectedPrice),
   };
+  const isSearchActive = Boolean(searchQuery);
 
   return (
     <section className="app-section">
@@ -568,6 +605,85 @@ export default function ShopPage() {
           {error}
         </div>
       )}
+
+      <div className="mt-6 space-y-3 rounded-2xl border border-border/70 bg-white/95 p-4 shadow-sm">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex flex-col gap-3 sm:flex-row sm:items-center"
+        >
+          <div className="flex flex-1 items-center gap-2 rounded-full border border-border bg-white px-3 py-2 shadow-sm focus-within:border-accent">
+            <Search className="h-4 w-4 text-secondary" />
+            <input
+              type="search"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder={searchPlaceholder}
+              className="w-full border-0 bg-transparent text-sm text-primary placeholder:text-secondary/70 focus:outline-none"
+            />
+          </div>
+          <div className="flex flex-col gap-2 sm:w-auto sm:flex-row">
+            {isSearchActive && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="inline-flex w-full items-center justify-center rounded-full border border-border px-4 py-2 text-sm font-semibold text-secondary hover:border-accent sm:w-auto"
+              >
+                {clearSearchLabel}
+              </button>
+            )}
+            <button
+              type="submit"
+              className="inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 sm:w-auto"
+            >
+              {searchButtonLabel}
+            </button>
+          </div>
+        </form>
+
+        {quickCategoryChips.length > 0 && (
+          <div>
+            <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-secondary">
+              <span>{quickCategoriesLabel}</span>
+              {selectedCategory !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => handleCategoryChange("all")}
+                  className="text-secondary underline-offset-4 hover:text-primary"
+                >
+                  {filtersCopy.allProducts || "All products"}
+                </button>
+              )}
+            </div>
+            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+              <button
+                type="button"
+                onClick={() => handleCategoryChange("all")}
+                className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                  selectedCategory === "all"
+                    ? "border-accent bg-accent text-white shadow"
+                    : "border-border text-primary hover:border-accent"
+                }`}
+              >
+                {filtersCopy.allProducts || "All products"}
+              </button>
+              {quickCategoryChips.map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => handleCategoryChange(chip.id)}
+                  className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                    selectedCategory === chip.id
+                      ? "border-accent bg-accent text-white shadow"
+                      : "border-border text-primary hover:border-accent"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3 md:hidden">
         <button

@@ -35,8 +35,8 @@ export default function CouponTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]">
-      <table className="min-w-full divide-y divide-[var(--color-border-admin)]/80">
+    <div className="admin-table-container overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]">
+      <table className="admin-table min-w-full divide-y divide-[var(--color-border-admin)]/80">
         <thead className="bg-[var(--color-bg-hover)]/60">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
@@ -62,7 +62,7 @@ export default function CouponTable({
         <tbody className="divide-y divide-[var(--color-border-admin)]/60">
           {coupons.map((coupon) => (
             <tr key={coupon.id}>
-              <td className="px-4 py-4 align-top">
+              <td className="px-4 py-4 align-top" data-label="Kod">
                 <div className="space-y-1">
                   <p className="font-semibold tracking-wide text-[var(--color-text-admin)]">
                     {coupon.code}
@@ -74,13 +74,13 @@ export default function CouponTable({
                   )}
                 </div>
               </td>
-              <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin)]">
+              <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin)]" data-label="Yüzde">
                 {coupon.percentage}%
               </td>
-              <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin)]">
+              <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin)]" data-label="Minimum">
                 {coupon.minSubtotal ? currency.format(coupon.minSubtotal) : "—"}
               </td>
-              <td className="px-4 py-4 align-top">
+              <td className="px-4 py-4 align-top" data-label="Durum">
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
                     coupon.active
@@ -91,15 +91,15 @@ export default function CouponTable({
                   {coupon.active ? "Aktif" : "Pasif"}
                 </span>
               </td>
-              <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin-muted)]">
+              <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin-muted)]" data-label="Güncellenme">
                 {formatTimestamp(coupon.updatedAt)}
               </td>
-              <td className="px-4 py-4 align-top">
-                <div className="flex justify-end gap-2">
+              <td className="px-4 py-4 align-top text-left md:text-right" data-label="İşlemler">
+                <div className="mobile-full flex flex-col gap-2 md:flex-row md:justify-end">
                   <button
                     type="button"
                     onClick={() => onToggleActive?.(coupon)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                    className="inline-flex h-9 w-full items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-9"
                     title={coupon.active ? "Pasifleştir" : "Aktifleştir"}
                   >
                     <Power className="h-4 w-4" />
@@ -107,7 +107,7 @@ export default function CouponTable({
                   <button
                     type="button"
                     onClick={() => onEdit?.(coupon)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                    className="inline-flex h-9 w-full items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-9"
                     title="Kuponu düzenle"
                   >
                     <Pencil className="h-4 w-4" />
@@ -115,7 +115,7 @@ export default function CouponTable({
                   <button
                     type="button"
                     onClick={() => onDelete?.(coupon)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50"
+                    className="inline-flex h-9 w-full items-center justify-center rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50 md:w-9"
                     title="Kuponu sil"
                   >
                     <Trash2 className="h-4 w-4" />

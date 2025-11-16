@@ -384,8 +384,8 @@ function OrdersTable() {
     return map[s] || "bg-gray-50 text-gray-700 border-gray-200";
   };
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--color-border-admin)]">
-      <table className="min-w-full divide-y divide-[var(--color-border-admin)]">
+    <div className="admin-table-container overflow-hidden rounded-xl border border-[var(--color-border-admin)]">
+      <table className="admin-table min-w-full divide-y divide-[var(--color-border-admin)]">
         <thead className="bg-surface-light">
           <tr className="text-left text-sm text-text-admin-muted">
             <th className="px-4 py-3 font-medium">Sipariş</th>
@@ -401,10 +401,16 @@ function OrdersTable() {
               key={r.id}
               className="text-sm hover:bg-[var(--color-bg-hover)]/60 transition-colors"
             >
-              <td className="px-4 py-3 font-semibold text-primary">#{r.id}</td>
-              <td className="px-4 py-3">{r.customer}</td>
-              <td className="px-4 py-3">{r.date}</td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3 font-semibold text-primary" data-label="Sipariş">
+                #{r.id}
+              </td>
+              <td className="px-4 py-3" data-label="Müşteri">
+                {r.customer}
+              </td>
+              <td className="px-4 py-3" data-label="Tarih">
+                {r.date}
+              </td>
+              <td className="px-4 py-3" data-label="Durum">
                 <span
                   className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs ${badge(
                     r.status
@@ -413,7 +419,7 @@ function OrdersTable() {
                   {r.status}
                 </span>
               </td>
-              <td className="px-4 py-3 text-right font-semibold text-primary">
+              <td className="px-4 py-3 text-left font-semibold text-primary md:text-right" data-label="Toplam">
                 €{r.total}
               </td>
             </tr>

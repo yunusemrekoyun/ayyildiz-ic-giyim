@@ -469,7 +469,7 @@ function Heatmap({ data }) {
   const days = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[720px]">
+      <div className="min-w-full md:min-w-[720px]">
         <div className="grid grid-cols-[64px_repeat(24,minmax(0,1fr))] gap-1">
           <div />
           {Array.from({ length: 24 }).map((_, h) => (

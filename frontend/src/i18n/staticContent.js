@@ -346,6 +346,10 @@ const STATIC_CONTENT = {
       price: "Price Range",
       expand: "Expand",
       collapse: "Collapse",
+      searchPlaceholder: "Search products",
+      searchButton: "Search",
+      clearSearch: "Clear",
+      quickCategories: "Quick categories",
     },
     setsPage: {
       breadcrumb: "Trousseau Packages",
@@ -851,6 +855,10 @@ const STATIC_CONTENT = {
       price: "Fiyat Aralığı",
       expand: "Aç",
       collapse: "Kapat",
+      searchPlaceholder: "Ürün ara",
+      searchButton: "Ara",
+      clearSearch: "Temizle",
+      quickCategories: "Hızlı kategoriler",
     },
     setsPage: {
       breadcrumb: "Çeyiz Paketleri",
@@ -1354,6 +1362,10 @@ const STATIC_CONTENT = {
       price: "Preisspanne",
       expand: "Aufklappen",
       collapse: "Zuklappen",
+      searchPlaceholder: "Produkte suchen",
+      searchButton: "Suchen",
+      clearSearch: "Löschen",
+      quickCategories: "Schnellkategorien",
     },
     setsPage: {
       breadcrumb: "Aussteuer-Pakete",

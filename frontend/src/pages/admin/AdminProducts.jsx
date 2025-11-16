@@ -461,7 +461,7 @@ export default function AdminProducts() {
 
   return (
     <section className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--color-text-admin)]">
             Ürünler
@@ -470,7 +470,7 @@ export default function AdminProducts() {
             Mağaza kataloğundaki ürünleri ekleyin, düzenleyin ve yönetin.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => loadProducts(pagination.page)}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
@@ -486,35 +486,54 @@ export default function AdminProducts() {
         </div>
       </header>
 
-      <div className="grid gap-4 rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4 shadow-sm md:grid-cols-3">
-        <label className="md:col-span-1 flex items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
-          <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
-          <input
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Ürün ara"
-            className="w-full border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
-          />
-        </label>
-        <label className="md:col-span-1 flex items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
-          <span className="text-sm text-[var(--color-text-admin-muted)]">
-            Kategori
-          </span>
-          <select
-            value={categoryFilter}
-            onChange={(event) => setCategoryFilter(event.target.value)}
-            className="flex-1 border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
-          >
-            <option value="">Tüm kategoriler</option>
-            {categoryOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="md:col-span-1 flex items-center justify-end text-xs text-[var(--color-text-admin-muted)]">
-          {pagination.total} ürün • sayfa {pagination.page} / {pagination.pages}
+      <div className="space-y-4 rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] p-4 shadow-sm">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
+              Ürün ara
+            </span>
+            <div className="flex w-full items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
+              <Search className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
+              <input
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                placeholder="Ürün ara"
+                className="w-full border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none placeholder:text-[var(--color-text-admin-muted)]"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
+              Kategori
+            </span>
+            <div className="flex w-full items-center gap-2 rounded-xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-2.5">
+              <select
+                value={categoryFilter}
+                onChange={(event) => setCategoryFilter(event.target.value)}
+                className="flex-1 border-0 bg-transparent text-sm text-[var(--color-text-admin)] outline-none"
+              >
+                <option value="">Tüm kategoriler</option>
+                {categoryOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-col justify-between rounded-xl border border-dashed border-[var(--color-border-admin)] bg-[var(--color-bg-card)] px-3 py-3 text-sm text-[var(--color-text-admin-muted)]">
+            <span>
+              <strong className="text-[var(--color-text-admin)]">
+                {pagination.total}
+              </strong>{" "}
+              ürün
+            </span>
+            <span>
+              Sayfa {pagination.page} / {pagination.pages}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -603,8 +622,8 @@ function DeleteProductResolutionModal({
   onResolve,
 }) {
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-xl">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-2 sm:px-4">
+      <div className="w-full max-w-xl max-h-[90vh] overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-xl">
         <header className="border-b border-[var(--color-border-admin)] px-5 py-4">
           <h2 className="text-lg font-semibold text-[var(--color-text-admin)]">
             Ürün setlerde kullanılıyor

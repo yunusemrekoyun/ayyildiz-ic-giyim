@@ -29,8 +29,8 @@ export default function DiscountTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]">
-      <table className="min-w-full divide-y divide-[var(--color-border-admin)]/80">
+    <div className="admin-table-container overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]">
+      <table className="admin-table min-w-full divide-y divide-[var(--color-border-admin)]/80">
         <thead className="bg-[var(--color-bg-hover)]/60">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-admin-muted)]">
@@ -67,7 +67,7 @@ export default function DiscountTable({
 
             return (
               <tr key={discount.id}>
-                <td className="max-w-[280px] px-4 py-4 align-top">
+                <td className="max-w-[280px] px-4 py-4 align-top" data-label="İndirim">
                   <div className="space-y-1">
                     <p className="font-medium text-[var(--color-text-admin)]">
                       {discount.name}
@@ -79,10 +79,10 @@ export default function DiscountTable({
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin)]">
+                <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin)]" data-label="Yüzde">
                   {discount.percentage}%
                 </td>
-                <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin)]">
+                <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin)]" data-label="Kapsam">
                   {summaryParts.length ? summaryParts.join(" • ") : "—"}
                   {namePreview && (
                     <p className="mt-1 text-xs text-[var(--color-text-admin-muted)]">
@@ -90,7 +90,7 @@ export default function DiscountTable({
                     </p>
                   )}
                 </td>
-                <td className="px-4 py-4 align-top">
+                <td className="px-4 py-4 align-top" data-label="Durum">
                   <span
                     className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
                       discount.active
@@ -101,15 +101,15 @@ export default function DiscountTable({
                     {discount.active ? "Aktif" : "Pasif"}
                   </span>
                 </td>
-                <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin-muted)]">
+                <td className="px-4 py-4 align-top text-sm text-[var(--color-text-admin-muted)]" data-label="Güncellenme">
                   {formatTimestamp(discount.updatedAt)}
                 </td>
-                <td className="px-4 py-4 align-top">
-                  <div className="flex justify-end gap-2">
+                <td className="px-4 py-4 align-top text-left md:text-right" data-label="İşlemler">
+                  <div className="mobile-full flex flex-col gap-2 md:flex-row md:justify-end">
                     <button
                       type="button"
                       onClick={() => onToggleActive?.(discount)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                      className="inline-flex h-9 w-full items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-9"
                       title={discount.active ? "Pasifleştir" : "Aktifleştir"}
                     >
                       <Power className="h-4 w-4" />
@@ -117,7 +117,7 @@ export default function DiscountTable({
                     <button
                       type="button"
                       onClick={() => onEdit?.(discount)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                      className="inline-flex h-9 w-full items-center justify-center rounded-full border border-[var(--color-border-admin)] text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-9"
                       title="İndirimi düzenle"
                     >
                       <Pencil className="h-4 w-4" />
@@ -125,7 +125,7 @@ export default function DiscountTable({
                     <button
                       type="button"
                       onClick={() => onDelete?.(discount)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50"
+                      className="inline-flex h-9 w-full items-center justify-center rounded-full border border-rose-200 text-rose-600 hover:bg-rose-50 md:w-9"
                       title="İndirimi sil"
                     >
                       <Trash2 className="h-4 w-4" />

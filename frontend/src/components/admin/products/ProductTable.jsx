@@ -37,8 +37,8 @@ export default function ProductTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-sm">
-      <table className="min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
+    <div className="admin-table-container overflow-hidden rounded-2xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)] shadow-sm">
+      <table className="admin-table min-w-full divide-y divide-[var(--color-border-admin)]/70 text-sm">
         <thead className="bg-[var(--color-bg-hover)]/60 text-[var(--color-text-admin-muted)]">
           <tr>
             <th className="px-4 py-3 text-left font-medium">Ürün</th>
@@ -56,7 +56,7 @@ export default function ProductTable({
               key={product.id}
               className="hover:bg-[var(--color-bg-hover)]/40"
             >
-              <td className="px-4 py-3">
+              <td className="px-4 py-3" data-label="Ürün">
                 <div className="flex items-center gap-3">
                   {product.images?.[0]?.url ? (
                     <img
@@ -77,42 +77,42 @@ export default function ProductTable({
                   </div>
                 </div>
               </td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3" data-label="Kategori">
                 <span className="text-sm text-[var(--color-text-admin-muted)]">
                   {product.category?.name || product.category?.label || "—"}
                 </span>
               </td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3" data-label="Fiyat">
                 {formatter.format(product.price ?? 0)}
               </td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3" data-label="Setler">
                 <SetBadge count={product.setsCount} />
               </td>
-              <td className="px-4 py-3">
+              <td className="px-4 py-3" data-label="Durum">
                 <StatusBadge active={product.isActive} />
               </td>
-              <td className="px-4 py-3 text-[var(--color-text-admin-muted)]">
+              <td className="px-4 py-3 text-[var(--color-text-admin-muted)]" data-label="Güncellenme">
                 {new Date(
                   product.updatedAt || product.createdAt
                 ).toLocaleDateString()}
               </td>
-              <td className="px-4 py-3 text-right">
-                <div className="flex items-center justify-end gap-2">
+              <td className="px-4 py-3 text-left md:text-right" data-label="İşlemler">
+                <div className="mobile-full flex flex-col gap-2 md:flex-row md:items-center md:justify-end">
                   <button
                     onClick={() => onTranslate?.(product)}
-                    className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                    className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-auto"
                   >
                     <Languages className="h-4 w-4" /> Dil varyantı
                   </button>
                   <button
                     onClick={() => onEdit?.(product)}
-                    className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                    className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-auto"
                   >
                     <Edit3 className="h-4 w-4" /> Düzenle
                   </button>
                   <button
                     onClick={() => onDelete?.(product)}
-                    className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                    className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 md:w-auto"
                   >
                     <Trash2 className="h-4 w-4" /> Sil
                   </button>

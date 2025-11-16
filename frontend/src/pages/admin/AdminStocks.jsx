@@ -88,7 +88,7 @@ export default function AdminStocks() {
       {/* Tabs + Search */}
       <div className="mb-4 rounded-2xl border p-3 sm:p-4" style={themeCard}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               className={`rounded-xl px-3 py-2 text-sm border transition ${
                 tab === "products" ? "font-semibold" : ""
@@ -124,14 +124,14 @@ export default function AdminStocks() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div
-              className="flex items-center gap-2 rounded-full border px-3 py-1.5"
+              className="flex w-full items-center gap-2 rounded-full border px-3 py-1.5"
               style={themeCard}
             >
               <Search className="h-4 w-4 opacity-60" />
               <input
-                className="w-56 border-0 bg-transparent text-sm outline-none"
+                className="w-full border-0 bg-transparent text-sm outline-none sm:w-56"
                 placeholder={
                   tab === "products" ? "Ürünlerde ara…" : "Setlerde ara…"
                 }
@@ -146,7 +146,7 @@ export default function AdminStocks() {
               />
             </div>
             <button
-              className="rounded-xl border px-3 py-2 text-sm"
+              className="w-full rounded-xl border px-3 py-2 text-sm sm:w-auto"
               style={themeCard}
               onClick={() => {
                 setPage(1);
@@ -161,8 +161,8 @@ export default function AdminStocks() {
 
       {/* List */}
       <div className="overflow-hidden rounded-2xl border" style={themeCard}>
-        <div className="w-full overflow-x-auto">
-          <table className="min-w-full text-sm">
+        <div className="admin-table-container w-full overflow-x-auto">
+          <table className="admin-table min-w-full text-sm">
             <thead
               className="text-left"
               style={{
@@ -190,7 +190,7 @@ export default function AdminStocks() {
                     className="border-t"
                     style={{ borderColor: "var(--color-border-admin)" }}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Tür">
                       {tab === "products" ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">
                           Ürün
@@ -201,7 +201,7 @@ export default function AdminStocks() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Ad">
                       <div className="flex flex-col">
                         <span className="font-medium">{name}</span>
                         <span className="text-xs opacity-70">
@@ -209,12 +209,12 @@ export default function AdminStocks() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Fiyat">
                       {"price" in it
                         ? `${Number(it.price || 0).toLocaleString()} ₺`
                         : "-"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Kategori / Bilgi">
                       {tab === "products" ? (
                         <span className="opacity-80 text-xs">
                           {it?.category?.name ||
@@ -226,11 +226,11 @@ export default function AdminStocks() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end">
+                    <td className="px-4 py-3 text-left md:text-right" data-label="Stok">
+                      <div className="mobile-full flex flex-col gap-2 md:flex-row md:justify-end">
                         <button
                           onClick={() => openPanel(model, it._id, name)}
-                          className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium shadow-sm"
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium shadow-sm md:w-auto"
                           style={{
                             background: "var(--color-accent)",
                             color: "white",
@@ -259,13 +259,13 @@ export default function AdminStocks() {
 
         {/* pagination */}
         <div
-          className="flex items-center justify-between border-t px-4 py-3"
+          className="flex flex-col gap-2 border-t px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
           style={{ borderColor: "var(--color-border-admin)" }}
         >
           <div className="text-xs opacity-70">
             Toplam {total} kayıt — sayfa {page}/{pages}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               className="rounded-xl border px-3 py-1.5 text-sm disabled:opacity-40"
               style={themeCard}

@@ -180,9 +180,9 @@ export default function AdminOrdersPage() {
               }
             />
           </div>
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
             <select
-              className="rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] px-3 py-1.5 text-sm"
+              className="w-full rounded-full border border-[var(--color-border-admin)] bg-[var(--color-bg-admin)] px-3 py-1.5 text-sm sm:w-auto"
               value={filters.status}
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, status: e.target.value }))
@@ -196,7 +196,7 @@ export default function AdminOrdersPage() {
             </select>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--color-text-admin)] px-4 py-2 text-sm font-semibold text-[var(--color-bg-admin)] hover:opacity-90 sm:w-auto"
             >
               <Search className="h-4 w-4" /> Ara
             </button>
@@ -205,8 +205,8 @@ export default function AdminOrdersPage() {
       </section>
 
       <section className="rounded-3xl border border-[var(--color-border-admin)] bg-[var(--color-bg-card)]">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[var(--color-border-admin)]/60 text-sm">
+        <div className="admin-table-container overflow-x-auto">
+          <table className="admin-table min-w-full divide-y divide-[var(--color-border-admin)]/60 text-sm">
             <thead className="bg-[var(--color-bg-admin)]/60">
               <tr className="text-left text-[var(--color-text-admin-muted)]">
                 <th className="px-4 py-3 font-medium">Sipariş</th>
@@ -244,7 +244,7 @@ export default function AdminOrdersPage() {
                       key={order.id}
                       className="hover:bg-[var(--color-bg-admin)]/40"
                     >
-                      <td className="px-4 py-3 align-top">
+                      <td className="px-4 py-3 align-top" data-label="Sipariş">
                         <div className="flex flex-col">
                           <span className="font-semibold text-[var(--color-text-admin)]">
                             {order.orderNumber}
@@ -255,7 +255,7 @@ export default function AdminOrdersPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 align-top">
+                      <td className="px-4 py-3 align-top" data-label="Müşteri">
                         {user ? (
                           <div className="flex items-center gap-2 text-sm text-[var(--color-text-admin)]">
                             <User2 className="h-4 w-4 text-[var(--color-text-admin-muted)]" />
@@ -276,7 +276,7 @@ export default function AdminOrdersPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 align-top">
+                      <td className="px-4 py-3 align-top" data-label="Toplam">
                         <div className="flex flex-col text-[var(--color-text-admin)]">
                           <span className="font-semibold">
                             {money(order.total)}
@@ -287,7 +287,7 @@ export default function AdminOrdersPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 align-top">
+                      <td className="px-4 py-3 align-top" data-label="Durum">
                         <div className="flex flex-col gap-2">
                           <StatusBadge status={order.status} />
                           <select
@@ -308,7 +308,7 @@ export default function AdminOrdersPage() {
                           </select>
                         </div>
                       </td>
-                      <td className="px-4 py-3 align-top text-sm text-[var(--color-text-admin)]">
+                      <td className="px-4 py-3 align-top text-sm text-[var(--color-text-admin)]" data-label="Tarih">
                         <div className="flex flex-col gap-1">
                           <span className="flex items-center gap-1 text-xs text-[var(--color-text-admin-muted)]">
                             <CalendarDays className="h-3.5 w-3.5" />
@@ -317,11 +317,11 @@ export default function AdminOrdersPage() {
                           <span>{created}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 align-top text-right">
-                        <div className="flex justify-end gap-2">
+                      <td className="px-4 py-3 align-top text-left md:text-right" data-label="İşlemler">
+                        <div className="mobile-full flex flex-col gap-2 md:flex-row md:justify-end">
                           <button
                             onClick={() => setSelectedOrderId(order.id)}
-                            className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                            className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-auto"
                           >
                             <Truck className="h-3.5 w-3.5" /> Görüntüle
                           </button>
@@ -329,7 +329,7 @@ export default function AdminOrdersPage() {
                             onClick={() =>
                               setSelectedOrderId(order.orderNumber)
                             }
-                            className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)]"
+                            className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-[var(--color-border-admin)] px-3 py-1.5 text-xs text-[var(--color-text-admin)] hover:bg-[var(--color-bg-hover)] md:w-auto"
                             title="Sipariş numarasıyla aç"
                           >
                             <ArrowLeftRight className="h-3.5 w-3.5" />
@@ -344,12 +344,12 @@ export default function AdminOrdersPage() {
           </table>
         </div>
 
-        <footer className="flex items-center justify-between border-t border-[var(--color-border-admin)]/60 px-4 py-3 text-sm text-[var(--color-text-admin-muted)]">
+        <footer className="flex flex-col gap-3 border-t border-[var(--color-border-admin)]/60 px-4 py-3 text-sm text-[var(--color-text-admin-muted)] sm:flex-row sm:items-center sm:justify-between">
           <span>
             Toplam {pagination.total || rows.length} siparişten {rows.length}{" "}
             tanesi gösteriliyor
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               disabled={page <= 1 || loading}
               onClick={() => fetchOrders(Math.max(1, page - 1), filters)}
