@@ -542,16 +542,6 @@ export default function ShopPage() {
         ]}
       />
 
-      <div className="mt-4 text-center">
-        <h1 className="text-4xl font-serif font-extrabold tracking-tight text-primary">
-          {shopCopy.title || "Shop Our Collection"}
-        </h1>
-        <p className="mx-auto mt-2 max-w-2xl text-secondary">
-          {shopCopy.subtitle ||
-            "Browse curated products uploaded via the admin panel. Filter by category, colour, size and price to find your perfect match."}
-        </p>
-      </div>
-
       {isSaleMode && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 text-sm text-accent">
           <div>
@@ -606,7 +596,7 @@ export default function ShopPage() {
         </div>
       )}
 
-      <div className="mt-6 space-y-3 rounded-2xl border border-border/70 bg-white/95 p-4 shadow-sm">
+      <div className="mt-6 space-y-3 rounded-2xl border border-border/70 bg-white/95 p-4 shadow-sm lg:hidden">
         <form
           onSubmit={handleSearchSubmit}
           className="flex flex-col gap-3 sm:flex-row sm:items-center"
@@ -737,6 +727,67 @@ export default function ShopPage() {
         </div>
 
         <div>
+          <div className="hidden lg:block rounded-2xl border border-border/70 bg-white/95 p-4 shadow-sm">
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex items-center gap-3"
+            >
+              <div className="flex flex-1 items-center gap-2 rounded-full border border-border bg-white px-3 py-2 shadow-sm focus-within:border-accent">
+                <Search className="h-4 w-4 text-secondary" />
+                <input
+                  type="search"
+                  value={searchText}
+                  onChange={(event) => setSearchText(event.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="w-full border-0 bg-transparent text-sm text-primary placeholder:text-secondary/70 focus:outline-none"
+                />
+              </div>
+              {isSearchActive && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-sm font-semibold text-secondary hover:border-accent"
+                >
+                  {clearSearchLabel}
+                </button>
+              )}
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90"
+              >
+                {searchButtonLabel}
+              </button>
+            </form>
+            {quickCategoryChips.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCategoryChange("all")}
+                  className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    selectedCategory === "all"
+                      ? "border-accent bg-accent text-white shadow"
+                      : "border-border text-primary hover:border-accent"
+                  }`}
+                >
+                  {filtersCopy.allProducts || "All products"}
+                </button>
+                {quickCategoryChips.map((chip) => (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => handleCategoryChange(chip.id)}
+                    className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      selectedCategory === chip.id
+                        ? "border-accent bg-accent text-white shadow"
+                        : "border-border text-primary hover:border-accent"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <ShopPageProducts
             products={filteredProducts}
             loading={loadingProducts}

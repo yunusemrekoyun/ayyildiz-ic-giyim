@@ -35,6 +35,7 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [me, setMe] = useState(getUserCache());
+  const bodyOverflow = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -52,6 +53,20 @@ export default function AdminLayout({ children, title, subtitle, actions }) {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (bodyOverflow.current === null) {
+      bodyOverflow.current = document?.body?.style?.overflow || "";
+    }
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = bodyOverflow.current || "";
+    }
+    return () => {
+      document.body.style.overflow = bodyOverflow.current || "";
+    };
+  }, [sidebarOpen]);
 
   const breadcrumbs = useMemo(() => {
     const parts = location.pathname.replace(/^\/+|\/+$/g, "").split("/");

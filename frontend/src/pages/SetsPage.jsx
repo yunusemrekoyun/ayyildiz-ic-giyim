@@ -135,7 +135,7 @@ export default function SetsPage() {
               { label: setsCopy.breadcrumb || "Trousseau Packages" },
             ]}
           />
-          <div className="mt-4 text-center">
+          {/* <div className="mt-4 text-center">
             <h1 className="text-4xl font-serif font-extrabold tracking-tight text-primary">
               {setsCopy.title || "Trousseau Packages"}
             </h1>
@@ -143,7 +143,7 @@ export default function SetsPage() {
               {setsCopy.subtitle ||
                 "Curated collections for your perfect wedding trousseau — discover elegant bridal, bedroom and bathroom packages crafted to match your style."}
             </p>
-          </div>
+          </div> */}
         </div>
       </section>
 
