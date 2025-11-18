@@ -46,8 +46,7 @@ export default function ShopPage() {
   const matchingCopy = shopCopy.matchingSets || {};
   const bannerCopy = shopCopy.campaignBanner || {};
   const filtersCopy = useMemo(() => t("shopFilters") || {}, [t, lang]);
-  const searchPlaceholder =
-    filtersCopy.searchPlaceholder || "Search products";
+  const searchPlaceholder = filtersCopy.searchPlaceholder || "Search products";
   const searchButtonLabel = filtersCopy.searchButton || "Search";
   const clearSearchLabel = filtersCopy.clearSearch || "Clear";
   const quickCategoriesLabel =
@@ -391,9 +390,7 @@ export default function ShopPage() {
     return match?.label || selectedColor;
   }, [availableColors, selectedColor]);
   const priceChipActive =
-    priceRange.max > 0 &&
-    selectedPrice &&
-    selectedPrice < priceRange.max;
+    priceRange.max > 0 && selectedPrice && selectedPrice < priceRange.max;
 
   const handleOpenFilters = () => {
     setDraftFilters({
@@ -596,7 +593,7 @@ export default function ShopPage() {
         </div>
       )}
 
-      <div className="mt-6 space-y-3 rounded-2xl border border-border/70 bg-white/95 p-4 shadow-sm lg:hidden">
+      <div className="mt-6 space-y-3 rounded-2xl border border-border/70 bg-white/95 p-4 shadow-sm md:hidden">
         <form
           onSubmit={handleSearchSubmit}
           className="flex flex-col gap-3 sm:flex-row sm:items-center"
@@ -706,8 +703,9 @@ export default function ShopPage() {
         </div>
       )}
 
-      <div className="mt-8 flex flex-col gap-8 lg:grid lg:grid-cols-[320px,1fr]">
-        <div className="hidden lg:block">
+      <div className="mt-8 flex flex-col gap-8 lg:flex-row">
+        {/* SOLDA: DESKTOP FİLTRE */}
+        <div className="hidden lg:block lg:w-[320px] lg:flex-shrink-0">
           <ShopPageFilter
             categoryTree={categoryTree}
             selectedCategory={selectedCategory}
@@ -726,8 +724,9 @@ export default function ShopPage() {
           />
         </div>
 
-        <div>
-          <div className="hidden lg:block rounded-2xl border border-border/70 bg-white/95 p-4 shadow-sm">
+        {/* SAĞDA: ÜRÜNLER + DESKTOP SEARCH BAR */}
+        <div className="flex-1 min-w-0">
+          {/* <div className="hidden md:block rounded-2xl border border-border/70 bg-white/95 p-4 shadow-sm">
             <form
               onSubmit={handleSearchSubmit}
               className="flex items-center gap-3"
@@ -787,13 +786,13 @@ export default function ShopPage() {
                 ))}
               </div>
             )}
-          </div>
+          </div> */}
+
           <ShopPageProducts
             products={filteredProducts}
             loading={loadingProducts}
             emptyLabel={shopProductsEmpty}
           />
-
           {searchQuery && !isSaleMode && (
             <div className="mt-12">
               <h2 className="text-2xl font-semibold text-primary">

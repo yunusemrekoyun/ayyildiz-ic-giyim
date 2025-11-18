@@ -20,8 +20,8 @@ import {
 export default function LayoutSelector() {
   const location = useLocation();
   const [params] = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const [initializing, setInitializing] = useState(true);
+  const [user, setUser] = useState(() => getUserCache());
 
   const isAdminSection = /^\/admin(\/|$)/.test(location.pathname);
   const paramsKey = useMemo(() => params.toString(), [params]);
@@ -32,10 +32,8 @@ export default function LayoutSelector() {
     const finish = (nextUser) => {
       if (!mounted) return;
       setUser(nextUser);
-      setLoading(false);
+      setInitializing(false);
     };
-
-    setLoading(true);
 
     (async () => {
       const cachedUser = getUserCache();
@@ -76,9 +74,9 @@ export default function LayoutSelector() {
     return () => {
       mounted = false;
     };
-  }, [location.pathname, paramsKey]);
+  }, [location.pathname, paramsKey, initializing]);
 
-  if (loading) return null;
+  if (initializing) return null;
 
   const role = (user?.role || "user").toLowerCase();
 
