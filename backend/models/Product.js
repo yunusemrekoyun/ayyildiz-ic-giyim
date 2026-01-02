@@ -92,8 +92,6 @@ const ProductSchema = new mongoose.Schema(
 );
 
 ProductSchema.index({ name: 1 }, { unique: true });
-ProductSchema.index({ slug: 1 });
-ProductSchema.index({ sku: 1 }, { unique: true, sparse: true });
 ProductSchema.index({ category: 1 });
 
 ProductSchema.pre("validate", async function (next) {

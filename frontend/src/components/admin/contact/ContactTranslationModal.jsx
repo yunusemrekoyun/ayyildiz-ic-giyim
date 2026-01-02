@@ -2,6 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import { contactPageApi } from "../../../api/contact.js";
 import TranslationModal from "../translations/TranslationModal.jsx";
 
+function extractMessage(error) {
+  if (!error) return "Beklenmeyen hata";
+  if (error instanceof Error) {
+    try {
+      const parsed = JSON.parse(error.message);
+      if (parsed?.message) return parsed.message;
+    } catch {
+      /* ignore */
+    }
+    return error.message;
+  }
+  if (typeof error === "string") return error;
+  return String(error);
+}
+
 const BLOCKS = [
   { key: "addressBlock", label: "Adres Bloğu" },
   { key: "hoursBlock", label: "Çalışma Saatleri Bloğu" },

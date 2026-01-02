@@ -54,27 +54,16 @@ export const categoryApi = {
   },
 
   async remove(idOrSlug) {
-    // 🔍 DEBUG: gerçekten ne geliyor görelim
-    console.log(
-      "categoryApi.remove called with:",
-      idOrSlug,
-      "type=",
-      typeof idOrSlug
-    );
-
-    // Eğer yanlışlıkla obje geldiyse, içinden id/_id almaya çalış
     let safeId = idOrSlug;
-
     if (idOrSlug && typeof idOrSlug === "object") {
-      if (idOrSlug.id) safeId = idOrSlug.id;
-      else if (idOrSlug._id) safeId = idOrSlug._id;
-      else safeId = String(idOrSlug);
+      safeId = idOrSlug.id || idOrSlug._id || `${idOrSlug}`;
     }
-
-    safeId = String(safeId);
-
-    console.log("categoryApi.remove using safeId:", safeId);
-
+    safeId = String(safeId || "").trim();
+    if (!safeId) {
+      throw new Error(
+        JSON.stringify({ message: "Silinecek kategori kimliği bulunamadı" })
+      );
+    }
     return http(`/categories/${safeId}`, {
       method: "DELETE",
       auth: true,

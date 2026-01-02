@@ -85,7 +85,6 @@ StockItemSchema.index(
   { ownerModel: 1, owner: 1, comboKey: 1 },
   { unique: true }
 );
-StockItemSchema.index({ sku: 1 }, { unique: true, sparse: true });
 StockItemSchema.index({ ownerModel: 1, owner: 1 });
 StockItemSchema.index({ isActive: 1, updatedAt: -1 });
 

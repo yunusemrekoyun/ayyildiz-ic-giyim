@@ -65,8 +65,6 @@ const SetSchema = new mongoose.Schema(
 );
 
 SetSchema.index({ name: 1 }, { unique: true });
-SetSchema.index({ slug: 1 });
-SetSchema.index({ sku: 1 }, { unique: true, sparse: true });
 
 SetSchema.pre("validate", async function (next) {
   if (this.isModified("name") || !this.slug) {

@@ -13,7 +13,6 @@ const CouponSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-CouponSchema.index({ code: 1 }, { unique: true });
 CouponSchema.index({ active: 1 });
 
 export default mongoose.model("Coupon", CouponSchema);

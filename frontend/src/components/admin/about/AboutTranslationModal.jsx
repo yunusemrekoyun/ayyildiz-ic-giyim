@@ -2,6 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import { aboutApi } from "../../../api/about.js";
 import TranslationModal from "../translations/TranslationModal.jsx";
 
+function extractMessage(error) {
+  if (!error) return "Beklenmeyen hata";
+  if (error instanceof Error) {
+    try {
+      const parsed = JSON.parse(error.message);
+      if (parsed?.message) return parsed.message;
+    } catch {
+      /* ignore */
+    }
+    return error.message;
+  }
+  if (typeof error === "string") return error;
+  return String(error);
+}
+
 const EMPTY_DRAFT = {
   heroTitle: "",
   heroSubtitle: "",

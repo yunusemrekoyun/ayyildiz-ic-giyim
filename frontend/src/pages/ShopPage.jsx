@@ -114,6 +114,7 @@ export default function ShopPage() {
   // Kategori ağacı
   useEffect(() => {
     let mounted = true;
+    setError(null);
     (async () => {
       try {
         const treeRes = await categoryApi.tree(lang);
@@ -132,6 +133,7 @@ export default function ShopPage() {
   // Ürünler + set arama sonuçları
   useEffect(() => {
     let mounted = true;
+    setError(null);
     (async () => {
       try {
         setLoadingProducts(true);
